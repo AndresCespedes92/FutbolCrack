@@ -1,9 +1,275 @@
-<section class="page-intro" aria-labelledby="titulo-registro">
-  <span class="eyebrow">FUTBOLCRACK / 02</span>
-  <h1 id="titulo-registro">Sumate al equipo</h1>
-  <p>Un lugar para compartir tu pasión por el fútbol.</p>
-</section>
-<section class="block-notice" aria-label="Estado de implementación">
-  <strong>Registro · Estructura inicial</strong>
-  <p>Esta ruta ya está disponible. El contenido de esta pantalla se implementará en el bloque 2, después de su aprobación.</p>
-</section>
+<div class="registration-layout">
+  <section class="registration-story" aria-labelledby="titulo-registro">
+    <span class="eyebrow">TU TALENTO EMPIEZA A MOSTRARSE</span>
+    <h1 id="titulo-registro">Tu próximo<br />paso empieza acá.</h1>
+    <p>Mostrá tus jugadas y tu recorrido.<br />Descubrí talento y compartí pruebas de jugadores.</p>
+    <div class="shirt-number" aria-hidden="true">10</div>
+    <span class="eyebrow">UN PERFIL PARA CONECTAR TALENTO Y OPORTUNIDADES.</span>
+  </section>
+  <section class="auth-panel" aria-labelledby="titulo-datos">
+    <h2 id="titulo-datos">Creá tu perfil</h2>
+    <p class="demo-note" id="aviso-registro">
+      <strong>Validación local de demostración.</strong> No se crea una cuenta ni se guardan datos o
+      imágenes. El envío sigue deshabilitado, incluso cuando todos los datos son válidos.
+    </p>
+    <p class="validation-guide">
+      Los campos con errores se marcan en rojo y los válidos en verde después de interactuar. Los
+      opcionales vacíos quedan neutros.
+    </p>
+    <!-- formGroup conecta el HTML al modelo. ngClass adapta el patrón verificado en CineBera. -->
+    <!-- Cancelamos submit también con Enter: validar los datos no equivale a crear una cuenta. -->
+    <form
+      [formGroup]="registroForm"
+      (ngSubmit)="$event.preventDefault()"
+      aria-describedby="aviso-registro"
+      novalidate
+    >
+      <fieldset>
+        <legend><span>01</span> Datos personales</legend>
+        <div class="form-grid">
+          <div class="field">
+            <label for="nombre">Nombre</label>
+            <input
+              id="nombre"
+              name="nombre"
+              formControlName="nombre"
+              autocomplete="given-name"
+              placeholder="Tu nombre"
+              required
+              [ngClass]="clasesCampo(campos.nombre)"
+              [attr.aria-invalid]="esInvalido(campos.nombre)"
+              aria-describedby="ayuda-nombre estado-nombre"
+            />
+            <small id="ayuda-nombre"
+              >Entre 2 y 50 letras; se permiten espacios, guiones y apóstrofes.</small
+            >
+            <small
+              id="estado-nombre"
+              class="field-status"
+              aria-live="polite"
+              [class.field-error]="esInvalido(campos.nombre)"
+              [class.field-success]="esValido(campos.nombre)"
+              >{{ mensajeCampo(campos.nombre) }}</small
+            >
+          </div>
+          <div class="field">
+            <label for="apellido">Apellido</label>
+            <input
+              id="apellido"
+              name="apellido"
+              formControlName="apellido"
+              autocomplete="family-name"
+              placeholder="Tu apellido"
+              required
+              [ngClass]="clasesCampo(campos.apellido)"
+              [attr.aria-invalid]="esInvalido(campos.apellido)"
+              aria-describedby="ayuda-apellido estado-apellido"
+            />
+            <small id="ayuda-apellido">Entre 2 y 50 letras, como en Nombre.</small>
+            <small
+              id="estado-apellido"
+              class="field-status"
+              aria-live="polite"
+              [class.field-error]="esInvalido(campos.apellido)"
+              [class.field-success]="esValido(campos.apellido)"
+              >{{ mensajeCampo(campos.apellido) }}</small
+            >
+          </div>
+          <div class="field full-width">
+            <label for="correo">Correo electrónico</label>
+            <input
+              id="correo"
+              name="correo"
+              formControlName="correo"
+              type="email"
+              autocomplete="email"
+              placeholder="nombre@ejemplo.com"
+              required
+              [ngClass]="clasesCampo(campos.correo)"
+              [attr.aria-invalid]="esInvalido(campos.correo)"
+              aria-describedby="ayuda-correo estado-correo"
+            />
+            <small id="ayuda-correo"
+              >Ingresá un correo con formato válido. No se comprueba su disponibilidad.</small
+            >
+            <small
+              id="estado-correo"
+              class="field-status"
+              aria-live="polite"
+              [class.field-error]="esInvalido(campos.correo)"
+              [class.field-success]="esValido(campos.correo)"
+              >{{ mensajeCampo(campos.correo) }}</small
+            >
+          </div>
+          <div class="field full-width">
+            <label for="fecha-nacimiento">Fecha de nacimiento</label>
+            <input
+              id="fecha-nacimiento"
+              name="fechaNacimiento"
+              formControlName="fechaNacimiento"
+              type="date"
+              autocomplete="bday"
+              [max]="fechaMaxima"
+              required
+              [ngClass]="clasesCampo(campos.fechaNacimiento)"
+              [attr.aria-invalid]="esInvalido(campos.fechaNacimiento)"
+              aria-describedby="ayuda-fechaNacimiento estado-fechaNacimiento"
+            />
+            <small id="ayuda-fechaNacimiento"
+              >Seleccioná una fecha real, igual o anterior a hoy.</small
+            >
+            <small
+              id="estado-fechaNacimiento"
+              class="field-status"
+              aria-live="polite"
+              [class.field-error]="esInvalido(campos.fechaNacimiento)"
+              [class.field-success]="esValido(campos.fechaNacimiento)"
+              >{{ mensajeCampo(campos.fechaNacimiento) }}</small
+            >
+          </div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend><span>02</span> Tu acceso</legend>
+        <div class="field">
+          <label for="usuario">Nombre de usuario</label>
+          <input
+            id="usuario"
+            name="usuario"
+            formControlName="usuario"
+            autocomplete="username"
+            placeholder="Tu nombre en la comunidad"
+            required
+            [ngClass]="clasesCampo(campos.usuario)"
+            [attr.aria-invalid]="esInvalido(campos.usuario)"
+            aria-describedby="ayuda-usuario estado-usuario"
+          />
+          <small id="ayuda-usuario"
+            >De 3 a 20 caracteres. Letras sin acentos, números, puntos y guion bajo. Empezá con
+            letra o número.</small
+          >
+          <small
+            id="estado-usuario"
+            class="field-status"
+            aria-live="polite"
+            [class.field-error]="esInvalido(campos.usuario)"
+            [class.field-success]="esValido(campos.usuario)"
+            >{{ mensajeCampo(campos.usuario) }}</small
+          >
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="clave-registro">Contraseña</label>
+            <input
+              id="clave-registro"
+              name="clave"
+              formControlName="clave"
+              type="password"
+              autocomplete="new-password"
+              required
+              [ngClass]="clasesCampo(campos.clave)"
+              [attr.aria-invalid]="esInvalido(campos.clave)"
+              aria-describedby="ayuda-clave estado-clave"
+            />
+            <small id="ayuda-clave"
+              >De 8 a 64 caracteres; no puede contener solamente espacios.</small
+            >
+            <small
+              id="estado-clave"
+              class="field-status"
+              aria-live="polite"
+              [class.field-error]="esInvalido(campos.clave)"
+              [class.field-success]="esValido(campos.clave)"
+              >{{ mensajeCampo(campos.clave) }}</small
+            >
+          </div>
+          <div class="field">
+            <label for="repetir-clave">Repetir contraseña</label>
+            <input
+              id="repetir-clave"
+              name="repetirClave"
+              formControlName="repetirClave"
+              type="password"
+              autocomplete="new-password"
+              required
+              [ngClass]="clasesCampo(campos.repetirClave)"
+              [attr.aria-invalid]="esInvalido(campos.repetirClave)"
+              aria-describedby="ayuda-repetirClave estado-repetirClave"
+            />
+            <small id="ayuda-repetirClave"
+              >Debe coincidir exactamente con la contraseña anterior.</small
+            >
+            <small
+              id="estado-repetirClave"
+              class="field-status"
+              aria-live="polite"
+              [class.field-error]="esInvalido(campos.repetirClave)"
+              [class.field-success]="esValido(campos.repetirClave)"
+              >{{ mensajeCampo(campos.repetirClave) }}</small
+            >
+          </div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend><span>03</span> Tu presentación</legend>
+        <div class="field">
+          <label for="descripcion">Descripción breve (opcional)</label>
+          <textarea
+            id="descripcion"
+            name="descripcion"
+            formControlName="descripcion"
+            rows="3"
+            placeholder="Tu posición, tu recorrido y las oportunidades que buscás…"
+            [ngClass]="clasesCampo(campos.descripcion)"
+            [attr.aria-invalid]="esInvalido(campos.descripcion)"
+            aria-describedby="ayuda-descripcion estado-descripcion"
+          ></textarea>
+          <small id="ayuda-descripcion">Hasta 300 caracteres. Podés dejar este campo vacío.</small>
+          <small
+            id="estado-descripcion"
+            class="field-status"
+            aria-live="polite"
+            [class.field-error]="esInvalido(campos.descripcion)"
+            [class.field-success]="esValido(campos.descripcion)"
+            >{{ mensajeCampo(campos.descripcion) }}</small
+          >
+        </div>
+        <div class="field">
+          <label for="imagen-perfil">Imagen de perfil (opcional)</label>
+          <input
+            id="imagen-perfil"
+            name="imagenPerfil"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            (change)="seleccionarImagen($event)"
+            (blur)="campos.imagenPerfil.markAsTouched()"
+            [ngClass]="clasesCampo(campos.imagenPerfil)"
+            [attr.aria-invalid]="esInvalido(campos.imagenPerfil)"
+            aria-describedby="ayuda-imagenPerfil estado-imagenPerfil"
+          />
+          <small id="ayuda-imagenPerfil"
+            >JPG, PNG o WebP, hasta 5 MB. La imagen se selecciona localmente; no se sube ni se
+            guarda.</small
+          >
+          <small
+            id="estado-imagenPerfil"
+            class="field-status"
+            aria-live="polite"
+            [class.field-error]="esInvalido(campos.imagenPerfil)"
+            [class.field-success]="esValido(campos.imagenPerfil)"
+            >{{ mensajeCampo(campos.imagenPerfil) }}</small
+          >
+        </div>
+      </fieldset>
+      <p class="form-summary" role="status">
+        {{
+          registroForm.valid
+            ? 'Los datos cumplen las reglas locales. La creación de cuentas todavía no está disponible.'
+            : 'Completá los campos obligatorios y corregí los mensajes que aparezcan.'
+        }}
+      </p>
+      <button class="button" type="submit" disabled>Crear cuenta · Próximamente</button>
+    </form>
+    <p class="auth-switch">¿Ya tenés cuenta? <a routerLink="/login">Ingresá</a></p>
+  </section>
+</div>

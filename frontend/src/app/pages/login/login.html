@@ -1,9 +1,47 @@
-<section class="page-intro" aria-labelledby="titulo-login">
-  <span class="eyebrow">FUTBOLCRACK / 01</span>
-  <h1 id="titulo-login">Entrá a la cancha</h1>
-  <p>Tu comunidad de fútbol empieza acá.</p>
-</section>
-<section class="block-notice" aria-label="Estado de implementación">
-  <strong>Login · Estructura inicial</strong>
-  <p>Esta ruta ya está disponible. El contenido de esta pantalla se implementará en el bloque 2, después de su aprobación.</p>
-</section>
+<div class="auth-layout">
+  <section class="auth-story" aria-labelledby="titulo-login">
+    <span class="eyebrow">MOSTRÁ TU TALENTO</span>
+    <h1 id="titulo-login">Que tu juego<br />se vea.</h1>
+    <p>Compartí tus jugadas.<br />Conectá con tu próxima oportunidad.</p>
+    <div class="pitch" aria-hidden="true">
+      <span class="pitch-circle"></span><span class="pitch-box"></span>
+    </div>
+    <span class="story-caption">TU JUEGO. TU RECORRIDO. TU OPORTUNIDAD.</span>
+  </section>
+
+  <section class="auth-panel" aria-labelledby="titulo-formulario">
+    <span class="eyebrow">FUTBOLCRACK / ACCESO</span>
+    <h2 id="titulo-formulario">Volvé al juego</h2>
+    <p class="muted">Jugadores, clubes y talento por descubrir.</p>
+    <p class="demo-note" id="aviso-login">
+      <strong>Vista de diseño.</strong> El inicio de sesión todavía no está disponible. Podés
+      explorar las pantallas desde la navegación.
+    </p>
+    <!-- El submit también se cancela al presionar Enter: no hay sesión ni petición a una API. -->
+    <form (submit)="$event.preventDefault()" aria-describedby="aviso-login">
+      <div class="field">
+        <label for="identificador">Usuario o correo electrónico</label>
+        <input
+          id="identificador"
+          name="identificador"
+          type="text"
+          autocomplete="username"
+          placeholder="Tu usuario o correo"
+        />
+      </div>
+      <div class="field">
+        <label for="clave-login">Contraseña</label>
+        <input
+          id="clave-login"
+          name="clave"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Tu contraseña"
+        />
+      </div>
+      <button class="button" type="submit" disabled>Ingresar · Próximamente</button>
+    </form>
+    <p class="auth-switch">¿Todavía no tenés perfil? <a routerLink="/registro">Registrate</a></p>
+    <a class="text-link" routerLink="/publicaciones">Explorar publicaciones de ejemplo →</a>
+  </section>
+</div>

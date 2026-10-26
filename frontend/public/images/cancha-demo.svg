@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+  <rect width="800" height="400" fill="#34452F"/>
+  <g fill="none" stroke="#596B42" stroke-width="2">
+    <path d="M30 25h740v350H30zM400 25v350M30 105h110v190H30m740-190H660v190h110"/>
+    <circle cx="400" cy="200" r="75"/>
+  </g>
+  <path fill="#101310" d="m0 295 800-100v205H0z"/>
+  <text x="52" y="140" fill="#F1F1E9" font-family="Arial,sans-serif" font-size="100" font-weight="900">09</text>
+  <text x="52" y="310" fill="#F1F1E9" font-family="Arial,sans-serif" font-size="32" font-weight="bold">CONTROL Y DEFINICIÓN.</text>
+  <text x="54" y="348" fill="#929990" font-family="Arial,sans-serif" font-size="14" letter-spacing="3">FUTBOLCRACK / ILUSTRACIÓN DE EJEMPLO</text>
+</svg>

@@ -1,8 +1,10 @@
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
-// Pantalla pública de login: estructura inicial; el contenido se incorpora en el bloque 2.
+// Presenta el acceso y sus enlaces. El envío se habilitará al incorporar autenticación.
 @Component({
   selector: 'app-login',
+  imports: [RouterLink],
   templateUrl: './login.html',
   styleUrl: './login.css',
 })

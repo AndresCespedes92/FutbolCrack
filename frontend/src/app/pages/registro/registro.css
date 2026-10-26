@@ -1,1 +1,98 @@
-:host { display: block; }
+/* Registro: grillas y agrupación visual. La lógica de colores está al final de este archivo. */
+:host {
+  display: block;
+}
+/* Dos columnas: presentación a la izquierda, formulario más ancho a la derecha. */
+.registration-layout {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 48px;
+  align-items: start;
+}
+.registration-story {
+  padding: 28px 0;
+}
+.registration-story h1 {
+  font-size: clamp(2.8rem, 5vw, 4.8rem);
+}
+.registration-story p {
+  color: var(--color-text-secondary);
+}
+/* Dorsal decorativo; se oculta en pantallas pequeñas para priorizar el formulario. */
+.shirt-number {
+  font-family: Impact, 'Arial Narrow', sans-serif;
+  font-size: 12rem;
+  line-height: 1.2;
+  color: var(--color-primary);
+  border-top: 1px solid var(--color-border);
+  margin-top: 40px;
+}
+/* Fieldset y legend agrupan datos relacionados también para tecnologías de asistencia. */
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 28px 0;
+  min-width: 0;
+}
+legend {
+  padding: 0 0 18px;
+  font-weight: bold;
+}
+legend span {
+  color: var(--color-text-secondary);
+  margin-right: 10px;
+  font-size: 0.75rem;
+}
+/* Pares de campos; full-width hace que correo y fecha ocupen todo el ancho. */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+.full-width {
+  grid-column: 1 / -1;
+}
+/* Primer corte: una columna general. A 480px también apilamos los pares de campos. */
+@media (max-width: 850px) {
+  .registration-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .shirt-number {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ngClass agrega estas clases según el control; no usamos :valid porque marcaría campos sin tocar. */
+.field .input-invalido {
+  border-color: var(--color-error);
+}
+.field .input-valido {
+  border-color: var(--color-success);
+}
+/* El mensaje acompaña al borde para que la información no dependa solamente del color. */
+.field .field-error {
+  color: var(--color-error);
+}
+.field .field-success {
+  color: var(--color-success);
+}
+.field-status:empty {
+  display: none;
+}
+.validation-guide,
+.form-summary {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+.form-summary {
+  border-top: 1px solid var(--color-border);
+  padding-top: 20px;
+  margin-bottom: 20px;
+}

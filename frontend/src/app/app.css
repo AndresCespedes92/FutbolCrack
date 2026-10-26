@@ -1,5 +1,41 @@
-main { max-width: 1120px; margin: 0 auto; padding: 56px 24px; min-height: calc(100dvh - 180px); }
-.site-footer { border-top: 1px solid var(--color-border); padding: 24px; display: flex; justify-content: space-between; gap: 16px; color: var(--color-text-secondary); font-size: .75rem; letter-spacing: .06em; }
-.skip-link { position: fixed; top: -100px; left: 16px; background: var(--color-text); color: var(--color-background); padding: 12px; z-index: 10; }
-.skip-link:focus { top: 12px; }
-@media (max-width: 600px) { main { padding: 32px 20px; } .site-footer { flex-direction: column; } }
+/* Contenedor de las rutas: max-width limita el ancho en escritorio; padding da aire lateral. */
+main {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 56px 24px;
+  min-height: calc(100dvh - 180px);
+}
+/* Pie compartido; flex separa la marca y el estado del sprint. */
+.site-footer {
+  border-top: 1px solid var(--color-border);
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+/* Enlace oculto hasta recibir foco: permite saltar la navegación usando el teclado. */
+.skip-link {
+  border-radius: var(--radius-control);
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  background: var(--color-text);
+  color: var(--color-background);
+  padding: 12px;
+  z-index: 10;
+}
+.skip-link:focus {
+  top: 12px;
+}
+/* En celular apilamos el pie y ajustamos los márgenes del contenido. */
+@media (max-width: 600px) {
+  main {
+    padding: 32px 20px;
+  }
+  .site-footer {
+    flex-direction: column;
+  }
+}
