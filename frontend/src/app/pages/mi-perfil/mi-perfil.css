@@ -1,1 +1,194 @@
-:host { display: block; }
+/* Perfil: ficha del jugador, CV y material. Las publicaciones reutilizan PublicacionCard. */
+:host {
+  display: block;
+}
+h1 {
+  font-size: clamp(2.8rem, 6vw, 4.5rem);
+}
+/* Cabecera en dos columnas; overflow recorta el fondo del avatar en las esquinas redondeadas. */
+.player-card {
+  display: grid;
+  grid-template-columns: 0.8fr 1.5fr;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  margin-top: 32px;
+  background: var(--color-surface);
+}
+.player-art {
+  background: var(--color-secondary);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 28px;
+}
+.player-art img {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  align-self: center;
+}
+.player-art > span {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-align: center;
+  margin-top: 20px;
+}
+.player-info {
+  padding: 36px;
+  min-width: 0;
+}
+.player-info h2 {
+  margin: 20px 0 8px;
+  text-transform: uppercase;
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.player-number {
+  float: right;
+  color: var(--color-text-secondary);
+  font-family: Impact, 'Arial Narrow', sans-serif;
+}
+.player-user {
+  color: var(--color-text-secondary);
+  margin-top: 12px;
+}
+.availability {
+  display: inline-block;
+  background: var(--color-secondary);
+  border-radius: var(--radius-control);
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+/* Datos del CV: una grilla de dos columnas. dt es la etiqueta y dd su valor. */
+.player-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 28px;
+}
+dt {
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  margin-bottom: 8px;
+}
+dd {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+/* Secciones de trayectoria y características, con proporciones independientes de la cabecera. */
+.cv-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  margin-top: 24px;
+}
+.cv-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 28px;
+}
+.cv-panel h2 {
+  margin: 12px 0 24px;
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+/* Trayectoria: la línea a la izquierda agrupa visualmente cada etapa del jugador. */
+.career-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.career-list li {
+  border-left: 2px solid var(--color-primary);
+  padding-left: 18px;
+  margin-top: 24px;
+}
+.career-date {
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+}
+.career-list h3 {
+  font-size: 1rem;
+  margin: 10px 0 4px;
+}
+.career-list p {
+  font-size: 0.85rem;
+  margin: 4px 0;
+}
+.career-list small,
+.cv-caption {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+/* Etiquetas informativas, sin comportamiento de botón. flex-wrap permite varias filas. */
+.skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+}
+.skill-list li {
+  background: var(--color-secondary);
+  border-radius: var(--radius-control);
+  padding: 9px 12px;
+  font-size: 0.75rem;
+}
+.cv-panel > p {
+  font-size: 0.85rem;
+}
+/* Material del jugador: max-width conserva una lectura cómoda de sus publicaciones. */
+.player-posts {
+  display: grid;
+  gap: 24px;
+  max-width: 760px;
+  margin-top: 44px;
+}
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.section-heading h2 {
+  font-size: 1.35rem;
+  margin: 10px 0 0;
+}
+.section-heading > span {
+  font-size: 0.6rem;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.08em;
+}
+.material-note {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  margin: 0;
+}
+/* Perfil móvil: apilamos las secciones y reducimos avatar y relleno. */
+@media (max-width: 700px) {
+  .player-card,
+  .cv-layout {
+    grid-template-columns: 1fr;
+  }
+  .player-art img {
+    max-width: 200px;
+  }
+  .player-info,
+  .cv-panel {
+    padding: 24px;
+  }
+}
+@media (max-width: 380px) {
+  .player-facts {
+    grid-template-columns: 1fr;
+  }
+}

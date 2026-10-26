@@ -2,27 +2,216 @@
 :root {
   color-scheme: dark;
   --color-background: #101310;
-  --color-primary: #596B42;
-  --color-secondary: #34452F;
+  --color-primary: #596b42;
+  --color-secondary: #34452f;
   --color-surface: #242824;
   --color-text-secondary: #929990;
-  --color-text: #F1F1E9;
+  --color-text: #f1f1e9;
   --color-border: #424a40;
+  /* Colores funcionales de validación, claros para contrastar con las superficies oscuras. */
+  --color-error: #ef9a9a;
+  --color-success: #a8c987;
+  /* Cambiá estos radios para redondear todos los controles y tarjetas a la vez. */
+  --radius-control: 12px;
+  --radius-card: 20px;
   font-family: Arial, Helvetica, sans-serif;
   color: var(--color-text);
   background: var(--color-background);
 }
-* { box-sizing: border-box; }
-body { margin: 0; }
-a { color: inherit; }
-button, input, textarea { font: inherit; }
-:focus-visible { outline: 3px solid var(--color-text); outline-offset: 4px; }
-h1 { margin: 12px 0 20px; font-size: clamp(2.5rem, 7vw, 5rem); text-transform: uppercase; letter-spacing: -.05em; line-height: 1; overflow-wrap: anywhere; }
-p { line-height: 1.65; }
-.eyebrow { color: var(--color-text-secondary); font-size: .75rem; font-weight: bold; letter-spacing: .16em; }
-.page-intro { border-left: 4px solid var(--color-primary); padding-left: 24px; max-width: 780px; }
-.block-notice { margin-top: 32px; padding: 24px; border: 1px solid var(--color-border); background: var(--color-surface); max-width: 780px; }
-.block-notice p { margin: 8px 0 0; color: var(--color-text-secondary); }
-.button { display: inline-block; background: var(--color-primary); color: var(--color-text); padding: 14px 22px; border: 1px solid var(--color-primary); border-radius: 2px; font-weight: bold; text-decoration: none; transition: background-color .15s; }
-.button:hover { background: var(--color-secondary); }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+/* Base global: border-box incluye borde y padding dentro del ancho declarado. */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+a {
+  color: inherit;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+/* El contorno blanco indica dónde está el teclado; no se elimina al colorear un campo. */
+:focus-visible {
+  outline: 3px solid var(--color-text);
+  outline-offset: 4px;
+}
+/* Tipografía compartida: clamp ajusta el tamaño entre celular y escritorio. */
+h1 {
+  margin: 12px 0 20px;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+p {
+  line-height: 1.65;
+}
+.eyebrow {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: bold;
+  letter-spacing: 0.16em;
+}
+/* Botones comunes: modificá aquí padding, radios y hover para cambiar todas las pantallas. */
+.button {
+  display: inline-block;
+  background: var(--color-primary);
+  color: var(--color-text);
+  padding: 14px 22px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-control);
+  font-weight: bold;
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+.button:hover {
+  background: var(--color-secondary);
+}
+/* Respeta la preferencia de accesibilidad del sistema para evitar transiciones. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}
+
+/* Elementos compartidos por las pantallas; cada componente conserva su disposición propia. */
+.muted {
+  color: var(--color-text-secondary);
+}
+.demo-note {
+  border-radius: var(--radius-control);
+  padding: 16px 20px;
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-surface);
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+.demo-note strong {
+  color: var(--color-text);
+}
+/* Layout de acceso; el registro tiene su propia grilla en registro.css. */
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: start;
+}
+.auth-story {
+  padding: 24px 0;
+}
+.auth-panel {
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 32px;
+  min-width: 0;
+}
+.auth-panel h2 {
+  font-size: 1.8rem;
+  letter-spacing: -0.04em;
+  margin: 12px 0;
+}
+.auth-panel .demo-note {
+  background: var(--color-background);
+}
+/* Campos compartidos por login y registro. Los colores de validación están en registro.css. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+.field label {
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+.field input,
+.field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 13px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-background);
+  color: var(--color-text);
+}
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 1;
+}
+.field textarea {
+  resize: vertical;
+}
+.field small {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+input::file-selector-button {
+  border-radius: var(--radius-control);
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 8px;
+  margin-right: 12px;
+  font: inherit;
+}
+/* Estado real de acciones futuras: el atributo disabled impide usarlas. */
+.button:disabled {
+  background: var(--color-secondary);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+.auth-panel form > .button {
+  width: 100%;
+}
+.auth-panel form {
+  margin-top: 28px;
+}
+.auth-switch {
+  font-size: 0.9rem;
+  margin-top: 24px;
+}
+.auth-switch a,
+.text-link {
+  text-underline-offset: 4px;
+  font-weight: bold;
+}
+.text-link {
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+/* Avatar de iniciales usado en las tarjetas y en la vista previa de publicación. */
+.avatar {
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: bold;
+  background: var(--color-secondary);
+  border: 1px solid var(--color-primary);
+}
+/* Adaptación móvil: baja a una columna y reduce el padding del panel. */
+@media (max-width: 760px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+@media (max-width: 480px) {
+  .auth-panel {
+    padding: 24px 18px;
+  }
+}

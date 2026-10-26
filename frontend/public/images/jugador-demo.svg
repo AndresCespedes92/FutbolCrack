@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 360">
+  <circle cx="160" cy="172" r="136" fill="none" stroke="#596B42"/>
+  <path d="m100 70-70 55 40 62 30-18v145h120V169l30 18 40-62-70-55-35 18h-50z" fill="#101310" stroke="#929990" stroke-width="2"/>
+  <path d="m130 76 30 27 30-27" fill="none" stroke="#F1F1E9" stroke-width="5"/>
+  <path d="M111 119h98v8h-98z" fill="#596B42"/>
+  <text x="160" y="240" text-anchor="middle" fill="#F1F1E9" font-family="Arial,sans-serif" font-size="105" font-weight="900">10</text>
+  <text x="160" y="281" text-anchor="middle" fill="#929990" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">RÍOS</text>
+</svg>

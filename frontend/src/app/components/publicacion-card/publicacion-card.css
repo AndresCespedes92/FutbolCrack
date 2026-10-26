@@ -1,0 +1,154 @@
+/* Tarjeta reutilizable para feed y perfil: su tamaño lo decide el contenedor padre. */
+:host {
+  display: block;
+  min-width: 0;
+}
+/* Superficie y esquinas; overflow evita que la imagen salga del borde redondeado. */
+.post {
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+/* Autor, avatar y etiqueta de demo. Los textos largos pueden ajustarse al ancho disponible. */
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 24px 0;
+}
+.post-header > div {
+  min-width: 0;
+}
+.post-header strong {
+  display: block;
+}
+.post-user {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+.post-header small {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+}
+.demo-tag {
+  border-radius: 8px;
+  margin-left: auto;
+  align-self: flex-start;
+  color: var(--color-text-secondary);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  border: 1px solid var(--color-border);
+  padding: 5px;
+}
+/* Título y mensaje: este padding controla el aire interior de la publicación. */
+.post-body {
+  padding: 22px 24px;
+}
+.post-body h2 {
+  margin: 0 0 12px;
+  font-size: 1.4rem;
+  letter-spacing: -0.03em;
+}
+.post-body p {
+  margin: 0;
+}
+.post-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-top: 1px solid var(--color-border);
+}
+/* Contadores estáticos; flex-wrap evita desbordes y no los presenta como botones. */
+.post-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 18px 24px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.8rem;
+}
+.post-footer small {
+  width: 100%;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+}
+/* Reducimos los márgenes interiores en celulares pequeños. */
+@media (max-width: 480px) {
+  .post-header {
+    padding: 18px 16px 0;
+  }
+  .post-body,
+  .post-footer {
+    padding: 18px 16px;
+  }
+}
+
+/* Tipo de contenido y datos de convocatoria, visibles cuando existe convocatoria en el objeto. */
+.post-type {
+  display: inline-block;
+  border-radius: var(--radius-control);
+  background: var(--color-secondary);
+  padding: 6px 10px;
+  font-size: 0.7rem;
+  margin-bottom: 14px;
+}
+.trial-type {
+  background: var(--color-primary);
+}
+.trial-details {
+  display: grid;
+  gap: 18px;
+  background: var(--color-background);
+  border-radius: var(--radius-control);
+  padding: 20px;
+  margin: 24px 0 16px;
+}
+.trial-details dt {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+.trial-details dd {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0;
+}
+.post-body .trial-note {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+/* Reserva visual del futuro video; no hay controles de reproducción ni archivo de video. */
+.video-demo {
+  min-height: 260px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  background: var(--color-secondary);
+  border-top: 1px solid var(--color-border);
+}
+.video-label {
+  letter-spacing: 0.12em;
+  font-size: 0.65rem;
+}
+.video-demo strong {
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+.video-caption {
+  font-size: 0.75rem;
+}
+.post-media {
+  margin: 0;
+}
+.post-media figcaption {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  padding: 12px 24px;
+}

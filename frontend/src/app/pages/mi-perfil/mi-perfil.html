@@ -1,9 +1,107 @@
-<section class="page-intro" aria-labelledby="titulo-mi-perfil">
-  <span class="eyebrow">FUTBOLCRACK / 04</span>
-  <h1 id="titulo-mi-perfil">Tu ficha de jugador</h1>
-  <p>Tu historia, tu camiseta y tu forma de jugar.</p>
+<span class="eyebrow">TU PERFIL / TU CV FUTBOLÍSTICO</span>
+<h1>Mi perfil</h1>
+<p class="demo-note">
+  <strong>CV de demostración.</strong> Mateo, los clubes y su trayectoria son ficticios. Esta
+  pantalla no representa una sesión iniciada. La edición del CV y la carga de material estarán
+  disponibles más adelante.
+</p>
+<section class="player-card" aria-labelledby="nombre-jugador">
+  <div class="player-art">
+    <img
+      src="images/jugador-demo.svg"
+      width="320"
+      height="360"
+      alt="Avatar ilustrado: camiseta número 10 de Mateo Ríos"
+    /><span>PERFIL DE JUGADOR / EJEMPLO</span>
+  </div>
+  <div class="player-info">
+    <span class="availability">En búsqueda de pruebas · Ejemplo</span>
+    <h2 id="nombre-jugador">
+      Mateo<br />Ríos<span class="player-number" aria-hidden="true">10</span>
+    </h2>
+    <p class="player-user">@mateo.10 · La Plata, Buenos Aires</p>
+    <p>
+      Mediocampista con perfil ofensivo. Me gusta recibir entre líneas, asociarme con pases cortos y
+      llegar al área. Busco una oportunidad para seguir creciendo y aportar al equipo.
+    </p>
+    <dl class="player-facts">
+      <div>
+        <dt>Posición principal</dt>
+        <dd>Mediocampista ofensivo</dd>
+      </div>
+      <div>
+        <dt>Posición alternativa</dt>
+        <dd>Interior derecho</dd>
+      </div>
+      <div>
+        <dt>Pierna hábil</dt>
+        <dd>Derecha</dd>
+      </div>
+      <div>
+        <dt>Categoría</dt>
+        <dd>Mayor</dd>
+      </div>
+      <div>
+        <dt>Club actual</dt>
+        <dd>Barrio Sur · Ficticio</dd>
+      </div>
+      <div>
+        <dt>Publicaciones</dt>
+        <dd>{{ publicaciones.length }} de ejemplo</dd>
+      </div>
+    </dl>
+  </div>
 </section>
-<section class="block-notice" aria-label="Estado de implementación">
-  <strong>Mi perfil · Estructura inicial</strong>
-  <p>Esta ruta ya está disponible. El contenido de esta pantalla se implementará en el bloque 2, después de su aprobación.</p>
+<!-- CV visual de ejemplo: editar este HTML cambia los datos que se presentan, sin persistencia. -->
+<div class="cv-layout">
+  <section class="cv-panel" aria-labelledby="titulo-trayectoria">
+    <span class="eyebrow">CV / RECORRIDO DEPORTIVO</span>
+    <h2 id="titulo-trayectoria">Trayectoria</h2>
+    <ol class="career-list">
+      <li>
+        <span class="career-date">2024 — Actualidad</span>
+        <h3>Club Barrio Sur</h3>
+        <p>Categoría mayor · Mediocampista</p>
+        <small>Participación en entrenamientos y competencia local. Trayectoria ficticia.</small>
+      </li>
+      <li>
+        <span class="career-date">2021 — 2023</span>
+        <h3>Escuela de fútbol Los Tilos</h3>
+        <p>Divisiones juveniles · Interior derecho</p>
+        <small>Formación técnica y táctica. Institución de ejemplo.</small>
+      </li>
+    </ol>
+  </section>
+  <section class="cv-panel" aria-labelledby="titulo-juego">
+    <span class="eyebrow">CV / PERFIL DE JUEGO</span>
+    <h2 id="titulo-juego">Lo que aporto</h2>
+    <ul class="skill-list">
+      <li>Pase entre líneas</li>
+      <li>Control orientado</li>
+      <li>Lectura de juego</li>
+      <li>Llegada al área</li>
+    </ul>
+    <p>Busco pruebas para equipos de categoría mayor en La Plata y alrededores.</p>
+    <p class="cv-caption">
+      Características y disponibilidad declaradas de ejemplo. Sin evaluaciones ni estadísticas
+      verificadas.
+    </p>
+  </section>
+</div>
+<!-- Las tarjetas reciben solo las publicaciones filtradas del jugador en mi-perfil.ts. -->
+<section class="player-posts" aria-labelledby="titulo-publicaciones">
+  <div class="section-heading">
+    <div>
+      <span class="eyebrow">MATERIAL DEL JUGADOR</span>
+      <h2 id="titulo-publicaciones">Mis jugadas y publicaciones</h2>
+    </div>
+    <span>CONTENIDO DE DEMOSTRACIÓN</span>
+  </div>
+  <p class="material-note">
+    El material acompaña al CV: jugadas en video, fotos de entrenamiento y comentarios sobre el
+    juego. En esta muestra hay una vista previa de video y una publicación de texto.
+  </p>
+  @for (publicacion of publicaciones; track publicacion.id) {
+    <app-publicacion-card [publicacion]="publicacion" />
+  }
 </section>

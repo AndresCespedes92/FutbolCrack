@@ -1,9 +1,58 @@
-<section class="page-intro" aria-labelledby="titulo-publicaciones">
-  <span class="eyebrow">FUTBOLCRACK / 03</span>
-  <h1 id="titulo-publicaciones">El juego nos conecta</h1>
-  <p>La comunidad se encuentra dentro y fuera de la cancha.</p>
-</section>
-<section class="block-notice" aria-label="Estado de implementación">
-  <strong>Publicaciones · Estructura inicial</strong>
-  <p>Esta ruta ya está disponible. El contenido de esta pantalla se implementará en el bloque 2, después de su aprobación.</p>
-</section>
+<header class="feed-heading">
+  <div>
+    <span class="eyebrow">MOSTRÁ TU JUEGO. ENCONTRÁ TU OPORTUNIDAD.</span>
+    <h1>Tu talento<br />en la cancha.</h1>
+    <p>Jugadas, entrenamientos y pruebas. Un lugar para que te vean jugar.</p>
+  </div>
+  <span class="edition">FC<br /><small>TALENTO EN JUEGO</small></span>
+</header>
+<p class="demo-note">
+  <strong>Contenido de demostración.</strong> Jugadores, club, publicaciones y convocatorias son
+  ficticios. Los videos son espacios de muestra y las fotos se representan con ilustraciones. No hay
+  interacción ni postulaciones disponibles.
+</p>
+<div class="feed-layout">
+  <section class="feed" aria-labelledby="titulo-feed">
+    <div class="section-heading">
+      <h2 id="titulo-feed">En el radar</h2>
+      <span>{{ publicaciones.length }} PUBLICACIONES DE EJEMPLO</span>
+    </div>
+    <div class="composer-preview">
+      <span class="avatar" aria-hidden="true">FC</span>
+      <div>
+        <strong>¿Qué tenés para mostrar?</strong>
+        <p>Jugadas, videos, fotos o una prueba de jugadores.</p>
+        <small>Publicar estará disponible más adelante.</small>
+      </div>
+      <button class="button" type="button" disabled>Publicar</button>
+    </div>
+    <!-- track usa una identidad estable; [publicacion] comunica datos del padre al hijo. -->
+    @for (publicacion of publicaciones; track publicacion.id) {
+      <app-publicacion-card [publicacion]="publicacion" />
+    }
+  </section>
+  <aside class="feed-aside" aria-label="Talento y oportunidades">
+    <section class="community-card">
+      <span class="eyebrow">TU PRÓXIMO PASO</span>
+      <h2>Tu juego puede<br />abrir una puerta.</h2>
+      <p>
+        Mostrá tus mejores jugadas y tu recorrido para que otros jugadores, clubes y buscadores de
+        talentos puedan conocerte.
+      </p>
+      <a class="button" routerLink="/registro">Conocé el registro</a>
+    </section>
+    <section class="profile-link">
+      <span class="eyebrow">CV DE JUGADOR / EJEMPLO</span>
+      <h2>Mateo Ríos <span>10</span></h2>
+      <p>Mediocampista · Diestro<br />La Plata · Categoría mayor</p>
+      <a class="text-link" routerLink="/mi-perfil">Explorar el CV de ejemplo →</a>
+    </section>
+    <section class="opportunity-note">
+      <span class="eyebrow">PRUEBAS DE JUGADORES</span>
+      <p>
+        Los clubes y quienes buscan talento también pueden compartir convocatorias desde su perfil.
+      </p>
+    </section>
+    <p class="aside-caption">UN PERFIL. TU RECORRIDO. TU PRÓXIMA OPORTUNIDAD.</p>
+  </aside>
+</div>

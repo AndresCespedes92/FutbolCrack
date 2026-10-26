@@ -1,0 +1,72 @@
+<article class="post" [attr.aria-labelledby]="'publicacion-' + publicacion.id">
+  <header class="post-header">
+    <span class="avatar" aria-hidden="true">{{ publicacion.iniciales }}</span>
+    <div>
+      <strong>{{ publicacion.autor }}</strong
+      ><span class="post-user">@{{ publicacion.usuario }}</span
+      ><small>{{ publicacion.contexto }}</small>
+    </div>
+    <span class="demo-tag">DEMO</span>
+  </header>
+  <div class="post-body">
+    <span class="post-type" [class.trial-type]="publicacion.convocatoria">{{
+      publicacion.tipo
+    }}</span>
+    <h2 [id]="'publicacion-' + publicacion.id">{{ publicacion.titulo }}</h2>
+    <p>{{ publicacion.mensaje }}</p>
+    <!-- @if diferencia el contenido de una prueba sin agregar otro tipo de cuenta. -->
+    @if (publicacion.convocatoria; as prueba) {
+      <dl class="trial-details">
+        <div>
+          <dt>Categoría y posiciones</dt>
+          <dd>{{ prueba.categoria }}</dd>
+        </div>
+        <div>
+          <dt>Dónde</dt>
+          <dd>{{ prueba.lugar }}</dd>
+        </div>
+        <div>
+          <dt>Cuándo</dt>
+          <dd>{{ prueba.fecha }}</dd>
+        </div>
+        <div>
+          <dt>Qué llevar</dt>
+          <dd>{{ prueba.requisitos }}</dd>
+        </div>
+      </dl>
+      <p class="trial-note">
+        Convocatoria ficticia. No hay inscripción ni postulación disponible en esta demo.
+      </p>
+    }
+  </div>
+  <!-- No mostramos un reproductor falso: esta pieza solo reserva el espacio del futuro video. -->
+  @if (publicacion.videoDemo) {
+    <div
+      class="video-demo"
+      role="note"
+      aria-label="Espacio para video de jugada, sin reproducción disponible"
+    >
+      <span class="video-label">VIDEO DE JUGADA / VISTA PREVIA</span>
+      <strong>Tu juego,<br />en primera persona.</strong>
+      <span class="video-caption">Espacio para video · Sin reproducción en esta demo</span>
+    </div>
+  }
+  @if (publicacion.imagen) {
+    <figure class="post-media">
+      <img
+        class="post-image"
+        [src]="publicacion.imagen"
+        [alt]="publicacion.imagenDescripcion || 'Imagen de la publicación de ejemplo'"
+        width="800"
+        height="400"
+        loading="lazy"
+      />
+      <figcaption>Espacio para fotos · Ilustración de demostración</figcaption>
+    </figure>
+  }
+  <footer class="post-footer">
+    <span>{{ publicacion.likes }} Me gusta</span>
+    <span>{{ publicacion.comentarios }} comentarios</span>
+    <small>Cifras de ejemplo · Sin interacción</small>
+  </footer>
+</article>
