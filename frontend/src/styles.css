@@ -1,1 +1,28 @@
-/* You can add global styles to this file, and also import other style files */
+/* Paleta compartida: las variables evitan repetir colores en cada componente. */
+:root {
+  color-scheme: dark;
+  --color-background: #101310;
+  --color-primary: #596B42;
+  --color-secondary: #34452F;
+  --color-surface: #242824;
+  --color-text-secondary: #929990;
+  --color-text: #F1F1E9;
+  --color-border: #424a40;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-text);
+  background: var(--color-background);
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: inherit; }
+button, input, textarea { font: inherit; }
+:focus-visible { outline: 3px solid var(--color-text); outline-offset: 4px; }
+h1 { margin: 12px 0 20px; font-size: clamp(2.5rem, 7vw, 5rem); text-transform: uppercase; letter-spacing: -.05em; line-height: 1; overflow-wrap: anywhere; }
+p { line-height: 1.65; }
+.eyebrow { color: var(--color-text-secondary); font-size: .75rem; font-weight: bold; letter-spacing: .16em; }
+.page-intro { border-left: 4px solid var(--color-primary); padding-left: 24px; max-width: 780px; }
+.block-notice { margin-top: 32px; padding: 24px; border: 1px solid var(--color-border); background: var(--color-surface); max-width: 780px; }
+.block-notice p { margin: 8px 0 0; color: var(--color-text-secondary); }
+.button { display: inline-block; background: var(--color-primary); color: var(--color-text); padding: 14px 22px; border: 1px solid var(--color-primary); border-radius: 2px; font-weight: bold; text-decoration: none; transition: background-color .15s; }
+.button:hover { background: var(--color-secondary); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
