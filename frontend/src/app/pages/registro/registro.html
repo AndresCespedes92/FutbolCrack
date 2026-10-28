@@ -14,7 +14,7 @@
     <!-- Cancelamos submit también con Enter: validar los datos no equivale a crear una cuenta. -->
     <form
       [formGroup]="registroForm"
-      (ngSubmit)="$event.preventDefault()"
+      (ngSubmit)="registrar()"
       aria-describedby="aviso-registro"
       novalidate
     >
@@ -242,8 +242,7 @@
             aria-describedby="ayuda-imagenPerfil estado-imagenPerfil"
           />
           <small id="ayuda-imagenPerfil"
-            >JPG, PNG o WebP, hasta 5 MB. La imagen se selecciona localmente; no se sube ni se
-            guarda.</small
+            >JPG, PNG o WebP, hasta 5 MB. La imagen se guardará al crear tu cuenta.</small
           >
           <small
             id="estado-imagenPerfil"
@@ -255,14 +254,26 @@
           >
         </div>
       </fieldset>
-      <p class="form-summary" role="status">
-        {{
-          registroForm.valid
-            ? 'Los datos cumplen las reglas locales. La creación de cuentas todavía no está disponible.'
-            : 'Completá los campos obligatorios y corregí los mensajes que aparezcan.'
-        }}
-      </p>
-      <button class="button" type="submit" disabled>Crear cuenta · Próximamente</button>
+      <p class="form-summary" role="status" aria-live="polite">
+  @if (mensajeExito) {
+    {{ mensajeExito }}
+  } @else if (mensajeError) {
+    {{ mensajeError }}
+  } @else if (enviando) {
+    Creando tu cuenta...
+  } @else if (registroForm.valid) {
+    Los datos están completos. Ya podés crear tu cuenta.
+  } @else {
+    Completá los campos obligatorios y corregí los mensajes que aparezcan.
+  }
+</p>
+      <button
+  class="button"
+  type="submit"
+  [disabled]="registroForm.invalid || enviando"
+>
+  {{ enviando ? 'Creando cuenta...' : 'Crear cuenta' }}
+</button>
     </form>
     <p class="auth-switch">¿Ya tenés cuenta? <a routerLink="/login">Ingresá</a></p>
   </section>
