@@ -81,4 +81,44 @@ export class AuthService {
       },
     );
   }
+
+  
+/**
+ * OBTENER USUARIO AUTENTICADO
+ *
+ * Consulta GET /auth/me.
+ *
+ * El navegador envía automáticamente la cookie HttpOnly.
+ * AuthGuard verifica el JWT en NestJS.
+ *
+ * Si el token venció, el backend responde 401.
+ */
+obtenerMiPerfil(): Observable<Usuario> {
+  return this.http.get<Usuario>(
+    `${this.apiUrl}/me`,
+    {
+      withCredentials: true,
+    },
+  );
+}
+
+
+/**
+ * CERRAR SESIÓN
+ *
+ * Solicita a NestJS eliminar la cookie HttpOnly.
+ * Angular no puede borrarla directamente porque
+ * está protegida contra acceso desde JavaScript.
+ */
+cerrarSesion(): Observable<{ mensaje: string }> {
+  return this.http.post<{ mensaje: string }>(
+    `${this.apiUrl}/logout`,
+    {},
+    {
+      withCredentials: true,
+    },
+  );
+}
+
+
 }

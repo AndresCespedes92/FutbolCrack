@@ -139,4 +139,34 @@ async obtenerMiPerfil(
 }
 
 
+/**
+ * POST /auth/logout
+ *
+ * Cierra la sesión eliminando la cookie JWT.
+ *
+ * El navegador deja de enviar el token
+ * en las próximas peticiones.
+ */
+@Post('logout')
+@HttpCode(HttpStatus.OK)
+cerrarSesion(
+  @Res({ passthrough: true }) respuesta: Response,
+) {
+  // Eliminamos la cookie con el mismo nombre y ruta.
+  respuesta.clearCookie('token', {
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production'
+      ? 'none'
+      : 'lax',
+  });
+
+  return {
+    mensaje: 'Sesión cerrada correctamente',
+  };
+}
+
+
+
 }
