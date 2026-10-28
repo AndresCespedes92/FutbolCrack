@@ -9,44 +9,33 @@
 //6. La API responderá sin incluir la contraseña ni su hash.
 
 
+
+
 import { Module } from '@nestjs/common';
 
-// Importamos el módulo que administra los usuarios.
 import { UsuariosModule } from '../usuarios/usuarios.module.js';
-
-// Controlador que recibirá las peticiones de registro y login.
-import { AuthController } from './auth.controller.js';
-
-// Servicio que implementará la lógica de autenticación.
-import { AuthService } from './auth.service.js';
-import { JwtModule } from '@nestjs/jwt';
-
-// Módulo que administra la subida de imágenes.
 import { CloudinaryModule } from '../cloudinary/cloudinary.module.js';
 
-@Module({
-  // AuthModule necesita utilizar UsuariosService.
-  // Por eso importa UsuariosModule, que ya lo exporta.
-  imports: [UsuariosModule,
+// Módulo compartido que configura JWT y AuthGuard.
+import { SeguridadModule } from './seguridad.module.js';
 
-    // Permite utilizar CloudinaryService.
+import { AuthController } from './auth.controller.js';
+import { AuthService } from './auth.service.js';
+
+@Module({
+  imports: [
+    // Permite consultar y crear usuarios en MongoDB.
+    UsuariosModule,
+
+    // Permite subir imágenes de perfil.
     CloudinaryModule,
-    
-    // Configuramos el servicio que genera los JWT.
-    // La clave secreta se obtiene de las variables de entorno.
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: {
-        expiresIn: '2s',
-      },
-    }),
-    ],
-  // Recibirá las solicitudes HTTP:
-  // POST /auth/registro
-  // POST /auth/login
+
+    // Proporciona JwtService y AuthGuard.
+    SeguridadModule,
+  ],
+
   controllers: [AuthController],
 
-  // Contendrá la lógica de registro y autenticación.
   providers: [AuthService],
 })
 export class AuthModule {}

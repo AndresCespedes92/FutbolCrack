@@ -7,6 +7,8 @@
 // Como el recepcionista del club: recibe la ficha del jugador y su fotografía,
 //  verifica que la foto tenga un formato permitido y después entrega todo al departamento de inscripciones..
 
+import { Res } from '@nestjs/common';
+import type { Response } from 'express';
 
 import {
   Controller,
@@ -71,17 +73,41 @@ export class AuthController {
     return this.authService.registrar(datos, imagen);
   }
 
-  /**
-   * POST /auth/login
-   *
-   * Recibe las credenciales y devuelve un JWT.
-   */
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  login(@Body() datos: LoginDto) {
-    return this.authService.login(
-      datos.identificador,
-      datos.password,
-    );
-  }
+  
+/**
+ * POST /auth/login
+ *
+ * Valida las credenciales y guarda el JWT
+ * en una cookie HttpOnly.
+ */
+@Post('login')
+@HttpCode(HttpStatus.OK)
+async login(
+  @Body() datos: LoginDto,
+  @Res({ passthrough: true }) respuesta: Response,
+) {
+  // AuthService comprueba las credenciales y genera el JWT.
+  const resultado = await this.authService.login(
+    datos.identificador,
+    datos.password,
+  );
+
+  // En producción, la cookie debe viajar por HTTPS.
+  const esProduccion = process.env.NODE_ENV === 'production';
+
+  // El navegador recibe el JWT mediante Set-Cookie.
+  respuesta.cookie('token', resultado.access_token, {
+    httpOnly: true,
+    secure: esProduccion,
+    sameSite: esProduccion ? 'none' : 'lax',
+    maxAge: 20 * 1000,
+    path: '/',
+  });
+
+  // Conservamos temporalmente access_token para que
+  // las pruebas existentes de Postman sigan funcionando.
+  // Lo retiraremos cuando completemos el flujo con cookies.
+  return resultado;
+}
+
 }

@@ -1,6 +1,8 @@
 
 import { Controller, Get } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service.js';
+import { UseGuards } from '@nestjs/common';
+import { AuthGuard } from '../auth/guards/auth.guard.js';
 
 /**
  * Controlador de usuarios de FutbolCrack.
@@ -35,8 +37,9 @@ export class UsuariosController {
    * Antes de publicar la aplicación debemos
    * protegerlo con JWT o limitar su acceso.
    */
+  @UseGuards(AuthGuard)
   @Get()
   findAll() {
-    return this.usuariosService.findAll();
-  }
+  return this.usuariosService.findAll();
+}
 }
