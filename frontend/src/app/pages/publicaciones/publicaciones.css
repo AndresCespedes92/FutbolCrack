@@ -1,21 +1,30 @@
-/* Feed: controla la disposición de publicaciones y lateral; la tarjeta tiene CSS propio. */
+
+/* =========================================
+   FUTBOLCRACK - PÁGINA PUBLICACIONES
+   ========================================= */
+
 :host {
   display: block;
 }
-/* Presentación de la pantalla y marca lateral de escritorio. */
+
+/* ENCABEZADO */
+
 .feed-heading {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 24px;
 }
+
 .feed-heading h1 {
   font-size: clamp(2.4rem, 5vw, 4.4rem);
   max-width: 700px;
 }
+
 .feed-heading p {
   color: var(--color-text-secondary);
 }
+
 .edition {
   font-weight: 900;
   font-size: 4rem;
@@ -23,6 +32,7 @@
   color: var(--color-primary);
   text-align: right;
 }
+
 .edition small {
   display: block;
   font-size: 0.55rem;
@@ -30,7 +40,9 @@
   margin-top: 12px;
   color: var(--color-text-secondary);
 }
-/* La primera columna prioriza las publicaciones; minmax evita que el contenido las desborde. */
+
+/* DISTRIBUCIÓN PRINCIPAL */
+
 .feed-layout {
   display: grid;
   grid-template-columns: minmax(0, 2.15fr) minmax(0, 1fr);
@@ -38,11 +50,13 @@
   margin-top: 36px;
   align-items: start;
 }
+
 .feed {
   display: grid;
   gap: 24px;
   min-width: 0;
 }
+
 .section-heading {
   display: flex;
   justify-content: space-between;
@@ -50,106 +64,349 @@
   flex-wrap: wrap;
   gap: 12px;
 }
+
 .section-heading h2 {
   margin: 0;
   font-size: 1.2rem;
 }
+
 .section-heading span {
   font-size: 0.6rem;
   letter-spacing: 0.08em;
   color: var(--color-text-secondary);
 }
-/* Vista previa para publicar: el HTML mantiene el botón deshabilitado. */
+
+/* =========================================
+   FORMULARIO PARA PUBLICAR
+   ========================================= */
+
 .composer-preview {
-  border-radius: var(--radius-card);
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 18px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 24px;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: #141a15;
+}
+
+/* Avatar circular: nunca debe estirarse */
+
+.composer-avatar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  flex: 0 0 46px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #627b4d;
+  background: #30442d;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Contenedor que ocupa el espacio restante */
+
+.composer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.composer-title {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.composer-textarea {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  box-sizing: border-box;
+  padding: 15px 16px;
+  border: 1px solid #40503c;
+  border-radius: 12px;
+  background: #1d251d;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+
+.composer-textarea::placeholder {
+  color: #919c8d;
+}
+
+.composer-textarea:focus {
+  border-color: #a0bb79;
+}
+
+.composer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 16px;
-  padding: 20px;
-  border: 1px dashed var(--color-border);
 }
-.composer-preview > div {
-  flex: 1;
-  min-width: 180px;
-}
-.composer-preview p {
-  font-size: 0.8rem;
+
+.composer-counter {
   color: var(--color-text-secondary);
-  margin: 6px 0 0;
+  font-size: 12px;
 }
-/* Paneles de contexto, CV y oportunidades: modificá padding y gap para ajustar su espacio. */
+
+.composer-submit {
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.composer-error {
+  color: #f0a4a4;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* =========================================
+   TARJETAS DE PUBLICACIONES
+   ========================================= */
+
+.feed-post {
+  min-width: 0;
+  overflow: hidden;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.post-avatar {
+  display: block;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #627b4d;
+}
+
+.post-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #30442d;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.post-author {
+  flex: 1;
+  min-width: 0;
+}
+
+.post-author h3 {
+  margin: 0 0 4px;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.post-author span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.post-date {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.post-body {
+  margin-top: 20px;
+}
+
+.post-body p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.post-image {
+  display: block;
+  width: 100%;
+  max-height: 480px;
+  margin-top: 18px;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.post-footer {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.post-footer span {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+/* MENSAJES DEL FEED */
+
+.feed-message {
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.feed-message p {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+/* =========================================
+   BARRA LATERAL
+   ========================================= */
+
 .feed-aside {
   display: grid;
   gap: 24px;
+  min-width: 0;
 }
+
 .community-card {
   border-radius: var(--radius-card);
   padding: 28px;
   background: var(--color-secondary);
   border-top: 4px solid var(--color-primary);
 }
+
 .community-card h2 {
   font-size: 1.9rem;
   letter-spacing: -0.04em;
 }
+
 .community-card p {
   font-size: 0.9rem;
 }
+
 .community-card .eyebrow {
   color: var(--color-text);
 }
+
 .profile-link {
   border-radius: var(--radius-card);
   border: 1px solid var(--color-border);
   padding: 24px;
 }
+
 .profile-link h2 {
   font-size: 1.25rem;
 }
+
 .profile-link h2 span {
   float: right;
   color: var(--color-text-secondary);
 }
+
 .profile-link p,
 .aside-caption {
   color: var(--color-text-secondary);
   font-size: 0.8rem;
 }
+
 .aside-caption {
   line-height: 1.9;
   letter-spacing: 0.06em;
 }
-/* A 850px el lateral pasa debajo; a 540px sus tarjetas también se apilan. */
-@media (max-width: 850px) {
-  .feed-layout {
-    grid-template-columns: 1fr;
-  }
-  .feed-aside {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .edition {
-    display: none;
-  }
-}
-@media (max-width: 540px) {
-  .feed-aside {
-    grid-template-columns: 1fr;
-  }
-}
 
-.composer-preview small {
-  display: block;
-  margin-top: 8px;
-  font-size: 0.7rem;
-  color: var(--color-text-secondary);
-}
 .opportunity-note {
   border-radius: var(--radius-card);
   padding: 24px;
   background: var(--color-surface);
 }
+
 .opportunity-note p {
   font-size: 0.85rem;
   margin-bottom: 0;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 850px) {
+  .feed-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .feed-aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .edition {
+    display: none;
+  }
+}
+
+@media (max-width: 540px) {
+  .feed-aside {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-preview {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .composer-avatar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    flex-basis: 38px;
+  }
+
+  .composer-footer {
+    flex-wrap: wrap;
+  }
+
+  .composer-submit {
+    margin-left: auto;
+  }
+
+  .feed-post {
+    padding: 18px;
+  }
+
+  .post-header {
+    flex-wrap: wrap;
+  }
+
+  .post-date {
+    margin-left: 62px;
+  }
 }

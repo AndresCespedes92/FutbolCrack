@@ -1,54 +1,245 @@
+
 <header class="feed-heading">
   <div>
-    <span class="eyebrow">MOSTRÁ TU JUEGO. ENCONTRÁ TU OPORTUNIDAD.</span>
+    <span class="eyebrow">
+      MOSTRÁ TU JUEGO. ENCONTRÁ TU OPORTUNIDAD.
+    </span>
+
     <h1>Tu talento<br />en la cancha.</h1>
-    <p>Jugadas, entrenamientos y pruebas. Un lugar para que te vean jugar.</p>
+
+    <p>
+      Jugadas, entrenamientos y pruebas.
+      Un lugar para que te vean jugar.
+    </p>
   </div>
-  <span class="edition">FC<br /><small>TALENTO EN JUEGO</small></span>
+
+  <span class="edition">
+    FC<br />
+    <small>TALENTO EN JUEGO</small>
+  </span>
 </header>
 
 <div class="feed-layout">
+
+  <!-- FEED PRINCIPAL -->
   <section class="feed" aria-labelledby="titulo-feed">
+
     <div class="section-heading">
       <h2 id="titulo-feed">En el radar</h2>
-      <span>{{ publicaciones.length }} PUBLICACIONES DE EJEMPLO</span>
+      <span>{{ publicaciones.length }} PUBLICACIONES</span>
     </div>
-    <div class="composer-preview">
-      <span class="avatar" aria-hidden="true">FC</span>
-      <div>
-        <strong>¿Qué tenés para mostrar?</strong>
-        <p>Jugadas, videos, fotos o una prueba de jugadores.</p>
-        <small>Publicar estará disponible más adelante.</small>
+
+    <!-- FORMULARIO DE PUBLICACIÓN -->
+    <form
+      class="composer-preview"
+      (ngSubmit)="publicar()"
+    >
+      <div class="composer-avatar" aria-hidden="true">
+        FC
       </div>
-      <button class="button" type="button" disabled>Publicar</button>
-    </div>
-    <!-- track usa una identidad estable; [publicacion] comunica datos del padre al hijo. -->
-    @for (publicacion of publicaciones; track publicacion.id) {
-      <app-publicacion-card [publicacion]="publicacion" />
+
+      <div class="composer-content">
+
+        <label
+          for="contenido-publicacion"
+          class="composer-title"
+        >
+          ¿Qué tenés para compartir crack?
+        </label>
+
+        <textarea
+          id="contenido-publicacion"
+          class="composer-textarea"
+          [formControl]="contenidoControl"
+          maxlength="2000"
+          rows="4"
+          placeholder="Compartí tu último entrenamiento, partido o una experiencia en la cancha..."
+        ></textarea>
+
+        <div class="composer-footer">
+          <span class="composer-counter">
+            {{ contenidoControl.value.length }} / 2000 caracteres
+          </span>
+
+          <button
+  class="button composer-submit"
+  type="button"
+  (click)="publicar()"
+  [disabled]="publicando"
+>
+  {{ publicando ? 'Publicando...' : 'Publicar' }}
+</button>
+        </div>
+
+        @if (contenidoControl.invalid && contenidoControl.touched) {
+          <p class="composer-error" role="alert">
+            Escribí una publicación válida de hasta 2000 caracteres.
+          </p>
+        }
+
+        @if (mensajePublicacion) {
+          <p class="composer-error" role="alert">
+            {{ mensajePublicacion }}
+          </p>
+        }
+
+      </div>
+    </form>
+
+    <!-- ESTADOS DEL FEED -->
+    @if (cargando) {
+      <p class="material-note">
+        Cargando publicaciones...
+      </p>
     }
+
+    @if (mensajeError) {
+      <div class="feed-message" role="alert">
+        <p>{{ mensajeError }}</p>
+
+        <button
+          class="button"
+          type="button"
+          (click)="cargarPublicaciones()"
+        >
+          Reintentar
+        </button>
+      </div>
+    }
+
+    @if (!cargando && !mensajeError && publicaciones.length === 0) {
+      <div class="feed-message">
+        <p>
+          Todavía no hay publicaciones.
+          ¡Sé el primero en mostrar tu talento!
+        </p>
+      </div>
+    }
+
+    <!-- PUBLICACIONES REALES DE MONGODB -->
+    @for (publicacion of publicaciones; track publicacion._id) {
+
+      <article class="feed-post">
+
+        <div class="post-header">
+
+          @if (publicacion.autorId?.imagenPerfil) {
+            <img
+              class="post-avatar"
+              [src]="publicacion.autorId!.imagenPerfil"
+              alt="Foto de perfil del autor"
+              loading="lazy"
+            />
+          } @else {
+            <div class="post-avatar post-avatar-fallback">
+              FC
+            </div>
+          }
+
+          <div class="post-author">
+
+            <h3>
+              @if (publicacion.autorId) {
+                {{ publicacion.autorId.nombre }}
+                {{ publicacion.autorId.apellido }}
+              } @else {
+                Usuario no disponible
+              }
+            </h3>
+
+            @if (publicacion.autorId) {
+              <span>
+                @{{ publicacion.autorId.nombreUsuario }}
+              </span>
+            }
+
+          </div>
+
+          <span class="post-date">
+            {{ publicacion.createdAt.slice(0, 10) }}
+          </span>
+
+        </div>
+
+        <div class="post-body">
+          <p>{{ publicacion.contenido }}</p>
+
+          @if (
+            publicacion.tipoMultimedia === 'imagen'
+            && publicacion.multimediaUrl
+          ) {
+            <img
+              class="post-image"
+              [src]="publicacion.multimediaUrl"
+              alt="Imagen compartida en la publicación"
+              loading="lazy"
+            />
+          }
+        </div>
+
+        <div class="post-footer">
+          <span>FUTBOLCRACK · TALENTO EN JUEGO</span>
+        </div>
+
+      </article>
+
+    }
+
   </section>
-  <aside class="feed-aside" aria-label="Talento y oportunidades">
+
+  <!-- BARRA LATERAL -->
+  <aside
+    class="feed-aside"
+    aria-label="Talento y oportunidades"
+  >
+
     <section class="community-card">
       <span class="eyebrow">TU PRÓXIMO PASO</span>
-      <h2>Tu juego puede<br />abrir una puerta.</h2>
+
+      <h2>
+        Tu juego puede<br />abrir una puerta.
+      </h2>
+
       <p>
-        Mostrá tus mejores jugadas y tu recorrido para que otros jugadores, clubes y buscadores de
-        talentos puedan conocerte.
+        Mostrá tus mejores jugadas y tu recorrido
+        para que otros jugadores, clubes y buscadores
+        de talentos puedan conocerte.
       </p>
-      <a class="button" routerLink="/registro">Conocé el registro</a>
+
+      <a class="button" routerLink="/registro">
+        Conocé el registro
+      </a>
     </section>
+
     <section class="profile-link">
-      <span class="eyebrow">CV DE JUGADOR / EJEMPLO</span>
-      <h2>Mateo Ríos <span>10</span></h2>
-      <p>Mediocampista · Diestro<br />La Plata · Categoría mayor</p>
-      <a class="text-link" routerLink="/mi-perfil">Explorar el CV →</a>
+      <span class="eyebrow">TU PERFIL FUTBOLÍSTICO</span>
+
+      <h2>Mostrá quién sos</h2>
+
+      <p>
+        Tu perfil reúne tu información personal
+        y tu recorrido como futbolista.
+      </p>
+
+      <a class="text-link" routerLink="/mi-perfil">
+        Ver mi perfil →
+      </a>
     </section>
+
     <section class="opportunity-note">
       <span class="eyebrow">PRUEBAS DE JUGADORES</span>
+
       <p>
-        Los clubes y quienes buscan talento también pueden compartir convocatorias desde su perfil.
+        Los clubes y quienes buscan talento
+        también pueden compartir convocatorias
+        desde su perfil.
       </p>
     </section>
-    <p class="aside-caption">UN PERFIL. TU RECORRIDO. TU PRÓXIMA OPORTUNIDAD.</p>
+
+    <p class="aside-caption">
+      UN PERFIL. TU RECORRIDO. TU PRÓXIMA OPORTUNIDAD.
+    </p>
+
   </aside>
+
 </div>
