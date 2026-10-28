@@ -34,14 +34,19 @@ export function crearFormularioRegistro() {
         ],
       }),
       clave: new FormControl('', {
-        nonNullable: true,
-        validators: [
-          Validators.required,
-          Validators.minLength(8),
-          Validators.maxLength(64),
-          Validators.pattern(/\S/),
-        ],
-      }),
+  nonNullable: true,
+  validators: [
+    Validators.required,
+    Validators.minLength(8),
+    Validators.maxLength(64),
+
+    // Debe contener al menos una letra mayúscula y un número.
+    // (?=.*[A-Z]) busca una mayúscula.
+    // (?=.*\d) busca un dígito.
+    // .+ permite el resto de los caracteres.
+    Validators.pattern(/^(?=.*[A-Z])(?=.*\d).+$/),
+  ],
+}),
       repetirClave: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       fechaNacimiento: new FormControl('', {
         nonNullable: true,

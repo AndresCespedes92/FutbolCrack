@@ -1,6 +1,6 @@
 
 import { NgClass } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { AbstractControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -17,6 +17,7 @@ import { AuthService } from '../../services/auth';
 })
 export class Registro {
   // Servicio encargado de comunicarse con NestJS.
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly authService = inject(AuthService);
 
   readonly registroForm = crearFormularioRegistro();
@@ -80,7 +81,7 @@ export class Registro {
         return 'Empezá con una letra o número. Usá letras sin acentos, números, puntos o guion bajo.';
 
       if (control === this.campos.clave)
-        return 'La contraseña no puede contener solamente espacios.';
+        return 'La contraseña debe contener al menos una mayúscula y un número.';
 
       return 'Usá letras; separá las palabras con un espacio, guion o apóstrofe.';
     }
@@ -152,6 +153,9 @@ export class Registro {
       next: (respuesta) => {
         this.mensajeExito = respuesta.mensaje;
         this.enviando = false;
+
+        // Notifica a Angular que debe actualizar la pantalla.
+        this.cdr.markForCheck();
       },
 
       error: (error: HttpErrorResponse) => {
@@ -170,6 +174,7 @@ export class Registro {
           this.mensajeError =
             'Ocurrió un error al crear la cuenta.';
         }
+        this.cdr.markForCheck();
       },
     });
   }
