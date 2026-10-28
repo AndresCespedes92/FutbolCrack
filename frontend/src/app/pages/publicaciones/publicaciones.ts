@@ -85,9 +85,6 @@ export class Publicaciones implements OnInit {
     ) {
       this.contenidoControl.markAsTouched();
 
-      this.mensajePublicacion =
-        'Escribí un mensaje antes de publicar.';
-
       return;
     }
 
