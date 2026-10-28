@@ -1,4 +1,5 @@
 
+
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -39,22 +40,17 @@ export interface CredencialesLogin {
 })
 export class AuthService {
 
-  // Inyección de dependencias con inject(),
-  // concepto que ya trabajamos en Angular.
+  // Inyectamos HttpClient para comunicarnos con NestJS.
   private readonly http = inject(HttpClient);
 
-  // Dirección de nuestro backend local.
-  // Más adelante la configuraremos por entorno
-  // para utilizar también el backend desplegado.
+  // Dirección del backend local.
   private readonly apiUrl = 'http://localhost:3000/auth';
 
   /**
    * REGISTRO
    *
-   * Recibe un FormData con los datos del usuario
-   * y una imagen opcional.
-   *
-   * HttpClient envía la solicitud al backend.
+   * Envía los datos del usuario mediante FormData.
+   * Puede incluir una imagen de perfil opcional.
    */
   registrar(datos: FormData): Observable<RespuestaRegistro> {
     return this.http.post<RespuestaRegistro>(
@@ -66,8 +62,13 @@ export class AuthService {
   /**
    * LOGIN
    *
-   * Envía el identificador y la contraseña.
-   * El backend responde con un JWT y los datos del usuario.
+   * Envía las credenciales al backend.
+   *
+   * withCredentials: true permite que el navegador
+   * reciba y envíe cookies en peticiones entre
+   * Angular (localhost:4200) y NestJS (localhost:3000).
+   *
+   * La cookie HttpOnly no puede leerse desde JavaScript.
    */
   login(
     credenciales: CredencialesLogin,
@@ -75,6 +76,9 @@ export class AuthService {
     return this.http.post<RespuestaLogin>(
       `${this.apiUrl}/login`,
       credenciales,
+      {
+        withCredentials: true,
+      },
     );
   }
 }

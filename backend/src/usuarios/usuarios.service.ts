@@ -174,6 +174,32 @@ async findByIdentificadorConPassword(
     }
   }
 
+  
+/**
+ * Busca un usuario mediante su ID de MongoDB.
+ *
+ * Se utilizará para obtener los datos del usuario
+ * autenticado a partir del campo "sub" del JWT.
+ *
+ * No devuelve passwordHash porque ese campo
+ * está excluido por defecto en el esquema.
+ */
+async findById(id: string): Promise<UsuarioDocument | null> {
+
+  // Verificamos que el ID tenga el formato correcto
+  // antes de realizar la consulta a MongoDB.
+  if (!this.usuarioModel.db.base.isValidObjectId(id)) {
+    return null;
+  }
+
+  // Buscamos únicamente al usuario identificado.
+  return this.usuarioModel
+    .findById(id)
+    .select('-passwordHash')
+    .exec();
+}
+
+
   /**
    * Devuelve todos los usuarios.
    *

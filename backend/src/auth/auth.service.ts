@@ -7,6 +7,7 @@ import {
   Injectable,
   BadRequestException,
   UnauthorizedException,
+  NotFoundException
 } from '@nestjs/common';
 
 import { JwtService } from '@nestjs/jwt';
@@ -143,4 +144,44 @@ export class AuthService {
       },
     };
   }
+
+  
+/**
+ * OBTENER MI PERFIL
+ *
+ * Recupera los datos del usuario autenticado.
+ *
+ * El ID proviene del campo "sub" del JWT,
+ * previamente validado por AuthGuard.
+ */
+async obtenerMiPerfil(usuarioId: string) {
+
+  // Consultamos MongoDB mediante UsuariosService.
+  const usuario = await this.usuariosService.findById(
+    usuarioId,
+  );
+
+  // Si el usuario fue eliminado o no existe,
+  // rechazamos la consulta.
+  if (!usuario) {
+    throw new NotFoundException(
+      'El usuario autenticado no existe',
+    );
+  }
+
+  // Devolvemos únicamente los datos permitidos.
+  // Nunca incluimos passwordHash.
+  return {
+    id: usuario._id.toString(),
+    nombre: usuario.nombre,
+    apellido: usuario.apellido,
+    correo: usuario.correo,
+    nombreUsuario: usuario.nombreUsuario,
+    fechaNacimiento: usuario.fechaNacimiento,
+    descripcion: usuario.descripcion,
+    imagenPerfil: usuario.imagenPerfil,
+    perfil: usuario.perfil,
+  };
+}
+
 }

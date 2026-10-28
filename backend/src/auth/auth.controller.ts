@@ -10,6 +10,9 @@
 import { Res } from '@nestjs/common';
 import type { Response } from 'express';
 
+import type { Request } from 'express';
+import { AuthGuard } from './guards/auth.guard.js';
+
 import {
   Controller,
   Post,
@@ -19,6 +22,9 @@ import {
   UploadedFile,
   UseInterceptors,
   ParseFilePipeBuilder,
+  Get,
+  Req,
+  UseGuards
 } from '@nestjs/common';
 
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -109,5 +115,28 @@ async login(
   // Lo retiraremos cuando completemos el flujo con cookies.
   return resultado;
 }
+
+
+/**
+ * GET /auth/me
+ *
+ * Devuelve los datos del usuario autenticado.
+ * AuthGuard verifica el JWT enviado por cookie o Bearer.
+ */
+@Get('me')
+@UseGuards(AuthGuard)
+async obtenerMiPerfil(
+  @Req() request: Request & {
+    user?: { sub: string; perfil: string };
+  },
+) {
+  // El Guard ya verificó el token y agregó su contenido
+  // a request.user.
+  const usuarioId = request.user!.sub;
+
+  // Consultamos MongoDB y devolvemos el perfil.
+  return this.authService.obtenerMiPerfil(usuarioId);
+}
+
 
 }
