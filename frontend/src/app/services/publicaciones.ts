@@ -46,7 +46,7 @@ export class PublicacionesService {
 
   // Backend local de FutbolCrack.
   private readonly apiUrl =
-    'http://localhost:3000/publicaciones';
+    'https://futbol-crackbackend.vercel.app/publicaciones';
 
   /**
    * GET /publicaciones

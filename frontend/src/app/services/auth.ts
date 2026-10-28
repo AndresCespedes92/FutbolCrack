@@ -44,7 +44,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
 
   // Dirección del backend local.
-  private readonly apiUrl = 'http://localhost:3000/auth';
+  private readonly apiUrl = 'https://futbol-crackbackend.vercel.app/auth';
 
   /**
    * REGISTRO
