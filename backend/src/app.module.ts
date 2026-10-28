@@ -4,10 +4,11 @@ import { UsuariosModule } from './usuarios/usuarios.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
 import { AuthModule } from './auth/auth.module.js';
+import { CloudinaryModule } from './cloudinary/cloudinary.module.js';
 
 
 @Module({
-  imports: [ConfigModule.forRoot(),MongooseModule.forRoot(process.env.CONNECTION_STRING!), UsuariosModule, AuthModule],
+  imports: [ConfigModule.forRoot(),MongooseModule.forRoot(process.env.CONNECTION_STRING!), UsuariosModule, AuthModule, CloudinaryModule],
   controllers: [AppController],
   providers: [],
 })
