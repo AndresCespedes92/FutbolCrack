@@ -76,6 +76,32 @@ export class UsuariosService {
       .exec();
   }
 
+  
+/**
+ * Busca un usuario por correo o nombre de usuario.
+ *
+ * Se utiliza exclusivamente para la autenticación.
+ * Incluimos passwordHash porque necesitamos verificar
+ * la contraseña ingresada mediante bcrypt.
+ */
+async findByIdentificadorConPassword(
+  identificador: string,
+): Promise<UsuarioDocument | null> {
+
+  const valor = identificador.trim();
+
+  return this.usuarioModel
+    .findOne({
+      $or: [
+        { correo: valor.toLowerCase() },
+        { nombreUsuario: valor },
+      ],
+    })
+    .select('+passwordHash')
+    .exec();
+}
+
+
   /**
    * Busca un usuario por nombre de usuario.
    */

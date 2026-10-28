@@ -19,12 +19,22 @@ import { AuthController } from './auth.controller.js';
 
 // Servicio que implementará la lógica de autenticación.
 import { AuthService } from './auth.service.js';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   // AuthModule necesita utilizar UsuariosService.
   // Por eso importa UsuariosModule, que ya lo exporta.
-  imports: [UsuariosModule],
-
+  imports: [UsuariosModule,
+    
+    // Configuramos el servicio que genera los JWT.
+    // La clave secreta se obtiene de las variables de entorno.
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: {
+        expiresIn: '2s',
+      },
+    }),
+    ],
   // Recibirá las solicitudes HTTP:
   // POST /auth/registro
   // POST /auth/login
