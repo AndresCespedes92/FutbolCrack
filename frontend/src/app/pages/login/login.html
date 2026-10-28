@@ -1,44 +1,131 @@
+
 <div class="auth-layout">
   <section class="auth-story" aria-labelledby="titulo-login">
     <span class="eyebrow">MOSTRÁ TU TALENTO</span>
     <h1 id="titulo-login">Que tu juego<br />se vea.</h1>
     <p>Compartí tus jugadas.<br />Conectá con tu próxima oportunidad.</p>
+
     <div class="pitch" aria-hidden="true">
-      <span class="pitch-circle"></span><span class="pitch-box"></span>
+      <span class="pitch-circle"></span>
+      <span class="pitch-box"></span>
     </div>
-    <span class="story-caption">TU JUEGO. TU RECORRIDO. TU OPORTUNIDAD.</span>
+
+    <span class="story-caption">
+      TU JUEGO. TU RECORRIDO. TU OPORTUNIDAD.
+    </span>
   </section>
 
   <section class="auth-panel" aria-labelledby="titulo-formulario">
     <span class="eyebrow">FUTBOLCRACK / ACCESO</span>
     <h2 id="titulo-formulario">Volvé al juego</h2>
     <p class="muted">Jugadores, clubes y talento por descubrir.</p>
-    
-    <!-- El submit también se cancela al presionar Enter: no hay sesión ni petición a una API. -->
-    <form (submit)="$event.preventDefault()" aria-describedby="aviso-login">
+
+    <!-- Conectamos el HTML con el FormGroup de login.ts. -->
+    <form
+      [formGroup]="loginForm"
+      (ngSubmit)="iniciarSesion()"
+      aria-describedby="aviso-login"
+      novalidate
+    >
       <div class="field">
-        <label for="identificador">Usuario o correo electrónico</label>
+        <label for="identificador">
+          Usuario o correo electrónico
+        </label>
+
+        <!-- Este control se vincula con loginForm.identificador. -->
         <input
           id="identificador"
           name="identificador"
+          formControlName="identificador"
           type="text"
           autocomplete="username"
           placeholder="Tu usuario o correo"
+          required
+          [attr.aria-invalid]="
+            loginForm.controls.identificador.invalid &&
+            loginForm.controls.identificador.touched
+          "
+          aria-describedby="error-identificador"
         />
+
+        @if (
+          loginForm.controls.identificador.invalid &&
+          loginForm.controls.identificador.touched
+        ) {
+          <small
+            id="error-identificador"
+            class="field-error"
+            role="alert"
+          >
+            Ingresá tu usuario o correo electrónico.
+          </small>
+        }
       </div>
+
       <div class="field">
         <label for="clave-login">Contraseña</label>
+
+        <!-- El backend espera que esta propiedad se llame password. -->
         <input
           id="clave-login"
-          name="clave"
+          name="password"
+          formControlName="password"
           type="password"
           autocomplete="current-password"
           placeholder="Tu contraseña"
+          required
+          [attr.aria-invalid]="
+            loginForm.controls.password.invalid &&
+            loginForm.controls.password.touched
+          "
+          aria-describedby="error-password"
         />
+
+        @if (
+          loginForm.controls.password.invalid &&
+          loginForm.controls.password.touched
+        ) {
+          <small
+            id="error-password"
+            class="field-error"
+            role="alert"
+          >
+            Ingresá tu contraseña.
+          </small>
+        }
       </div>
-      <button class="button" type="submit" disabled>Ingresar · Próximamente</button>
+
+      <!-- Mensajes que se actualizan cuando responde NestJS. -->
+      <p
+        id="aviso-login"
+        class="form-summary"
+        role="status"
+        aria-live="polite"
+      >
+        @if (enviando) {
+          Cargando...
+        } @else if (mensajeError) {
+          {{ mensajeError }}
+        } @else if (mensajeExito) {
+          {{ mensajeExito }}
+        }
+      </p>
+
+      <!-- Se deshabilita si el formulario es inválido o está enviando. -->
+      <button
+        class="button"
+        type="submit"
+        [disabled]="loginForm.invalid || enviando"
+      >
+        {{ enviando ? 'Ingresando...' : 'Ingresar' }}
+      </button>
     </form>
-    <p class="auth-switch">¿Todavía no tenés perfil? <a routerLink="/registro">Registrate</a></p>
-    <a class="text-link" routerLink="/publicaciones">Explorar publicaciones de ejemplo →</a>
+
+    <p class="auth-switch">
+      ¿Todavía no tenés perfil?
+      <a routerLink="/registro">Registrate</a>
+    </p>
+
+    
   </section>
 </div>
