@@ -3,8 +3,9 @@
 //AuthController recibe la petición HTTP.
 //CreateUsuarioDto valida los datos recibidos.
 //AuthService procesa el registro y genera el hash.
-//UsuariosService guarda el usuario en MongoDB.
-
+//UsuariosService guarda el usuario en MongoDB
+// Como el recepcionista del club: recibe la ficha del jugador y su fotografía,
+//  verifica que la foto tenga un formato permitido y después entrega todo al departamento de inscripciones..
 
 
 import {
@@ -13,7 +14,13 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  UploadedFile,
+  UseInterceptors,
+  ParseFilePipeBuilder,
 } from '@nestjs/common';
+
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 import { AuthService } from './auth.service.js';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto.js';
@@ -27,16 +34,46 @@ export class AuthController {
 
   /**
    * POST /auth/registro
-   * Registra un nuevo usuario.
-   * Devuelve HTTP 201 si se creó correctamente.
+   *
+   * Recibe los datos del usuario y una foto opcional.
+   * El formulario debe enviarse como multipart/form-data.
    */
   @Post('registro')
-  registrar(@Body() datos: CreateUsuarioDto) {
-    return this.authService.registrar(datos);
+  @UseInterceptors(
+    FileInterceptor('imagen', {
+      // Guardamos temporalmente la imagen en memoria.
+      storage: memoryStorage(),
+
+      // Limitamos el tamaño máximo a 5 MB.
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+    }),
+  )
+  registrar(
+    @Body() datos: CreateUsuarioDto,
+
+    // Valida la imagen antes de entregarla al servicio.
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: /^(image\/jpeg|image\/png|image\/webp)$/,
+        })
+        .addMaxSizeValidator({
+          maxSize: 5 * 1024 * 1024,
+        })
+        .build({
+          fileIsRequired: false,
+        }),
+    )
+    imagen?: Express.Multer.File,
+  ) {
+    return this.authService.registrar(datos, imagen);
   }
 
   /**
    * POST /auth/login
+   *
    * Recibe las credenciales y devuelve un JWT.
    */
   @Post('login')

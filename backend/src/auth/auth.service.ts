@@ -1,4 +1,6 @@
 //	Ejecuta las reglas de inscripción
+// Valida las contraseñas y genera el hash.
+
 
 
 import {
@@ -12,24 +14,58 @@ import * as bcrypt from 'bcrypt';
 
 import { UsuariosService } from '../usuarios/usuarios.service.js';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto.js';
+import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
+
+// Representa el contenido de la imagen recibida.
+// Es compatible con el archivo en memoria de Multer.
+interface ArchivoImagen {
+  buffer: Buffer;
+}
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usuariosService: UsuariosService,
-
-    // NestJS inyecta el servicio para generar JWT.
     private readonly jwtService: JwtService,
+
+    // NestJS inyecta el servicio de Cloudinary.
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  // REGISTRO: mantenemos la funcionalidad existente.
-  async registrar(datos: CreateUsuarioDto) {
+  /**
+   * REGISTRO DE USUARIOS
+   *
+   * Recibe los datos del formulario y una foto opcional.
+   * La contraseña se almacena como hash.
+   * La imagen se almacena en Cloudinary.
+   */
+  async registrar(
+    datos: CreateUsuarioDto,
+    imagen?: ArchivoImagen,
+  ) {
+    // 1. Validamos que ambas contraseñas coincidan.
     if (datos.password !== datos.repetirPassword) {
-      throw new BadRequestException('Las contraseñas no coinciden');
+      throw new BadRequestException(
+        'Las contraseñas no coinciden',
+      );
     }
 
-    const passwordHash = await bcrypt.hash(datos.password, 12);
+    // 2. Generamos el hash de la contraseña.
+    const passwordHash = await bcrypt.hash(
+      datos.password,
+      12,
+    );
 
+    // 3. Si recibimos una imagen, la subimos a Cloudinary.
+    // Si no hay imagen, guardamos una cadena vacía.
+    let imagenPerfil = '';
+
+    if (imagen) {
+      imagenPerfil =
+        await this.cloudinaryService.subirImagen(imagen);
+    }
+
+    // 4. Guardamos el usuario en MongoDB.
     const usuario = await this.usuariosService.create({
       nombre: datos.nombre,
       apellido: datos.apellido,
@@ -38,8 +74,10 @@ export class AuthService {
       passwordHash,
       fechaNacimiento: new Date(datos.fechaNacimiento),
       descripcion: datos.descripcion,
+      imagenPerfil,
     });
 
+    // 5. Respondemos sin incluir passwordHash.
     return {
       mensaje: 'Usuario registrado correctamente',
       usuario: {
@@ -56,36 +94,40 @@ export class AuthService {
     };
   }
 
-  // LOGIN: verifica credenciales y genera un JWT.
+  /**
+   * LOGIN DE USUARIOS
+   *
+   * Busca al usuario, verifica su contraseña
+   * y devuelve un JWT.
+   */
   async login(identificador: string, password: string) {
-    // 1. Buscamos por correo o nombre de usuario.
     const usuario =
       await this.usuariosService.findByIdentificadorConPassword(
         identificador,
       );
 
-    // 2. Si no existe, rechazamos el acceso.
     if (!usuario) {
-      throw new UnauthorizedException('Credenciales incorrectas');
+      throw new UnauthorizedException(
+        'Credenciales incorrectas',
+      );
     }
 
-    // 3. Comparamos la contraseña con el hash almacenado.
     const passwordValida = await bcrypt.compare(
       password,
       usuario.passwordHash,
     );
 
     if (!passwordValida) {
-      throw new UnauthorizedException('Credenciales incorrectas');
+      throw new UnauthorizedException(
+        'Credenciales incorrectas',
+      );
     }
 
-    // 4. Generamos el token con el identificador del usuario.
     const token = await this.jwtService.signAsync({
       sub: usuario._id.toString(),
       perfil: usuario.perfil,
     });
 
-    // 5. Devolvemos el token y los datos públicos del usuario.
     return {
       access_token: token,
       usuario: {

@@ -21,10 +21,16 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { JwtModule } from '@nestjs/jwt';
 
+// Módulo que administra la subida de imágenes.
+import { CloudinaryModule } from '../cloudinary/cloudinary.module.js';
+
 @Module({
   // AuthModule necesita utilizar UsuariosService.
   // Por eso importa UsuariosModule, que ya lo exporta.
   imports: [UsuariosModule,
+
+    // Permite utilizar CloudinaryService.
+    CloudinaryModule,
     
     // Configuramos el servicio que genera los JWT.
     // La clave secreta se obtiene de las variables de entorno.
