@@ -1,105 +1,179 @@
+
 <span class="eyebrow">TU PERFIL / TU CV FUTBOLÍSTICO</span>
-<h1>Mi perfil</h1>
-<p class="demo-note">
-  <strong></strong> 
-</p>
-<section class="player-card" aria-labelledby="nombre-jugador">
-  <div class="player-art">
-    <img
-      src="images/jugador-demo.svg"
-      width="320"
-      height="360"
-      alt="Avatar ilustrado: camiseta número 10 de Mateo Ríos"
-    /><span>PERFIL DE JUGADOR / EJEMPLO</span>
-  </div>
-  <div class="player-info">
-    <span class="availability">En búsqueda de pruebas</span>
-    <h2 id="nombre-jugador">
-      Mateo<br />Ríos<span class="player-number" aria-hidden="true">10</span>
-    </h2>
-    <p class="player-user">@mateo.10 · La Plata, Buenos Aires</p>
-    <p>
-      Mediocampista con perfil ofensivo. Me gusta recibir entre líneas, asociarme con pases cortos y
-      llegar al área. Busco una oportunidad para seguir creciendo y aportar al equipo.
-    </p>
-    <dl class="player-facts">
-      <div>
-        <dt>Posición principal</dt>
-        <dd>Mediocampista ofensivo</dd>
-      </div>
-      <div>
-        <dt>Posición alternativa</dt>
-        <dd>Interior derecho</dd>
-      </div>
-      <div>
-        <dt>Pierna hábil</dt>
-        <dd>Derecha</dd>
-      </div>
-      <div>
-        <dt>Categoría</dt>
-        <dd>Mayor</dd>
-      </div>
-      <div>
-        <dt>Club actual</dt>
-        <dd>Barrio Sur · Ficticio</dd>
-      </div>
-      <div>
-        <dt>Publicaciones</dt>
-        <dd>{{ publicaciones.length }} de ejemplo</dd>
-      </div>
-    </dl>
-  </div>
-</section>
-<!-- CV visual de ejemplo: editar este HTML cambia los datos que se presentan, sin persistencia. -->
-<div class="cv-layout">
-  <section class="cv-panel" aria-labelledby="titulo-trayectoria">
-    <span class="eyebrow">CV / RECORRIDO DEPORTIVO</span>
-    <h2 id="titulo-trayectoria">Trayectoria</h2>
-    <ol class="career-list">
-      <li>
-        <span class="career-date">2024 — Actualidad</span>
-        <h3>Club Barrio Sur</h3>
-        <p>Categoría mayor · Mediocampista</p>
-        <small>Participación en entrenamientos y competencia local. Trayectoria ficticia.</small>
-      </li>
-      <li>
-        <span class="career-date">2021 — 2023</span>
-        <h3>Escuela de fútbol Los Tilos</h3>
-        <p>Divisiones juveniles · Interior derecho</p>
-        <small>Formación técnica y táctica. Institución de ejemplo.</small>
-      </li>
-    </ol>
-  </section>
-  <section class="cv-panel" aria-labelledby="titulo-juego">
-    <span class="eyebrow">CV / PERFIL DE JUEGO</span>
-    <h2 id="titulo-juego">Lo que aporto</h2>
-    <ul class="skill-list">
-      <li>Pase entre líneas</li>
-      <li>Control orientado</li>
-      <li>Lectura de juego</li>
-      <li>Llegada al área</li>
-    </ul>
-    <p>Busco pruebas para equipos de categoría mayor en La Plata y alrededores.</p>
-    <p class="cv-caption">
-      Características y disponibilidad declaradas de ejemplo. Sin evaluaciones ni estadísticas
-      verificadas.
-    </p>
-  </section>
-</div>
-<!-- Las tarjetas reciben solo las publicaciones filtradas del jugador en mi-perfil.ts. -->
-<section class="player-posts" aria-labelledby="titulo-publicaciones">
-  <div class="section-heading">
-    <div>
-      <span class="eyebrow">MATERIAL DEL JUGADOR</span>
-      <h2 id="titulo-publicaciones">Mis jugadas y publicaciones</h2>
-    </div>
-    <span>CONTENIDO DE DEMOSTRACIÓN</span>
-  </div>
-  <p class="material-note">
-    El material acompaña al CV: jugadas en video, fotos de entrenamiento y comentarios sobre el
-    juego. En esta muestra hay una vista previa de video y una publicación de texto.
-  </p>
-  @for (publicacion of publicaciones; track publicacion.id) {
-    <app-publicacion-card [publicacion]="publicacion" />
+
+<div class="section-heading">
+  <h1>Mi perfil</h1>
+
+  @if (usuario) {
+    <button
+      type="button"
+      (click)="cerrarSesion()"
+      [disabled]="cerrandoSesion"
+    >
+      {{ cerrandoSesion ? 'Cerrando sesión...' : 'Cerrar sesión' }}
+    </button>
   }
-</section>
+</div>
+
+@if (cargando) {
+  <p class="demo-note">Cargando tu perfil...</p>
+}
+
+@if (mensajeError) {
+  <p class="demo-note" role="alert">
+    {{ mensajeError }}
+  </p>
+
+  <button type="button" (click)="cargarMiPerfil()">
+    Reintentar
+  </button>
+}
+
+@if (usuario; as jugador) {
+
+  <!-- Datos reales del usuario autenticado -->
+  <section
+    class="player-card"
+    aria-labelledby="nombre-jugador"
+  >
+
+    <div class="player-art">
+
+      @if (jugador.imagenPerfil) {
+        <img
+          [src]="jugador.imagenPerfil"
+          [alt]="'Foto de perfil de ' + jugador.nombre"
+          width="320"
+          height="360"
+        />
+      } @else {
+        <img
+          src="images/jugador-demo.svg"
+          alt="Avatar predeterminado de FutbolCrack"
+          width="320"
+          height="360"
+        />
+      }
+
+      <span>PERFIL DE JUGADOR</span>
+    </div>
+
+    <div class="player-info">
+
+      <span class="availability">
+        Futbolista registrado
+      </span>
+
+      <h2 id="nombre-jugador">
+        {{ jugador.nombre }}
+        {{ jugador.apellido }}
+      </h2>
+
+      <p class="player-user">
+        @{{ jugador.nombreUsuario }}
+      </p>
+
+      <p>
+        {{ jugador.descripcion || 'Todavía no agregaste una descripción.' }}
+      </p>
+
+      <dl class="player-facts">
+
+        <div>
+          <dt>Nombre</dt>
+          <dd>{{ jugador.nombre }} {{ jugador.apellido }}</dd>
+        </div>
+
+        <div>
+          <dt>Nombre de usuario</dt>
+          <dd>@{{ jugador.nombreUsuario }}</dd>
+        </div>
+
+        <div>
+          <dt>Correo electrónico</dt>
+          <dd>{{ jugador.correo }}</dd>
+        </div>
+
+        <div>
+          <dt>Fecha de nacimiento</dt>
+          <dd>{{ jugador.fechaNacimiento.slice(0, 10) }}</dd>
+        </div>
+
+        <div>
+          <dt>Tipo de perfil</dt>
+          <dd>{{ jugador.perfil }}</dd>
+        </div>
+
+      </dl>
+    </div>
+  </section>
+
+  <!-- Información de ejemplo hasta implementar el CV deportivo -->
+  <div class="cv-layout">
+
+    <section
+      class="cv-panel"
+      aria-labelledby="titulo-trayectoria"
+    >
+      <span class="eyebrow">CV / RECORRIDO DEPORTIVO</span>
+
+      <h2 id="titulo-trayectoria">Trayectoria</h2>
+
+      <p>
+        Próximamente podrás registrar los clubes,
+        categorías y equipos en los que jugaste.
+      </p>
+
+      <p class="cv-caption">
+        Esta información todavía no está disponible
+        en el perfil registrado.
+      </p>
+    </section>
+
+    <section
+      class="cv-panel"
+      aria-labelledby="titulo-juego"
+    >
+      <span class="eyebrow">CV / PERFIL DE JUEGO</span>
+
+      <h2 id="titulo-juego">Lo que aporto</h2>
+
+      <p>
+        {{ jugador.descripcion || 'Agregá una descripción de tu juego.' }}
+      </p>
+
+      <p class="cv-caption">
+        Las posiciones, clubes y estadísticas deportivas
+        se incorporarán en próximas funcionalidades.
+      </p>
+    </section>
+
+  </div>
+
+  <!-- Publicaciones ficticias: aún no asociadas al usuario real -->
+  <section
+    class="player-posts"
+    aria-labelledby="titulo-publicaciones"
+  >
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">MATERIAL DEL JUGADOR</span>
+        <h2 id="titulo-publicaciones">
+          Mis jugadas y publicaciones
+        </h2>
+      </div>
+
+      <span>CONTENIDO DE DEMOSTRACIÓN</span>
+    </div>
+
+    <p class="material-note">
+      Estas publicaciones son ejemplos visuales.
+      Todavía no están asociadas a tu cuenta.
+    </p>
+
+    @for (publicacion of publicaciones; track publicacion.id) {
+      <app-publicacion-card [publicacion]="publicacion" />
+    }
+
+  </section>
+}

@@ -6,15 +6,23 @@
 
 
 
-import { Component, ChangeDetectorRef, inject } from '@angular/core';
+
+import {
+  Component,
+  ChangeDetectorRef,
+  inject,
+} from '@angular/core';
+
 import { HttpErrorResponse } from '@angular/common/http';
+
 import {
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+
+import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../services/auth';
 
@@ -25,14 +33,17 @@ import { AuthService } from '../../services/auth';
   styleUrl: './login.css',
 })
 export class Login {
-  // Inyección de dependencias:
-  // AuthService realiza las peticiones al backend.
+
+  // Servicio que comunica Angular con NestJS.
   private readonly authService = inject(AuthService);
 
-  // Permite actualizar la vista cuando responde HTTP.
+  // Router permite navegar entre las pantallas Angular.
+  private readonly router = inject(Router);
+
+  // Actualiza la vista después de las respuestas HTTP.
   private readonly cdr = inject(ChangeDetectorRef);
 
-  // Formulario reactivo con sus validaciones.
+  // Formulario reactivo con validaciones obligatorias.
   readonly loginForm = new FormGroup({
     identificador: new FormControl('', {
       nonNullable: true,
@@ -45,13 +56,18 @@ export class Login {
     }),
   });
 
-  // Estados visuales del formulario.
+  // Estados del formulario.
   enviando = false;
   mensajeError = '';
   mensajeExito = '';
 
   /**
-   * Envía las credenciales al backend NestJS.
+   * INICIAR SESIÓN
+   *
+   * 1. Valida el formulario.
+   * 2. Envía las credenciales a NestJS.
+   * 3. NestJS devuelve la cookie HttpOnly.
+   * 4. Angular navega a Publicaciones.
    */
   iniciarSesion(): void {
     this.mensajeError = '';
@@ -60,7 +76,7 @@ export class Login {
     // Evitamos solicitudes duplicadas.
     if (this.enviando) return;
 
-    // Si faltan campos, marcamos los controles.
+    // Comprobamos los campos obligatorios.
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;
@@ -68,21 +84,33 @@ export class Login {
 
     this.enviando = true;
 
-    // getRawValue() obtiene los valores del formulario.
     const credenciales = this.loginForm.getRawValue();
 
     this.authService.login(credenciales).subscribe({
-      next: (respuesta) => {
-        this.enviando = false;
+      next: () => {
 
-        // Por ahora comprobamos que la autenticación funcione.
-        // En el siguiente paso implementaremos el manejo
-        // de la sesión y la navegación.
-        this.mensajeExito =
-          `Bienvenido, ${respuesta.usuario.nombre}. Sesión iniciada correctamente.`;
+        // No guardamos el JWT en localStorage.
+        // El navegador administra la cookie HttpOnly.
 
-        // Nunca mostramos el JWT en pantalla ni en consola.
-        this.cdr.markForCheck();
+        // Navegamos a la pantalla de publicaciones.
+        // Ajustaremos la ruta si app.routes.ts
+        // utiliza un nombre diferente.
+        void this.router.navigate(['/publicaciones'])
+          .then((navegacionExitosa) => {
+            this.enviando = false;
+
+            if (!navegacionExitosa) {
+              this.mensajeError =
+                'La sesión se inició, pero no se pudo abrir Publicaciones.';
+              this.cdr.markForCheck();
+            }
+          })
+          .catch(() => {
+            this.enviando = false;
+            this.mensajeError =
+              'La sesión se inició, pero ocurrió un error al navegar.';
+            this.cdr.markForCheck();
+          });
       },
 
       error: (error: HttpErrorResponse) => {
