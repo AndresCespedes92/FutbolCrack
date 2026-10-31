@@ -410,3 +410,8 @@
     margin-left: 62px;
   }
 }
+
+/* Reutiliza la superficie del textarea para título/archivo sin cambiar la estética del feed. */
+.composer-input { min-height: 0; resize: none; }
+.composer-textarea:focus-visible { outline: 3px solid var(--color-text); outline-offset: 3px; }
+.post-body h2 { font-size: 1.2rem; margin: 0 0 12px; overflow-wrap: anywhere; }

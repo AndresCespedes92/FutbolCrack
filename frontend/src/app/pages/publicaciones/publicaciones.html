@@ -1,16 +1,10 @@
-
 <header class="feed-heading">
   <div>
-    <span class="eyebrow">
-      MOSTRÁ TU JUEGO. ENCONTRÁ TU OPORTUNIDAD.
-    </span>
+    <span class="eyebrow"> MOSTRÁ TU JUEGO. ENCONTRÁ TU OPORTUNIDAD. </span>
 
     <h1>Tu talento<br />en la cancha.</h1>
 
-    <p>
-      Jugadas, entrenamientos y pruebas.
-      Un lugar para que te vean jugar.
-    </p>
+    <p>Jugadas, entrenamientos y pruebas. Un lugar para que te vean jugar.</p>
   </div>
 
   <span class="edition">
@@ -20,109 +14,106 @@
 </header>
 
 <div class="feed-layout">
-
   <!-- FEED PRINCIPAL -->
   <section class="feed" aria-labelledby="titulo-feed">
-
     <div class="section-heading">
       <h2 id="titulo-feed">En el radar</h2>
       <span>{{ publicaciones.length }} PUBLICACIONES</span>
     </div>
 
-    <!-- FORMULARIO DE PUBLICACIÓN -->
-    <form
-      class="composer-preview"
-      (ngSubmit)="publicar()"
-    >
-      <div class="composer-avatar" aria-hidden="true">
-        FC
-      </div>
-
+    <!-- La creación nueva usa FormData. No hay botón de baja hasta implementar el modal de 3C. -->
+    <form class="composer-preview" [formGroup]="publicacionForm" (ngSubmit)="publicar()" novalidate>
+      <div class="composer-avatar" aria-hidden="true">FC</div>
       <div class="composer-content">
-
-        <label
-          for="contenido-publicacion"
-          class="composer-title"
-        >
-          ¿Qué tenés para compartir crack?
-        </label>
-
+        <label for="titulo-publicacion" class="composer-title">Título de la publicación</label>
+        <input
+          id="titulo-publicacion"
+          class="composer-textarea composer-input"
+          formControlName="titulo"
+          maxlength="120"
+          placeholder="Por ejemplo: Entrenamiento de definición"
+          required
+          aria-describedby="error-titulo-publicacion"
+          [attr.aria-invalid]="campos.titulo.invalid && campos.titulo.touched"
+        />
+        @if (campos.titulo.invalid && campos.titulo.touched) {
+          <small id="error-titulo-publicacion" class="composer-error"
+            >Ingresá un título de 1 a 120 caracteres, no solo espacios.</small
+          >
+        }
+        <label for="descripcion-publicacion" class="composer-title">Descripción</label>
         <textarea
-          id="contenido-publicacion"
+          id="descripcion-publicacion"
           class="composer-textarea"
-          [formControl]="contenidoControl"
+          formControlName="descripcion"
           maxlength="2000"
           rows="4"
-          placeholder="Compartí tu último entrenamiento, partido o una experiencia en la cancha..."
+          placeholder="Compartí tu entrenamiento, partido o experiencia en la cancha…"
+          required
+          aria-describedby="error-descripcion-publicacion"
+          [attr.aria-invalid]="campos.descripcion.invalid && campos.descripcion.touched"
         ></textarea>
-
+        @if (campos.descripcion.invalid && campos.descripcion.touched) {
+          <small id="error-descripcion-publicacion" class="composer-error"
+            >Ingresá una descripción de 1 a 2000 caracteres, no solo espacios.</small
+          >
+        }
+        <label for="imagen-publicacion">Imagen (opcional)</label>
+        <input
+          #imagenPublicacion
+          id="imagen-publicacion"
+          class="composer-textarea composer-input"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          (change)="seleccionarImagen($event)"
+          aria-describedby="ayuda-imagen-publicacion error-imagen-publicacion"
+        />
+        <small id="ayuda-imagen-publicacion">JPEG, PNG o WebP, hasta 5 MB.</small>
+        @if (campos.imagen.invalid && campos.imagen.touched) {
+          <small id="error-imagen-publicacion" class="composer-error"
+            >Elegí una imagen JPEG, PNG o WebP de hasta 5 MB.</small
+          >
+        }
         <div class="composer-footer">
-          <span class="composer-counter">
-            {{ contenidoControl.value.length }} / 2000 caracteres
-          </span>
-
-          <button
-  class="button composer-submit"
-  type="button"
-  (click)="publicar()"
-  [disabled]="publicando"
->
-  {{ publicando ? 'Publicando...' : 'Publicar' }}
-</button>
+          <span class="composer-counter"
+            >{{ campos.descripcion.value.length }} / 2000 caracteres</span
+          >
+          <button class="button composer-submit" type="submit" [disabled]="publicando">
+            {{ publicando ? 'Publicando...' : 'Publicar' }}
+          </button>
         </div>
-
-        @if (contenidoControl.invalid && contenidoControl.touched) {
-          <p class="composer-error" role="alert">
-            Escribí una publicación válida de hasta 2000 caracteres.
-          </p>
-        }
-
         @if (mensajePublicacion) {
-          <p class="composer-error" role="alert">
-            {{ mensajePublicacion }}
-          </p>
+          <p class="composer-error" role="alert">{{ mensajePublicacion }}</p>
         }
-
+        @if (mensajeExito) {
+          <p role="status">{{ mensajeExito }}</p>
+        }
       </div>
     </form>
 
     <!-- ESTADOS DEL FEED -->
     @if (cargando) {
-      <p class="material-note">
-        Cargando publicaciones...
-      </p>
+      <p class="material-note">Cargando publicaciones...</p>
     }
 
     @if (mensajeError) {
       <div class="feed-message" role="alert">
         <p>{{ mensajeError }}</p>
 
-        <button
-          class="button"
-          type="button"
-          (click)="cargarPublicaciones()"
-        >
-          Reintentar
-        </button>
+        <button class="button" type="button" (click)="cargarPublicaciones()">Reintentar</button>
       </div>
     }
 
     @if (!cargando && !mensajeError && publicaciones.length === 0) {
       <div class="feed-message">
-        <p>
-          Todavía no hay publicaciones.
-          ¡Sé el primero en mostrar tu talento!
-        </p>
+        <p>Todavía no hay publicaciones. ¡Sé el primero en mostrar tu talento!</p>
       </div>
     }
 
     <!-- PUBLICACIONES REALES DE MONGODB -->
     @for (publicacion of publicaciones; track publicacion._id) {
-
       <article class="feed-post">
-
         <div class="post-header">
-
           @if (publicacion.autorId?.imagenPerfil) {
             <img
               class="post-avatar"
@@ -131,13 +122,10 @@
               loading="lazy"
             />
           } @else {
-            <div class="post-avatar post-avatar-fallback">
-              FC
-            </div>
+            <div class="post-avatar post-avatar-fallback">FC</div>
           }
 
           <div class="post-author">
-
             <h3>
               @if (publicacion.autorId) {
                 {{ publicacion.autorId.nombre }}
@@ -148,26 +136,21 @@
             </h3>
 
             @if (publicacion.autorId) {
-              <span>
-                @{{ publicacion.autorId.nombreUsuario }}
-              </span>
+              <span> @{{ publicacion.autorId.nombreUsuario }} </span>
             }
-
           </div>
 
           <span class="post-date">
             {{ publicacion.createdAt.slice(0, 10) }}
           </span>
-
         </div>
 
         <div class="post-body">
-          <p>{{ publicacion.contenido }}</p>
+          <!-- Los fallbacks también toleran un backend/documento anterior durante la transición. -->
+          <h2>{{ publicacion.titulo || 'Publicación anterior' }}</h2>
+          <p>{{ publicacion.descripcion ?? publicacion.contenido }}</p>
 
-          @if (
-            publicacion.tipoMultimedia === 'imagen'
-            && publicacion.multimediaUrl
-          ) {
+          @if (publicacion.tipoMultimedia === 'imagen' && publicacion.multimediaUrl) {
             <img
               class="post-image"
               [src]="publicacion.multimediaUrl"
@@ -180,35 +163,23 @@
         <div class="post-footer">
           <span>FUTBOLCRACK · TALENTO EN JUEGO</span>
         </div>
-
       </article>
-
     }
-
   </section>
 
   <!-- BARRA LATERAL -->
-  <aside
-    class="feed-aside"
-    aria-label="Talento y oportunidades"
-  >
-
+  <aside class="feed-aside" aria-label="Talento y oportunidades">
     <section class="community-card">
       <span class="eyebrow">TU PRÓXIMO PASO</span>
 
-      <h2>
-        Tu juego puede<br />abrir una puerta.
-      </h2>
+      <h2>Tu juego puede<br />abrir una puerta.</h2>
 
       <p>
-        Mostrá tus mejores jugadas y tu recorrido
-        para que otros jugadores, clubes y buscadores
-        de talentos puedan conocerte.
+        Mostrá tus mejores jugadas y tu recorrido para que otros jugadores, clubes y buscadores de
+        talentos puedan conocerte.
       </p>
 
-      <a class="button" routerLink="/registro">
-        Conocé el registro
-      </a>
+      <a class="button" routerLink="/registro"> Conocé el registro </a>
     </section>
 
     <section class="profile-link">
@@ -216,30 +187,19 @@
 
       <h2>Mostrá quién sos</h2>
 
-      <p>
-        Tu perfil reúne tu información personal
-        y tu recorrido como futbolista.
-      </p>
+      <p>Tu perfil reúne tu información personal y tu recorrido como futbolista.</p>
 
-      <a class="text-link" routerLink="/mi-perfil">
-        Ver mi perfil →
-      </a>
+      <a class="text-link" routerLink="/mi-perfil"> Ver mi perfil → </a>
     </section>
 
     <section class="opportunity-note">
       <span class="eyebrow">PRUEBAS DE JUGADORES</span>
 
       <p>
-        Los clubes y quienes buscan talento
-        también pueden compartir convocatorias
-        desde su perfil.
+        Los clubes y quienes buscan talento también pueden compartir convocatorias desde su perfil.
       </p>
     </section>
 
-    <p class="aside-caption">
-      UN PERFIL. TU RECORRIDO. TU PRÓXIMA OPORTUNIDAD.
-    </p>
-
+    <p class="aside-caption">UN PERFIL. TU RECORRIDO. TU PRÓXIMA OPORTUNIDAD.</p>
   </aside>
-
 </div>

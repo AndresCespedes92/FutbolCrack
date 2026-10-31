@@ -4,7 +4,7 @@
 
 Usuario declara perfil con enum `usuario` o `administrador` y valor por defecto usuario. UsuariosService.create fuerza `perfil: 'usuario'`; CreateUsuarioDto no acepta un perfil enviado desde el registro público. El JWT incluye perfil, pero AuthGuard solo verifica firma/expiración.
 
-GET `/usuarios` usa AuthGuard y AdministradorGuard. Este último consulta el rol actual en MongoDB y exige administrador. UsuariosService.findAll aplica una selección positiva sin credenciales; no tiene paginación. No hay todavía pantalla de administración, alta administrativa, cambio de estado o endpoint de baja de publicaciones.
+GET `/usuarios` usa AuthGuard y AdministradorGuard. Este último consulta el rol actual en MongoDB y exige administrador. UsuariosService.findAll aplica una selección positiva sin credenciales; no tiene paginación. No hay todavía pantalla de administración, alta administrativa, cambio de estado de usuarios. La baja lógica de publicaciones existe en backend desde 3A, sin interfaz todavía.
 
 No hay campo habilitado/activo en Usuario, ni método para establecerlo. UpdateUsuarioDto existe como PartialType de registro, pero no hay un PATCH de usuarios que lo consuma. Su presencia no demuestra edición implementada.
 
@@ -54,3 +54,9 @@ Conceptos: autorización por rol, privilegio mínimo, proyección de respuesta, 
 El socio común puede publicar pero no obtener el padrón completo. El secretario que figura hoy como administrador sí puede consultarlo; un carnet viejo no conserva ese permiso si la ficha cambió. Esto se aplica en Nest y no depende de botones Angular. UsuariosModule registra el guard reutilizando su servicio y SeguridadModule, sin módulos nuevos ni cambios al registro público.
 
 Los datos de prueba y el modelo/servicio de persistencia se simulan. No se inspeccionaron ni cambiaron roles reales de Atlas y no se implementó habilitar/deshabilitar: el modelo aún no tiene ese estado. El dashboard de Sprint 4 sigue parcial aunque el permiso de este endpoint ya esté protegido.
+
+## Actualización 3A — Baja administrativa de publicaciones
+
+PublicacionesService.darDeBaja comparte una sola operación para autor o administrador actual; reutiliza UsuariosService.findById sin modificar el registro público ni AuthGuard. DELETE /publicaciones/:id responde 403 a un tercero y 404 a una publicación ausente/ya retirada; aplica updateOne activo false, no borrado físico. La prueba permite un administrador actual aunque el claim de rol de su JWT sea viejo, y rechaza el caso inverso.
+
+Es como retirar de la cartelera del club un parte que el administrador puede gestionar, conservándolo en el archivo. El botón/modal y la vista administrativa siguen pendientes: no se agregó baja desde Angular en 3A.

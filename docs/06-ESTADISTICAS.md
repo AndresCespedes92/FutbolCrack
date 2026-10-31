@@ -10,11 +10,11 @@ Como en un club, la comisión necesita saber cuántos socios se incorporaron y q
 
 ## Tres propuestas con modelos existentes
 
-| Reporte propuesto                                 | Endpoint propuesto, no existente                      | Consulta MongoDB propuesta                                         | Gráfico | Datos disponibles / faltantes                                                                                                             |
-| ------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Altas de usuarios por día                         | GET `/estadisticas/usuarios?desde=...&hasta=...`      | match createdAt, group por día, sum 1, sort por día                | Líneas  | Usuario.createdAt por timestamps; no hay endpoint ni validación de rol.                                                                   |
-| Publicaciones creadas por día                     | GET `/estadisticas/publicaciones?desde=...&hasta=...` | match createdAt y política de visibles, group por día, sum 1, sort | Barras  | Publicacion.createdAt; el estado de baja todavía no existe.                                                                               |
-| Distribución de publicaciones por tipo multimedia | GET `/estadisticas/multimedia?desde=...&hasta=...`    | match createdAt y visibles, group por tipoMultimedia, sum 1        | Dona    | tipoMultimedia existe; el flujo de creación actual siempre guarda ninguno. No simular otras categorías con datos ficticios de producción. |
+| Reporte propuesto                                 | Endpoint propuesto, no existente                      | Consulta MongoDB propuesta                                         | Gráfico | Datos disponibles / faltantes                                                                                                                                        |
+| ------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Altas de usuarios por día                         | GET `/estadisticas/usuarios?desde=...&hasta=...`      | match createdAt, group por día, sum 1, sort por día                | Líneas  | Usuario.createdAt por timestamps; no hay endpoint ni validación de rol.                                                                                              |
+| Publicaciones creadas por día                     | GET `/estadisticas/publicaciones?desde=...&hasta=...` | match createdAt y política de visibles, group por día, sum 1, sort | Barras  | Publicacion.createdAt; el estado de baja todavía no existe.                                                                                                          |
+| Distribución de publicaciones por tipo multimedia | GET `/estadisticas/multimedia?desde=...&hasta=...`    | match createdAt y visibles, group por tipoMultimedia, sum 1        | Dona    | tipoMultimedia existe; desde 3A la creación puede guardar imagen o ninguno; el reporte aún no existe. No simular otras categorías con datos ficticios de producción. |
 
 Reutilizar modelos y módulos existentes; la necesidad de un módulo EstadisticasModule depende del enunciado oficial. Se puede separar la responsabilidad de consulta sin duplicar usuarios/publicaciones o agregar módulos funcionales por costumbre.
 
@@ -76,3 +76,7 @@ Agregar una acción Actualizar, o un cambio controlado al terminar de editar amb
 - Verificar que los tres gráficos tienen tipos distintos y una tabla o texto equivalente para lectura accesible.
 
 Conceptos: agregación, match/group/sum/sort, instantes UTC frente a fecha de calendario, validación cruzada, autorización, asincronía y visualización. Las consultas anteriores son propuestas y no se ejecutaron contra Atlas.
+
+## Datos disponibles desde 3A
+
+Publicacion ahora incluye activo, titulo y descripcion y puede guardar imágenes reales mediante Cloudinary; los reportes continúan pendientes. Las consultas de contenido visible deberán excluir activo false e incluir documentos antiguos sin activo. La política de medir altas históricas o solo visibles deberá definirse por reporte, sin dar de baja la historia al construir un gráfico.
