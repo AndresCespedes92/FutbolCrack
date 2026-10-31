@@ -201,14 +201,16 @@ async findById(id: string): Promise<UsuarioDocument | null> {
 
 
   /**
-   * Devuelve todos los usuarios.
-   *
-   * El campo passwordHash tiene select:false
-   * en el esquema, por lo que no se incluye
-   * en esta consulta.
+   * Devuelve el padrón para el endpoint restringido a administradores.
+   * La selección positiva permite solo los campos previstos: ni passwordHash
+   * ni eventuales campos de credenciales nuevos se agregan a la respuesta.
+   * Conservamos también select:false del esquema como defensa adicional.
    */
   async findAll(): Promise<Usuario[]> {
-    return this.usuarioModel.find().exec();
+    return this.usuarioModel
+      .find()
+      .select('nombre apellido correo nombreUsuario fechaNacimiento descripcion imagenPerfil perfil createdAt updatedAt')
+      .exec();
   }
 }
 

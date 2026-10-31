@@ -3,6 +3,7 @@ import { Controller, Get } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service.js';
 import { UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
+import { AdministradorGuard } from './guards/administrador.guard.js';
 
 /**
  * Controlador de usuarios de FutbolCrack.
@@ -32,14 +33,12 @@ export class UsuariosController {
    * Solicita al servicio todos los usuarios
    * registrados en MongoDB.
    *
-   * IMPORTANTE:
-   * Este endpoint es temporal para desarrollo.
-   * Antes de publicar la aplicación debemos
-   * protegerlo con JWT o limitar su acceso.
+   * Primero se verifica la sesión; luego el rol actual en MongoDB.
+   * Un socio autenticado no tiene permiso para consultar todo el padrón.
    */
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, AdministradorGuard)
   @Get()
   findAll() {
-  return this.usuariosService.findAll();
-}
+    return this.usuariosService.findAll();
+  }
 }
