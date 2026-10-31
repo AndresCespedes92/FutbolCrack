@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import type { PipelineStage } from 'mongoose';
+import { ListarPublicacionesDto } from './dto/listar-publicaciones.dto.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 import { UsuariosService } from '../usuarios/usuarios.service.js';
 import { Publicacion } from './entities/publicacion.entity.js';
@@ -62,23 +65,133 @@ export class PublicacionesService {
     return nueva.save();
   }
 
-  async listar() {
-    // $ne:false incluye documentos antiguos sin activo; no hace falta una migración destructiva.
-    const publicaciones = await this.publicacionModel
-      .find({ activo: { $ne: false } })
-      .populate('autorId', 'nombre apellido nombreUsuario imagenPerfil')
-      .sort({ createdAt: -1 })
-      .limit(50)
+  async listar(
+    consulta: ListarPublicacionesDto = new ListarPublicacionesDto(),
+    usuarioAutenticadoId?: string,
+  ) {
+    const { orden, usuarioId, offset, limit } = consulta;
+    const filtro: { activo: { $ne: false }; autorId?: Types.ObjectId } = {
+      activo: { $ne: false },
+    };
+    if (usuarioId) filtro.autorId = new Types.ObjectId(usuarioId);
+    const ordenamiento: Record<string, 1 | -1> =
+      orden === 'likes'
+        ? { cantidadLikes: -1, createdAt: -1, _id: -1 }
+        : { createdAt: -1, _id: -1 };
+    const identidad =
+      usuarioAutenticadoId && Types.ObjectId.isValid(usuarioAutenticadoId)
+        ? new Types.ObjectId(usuarioAutenticadoId)
+        : null;
+    // Una sola fuente de verdad: contamos el array, sin contador persistido que pueda desincronizarse.
+    // $match precede a $facet: total y página se calculan con los mismos filtros de estado/autor.
+    const pipeline: PipelineStage[] = [
+      { $match: filtro },
+      {
+        $set: {
+          cantidadLikes: { $size: { $ifNull: ['$likes', []] } },
+          meGusta: identidad
+            ? { $in: [identidad, { $ifNull: ['$likes', []] }] }
+            : false,
+        },
+      },
+      {
+        $facet: {
+          publicaciones: [
+            { $sort: ordenamiento },
+            { $skip: offset },
+            { $limit: limit },
+            // La lectura pública no expone los IDs de quienes votaron.
+            { $project: { likes: 0 } },
+          ],
+          conteo: [{ $count: 'total' }],
+        },
+      },
+    ];
+    const [resultado] = await this.publicacionModel
+      .aggregate<{
+        publicaciones: (Partial<Publicacion> & {
+          cantidadLikes: number;
+          meGusta: boolean;
+        })[];
+        conteo: { total: number }[];
+      }>(pipeline)
+      .exec();
+    const pagina = resultado?.publicaciones ?? [];
+    // populate solo resuelve autores de esta página y usa la referencia del modelo, no un nombre de colección fijo.
+    const publicaciones = await this.publicacionModel.populate(pagina, {
+      path: 'autorId',
+      select: 'nombre apellido nombreUsuario imagenPerfil',
+    });
+    const total = resultado?.conteo[0]?.total ?? 0;
+    return {
+      publicaciones: publicaciones.map((publicacion) => ({
+        ...publicacion,
+        titulo: publicacion.titulo || 'Publicación anterior',
+        descripcion: publicacion.descripcion ?? publicacion.contenido ?? '',
+        contenido: publicacion.descripcion ?? publicacion.contenido ?? '',
+        activo: publicacion.activo ?? true,
+      })),
+      total,
+      offset,
+      limit,
+      hayMas: offset + pagina.length < total,
+    };
+  }
+
+  darMeGusta(id: string, usuarioId: string) {
+    return this.cambiarMeGusta(id, usuarioId, true);
+  }
+  quitarMeGusta(id: string, usuarioId: string) {
+    return this.cambiarMeGusta(id, usuarioId, false);
+  }
+
+  private async cambiarMeGusta(
+    id: string,
+    usuarioId: string,
+    agregar: boolean,
+  ) {
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException(
+        'El identificador de publicación no es válido',
+      );
+    if (
+      !Types.ObjectId.isValid(usuarioId) ||
+      !(await this.usuariosService.findById(usuarioId))
+    ) {
+      throw new UnauthorizedException('El usuario autenticado no existe');
+    }
+    const actor = new Types.ObjectId(usuarioId);
+    const base = { _id: new Types.ObjectId(id), activo: { $ne: false } };
+    // El filtro y la modificación se ejecutan en una única operación del documento:
+    // dos pedidos simultáneos del mismo socio no pueden sumar dos votos.
+    const publicacion = await this.publicacionModel
+      .findOneAndUpdate(
+        { ...base, likes: agregar ? { $ne: actor } : actor },
+        agregar ? { $addToSet: { likes: actor } } : { $pull: { likes: actor } },
+        { new: true },
+      )
+      .select('likes')
       .lean()
       .exec();
-    // Normalización solo de respuesta: no escribe títulos inventados ni renombra datos en MongoDB.
-    return publicaciones.map((publicacion) => ({
-      ...publicacion,
-      titulo: publicacion.titulo || 'Publicación anterior',
-      descripcion: publicacion.descripcion ?? publicacion.contenido ?? '',
-      contenido: publicacion.descripcion ?? publicacion.contenido ?? '',
-      activo: publicacion.activo ?? true,
-    }));
+    if (!publicacion) {
+      const existe = await this.publicacionModel.findOne(base).exec();
+      if (!existe)
+        throw new NotFoundException(
+          'La publicación no existe o está dada de baja',
+        );
+      throw new ConflictException(
+        agregar
+          ? 'Ya diste me gusta a esta publicación'
+          : 'No tenés un me gusta para quitar en esta publicación',
+      );
+    }
+    return {
+      mensaje: agregar
+        ? 'Me gusta registrado correctamente'
+        : 'Me gusta quitado correctamente',
+      cantidadLikes: publicacion.likes?.length ?? 0,
+      meGusta: agregar,
+    };
   }
 
   async darDeBaja(id: string, usuarioId: string) {

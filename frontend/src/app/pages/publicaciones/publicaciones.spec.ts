@@ -8,6 +8,13 @@ describe('Formulario y feed de publicaciones 3A', () => {
   let fixture: ComponentFixture<Publicaciones>;
   let http: HttpTestingController;
   const url = 'https://futbol-crackbackend.vercel.app/publicaciones';
+  const pagina = (publicaciones: unknown[]) => ({
+    publicaciones,
+    total: publicaciones.length,
+    offset: 0,
+    limit: 10,
+    hayMas: false,
+  });
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Publicaciones],
@@ -16,7 +23,10 @@ describe('Formulario y feed de publicaciones 3A', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(Publicaciones);
     fixture.detectChanges();
-    http.expectOne(url).flush([]);
+    http
+      .expectOne('https://futbol-crackbackend.vercel.app/auth/me')
+      .flush({}, { status: 401, statusText: 'Unauthorized' });
+    http.expectOne((req) => req.url === url).flush(pagina([]));
     await fixture.whenStable();
   });
   afterEach(() => http.verify());
@@ -34,7 +44,7 @@ describe('Formulario y feed de publicaciones 3A', () => {
       .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     fixture.detectChanges();
   }
-  it('muestra título, descripción e imagen y no presenta acciones de baja', () => {
+  it('muestra título, descripción e imagen y no presenta bajas sin publicaciones ni sesión', () => {
     expect(fixture.nativeElement.querySelector('#titulo-publicacion')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#descripcion-publicacion')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#imagen-publicacion').accept).toBe(
@@ -50,7 +60,7 @@ describe('Formulario y feed de publicaciones 3A', () => {
     Object.defineProperty(selector, 'files', { value: { item: () => archivo } });
     selector.dispatchEvent(new Event('change'));
     enviar();
-    const solicitud = http.expectOne(url);
+    const solicitud = http.expectOne((req) => req.url === url);
     expect(solicitud.request.method).toBe('POST');
     expect(solicitud.request.withCredentials).toBe(true);
     expect(solicitud.request.body).toBeInstanceOf(FormData);
@@ -62,9 +72,9 @@ describe('Formulario y feed de publicaciones 3A', () => {
     expect(datos.get('contenido')).toBeNull();
     expect(fixture.componentInstance.publicando).toBe(true);
     enviar();
-    http.expectNone(url);
+    http.expectNone((req) => req.url === url);
     solicitud.flush({ _id: 'nuevo' });
-    http.expectOne(url).flush([]);
+    http.expectOne((req) => req.url === url).flush(pagina([]));
     fixture.detectChanges();
     expect(fixture.componentInstance.publicacionForm.value).toEqual({
       titulo: '',
@@ -77,10 +87,10 @@ describe('Formulario y feed de publicaciones 3A', () => {
   it('permite crear sin imagen', () => {
     completar();
     enviar();
-    const solicitud = http.expectOne(url);
+    const solicitud = http.expectOne((req) => req.url === url);
     expect((solicitud.request.body as FormData).get('imagen')).toBeNull();
     solicitud.flush({ _id: 'nuevo' });
-    http.expectOne(url).flush([]);
+    http.expectOne((req) => req.url === url).flush(pagina([]));
     expect(fixture.componentInstance.publicando).toBe(false);
   });
   it.each([
@@ -91,7 +101,7 @@ describe('Formulario y feed de publicaciones 3A', () => {
   ])('no envía textos inválidos: %j', (datos) => {
     fixture.componentInstance.publicacionForm.patchValue(datos);
     enviar();
-    http.expectNone(url);
+    http.expectNone((req) => req.url === url);
     expect(fixture.nativeElement.textContent).toContain('Revisá el título');
   });
   it('rechaza imagen de tipo no admitido o superior a 5 MiB', () => {
@@ -102,7 +112,7 @@ describe('Formulario y feed de publicaciones 3A', () => {
     ]) {
       fixture.componentInstance.campos.imagen.setValue(archivo);
       enviar();
-      http.expectNone(url);
+      http.expectNone((req) => req.url === url);
       expect(fixture.componentInstance.campos.imagen.invalid).toBe(true);
     }
   });
@@ -111,14 +121,16 @@ describe('Formulario y feed de publicaciones 3A', () => {
     (estado) => {
       completar();
       enviar();
-      http.expectOne(url).flush({}, { status: estado, statusText: 'Error de prueba' });
+      http
+        .expectOne((req) => req.url === url)
+        .flush({}, { status: estado, statusText: 'Error de prueba' });
       fixture.detectChanges();
       expect(fixture.componentInstance.campos.titulo.value).toBe('  Entrenamiento  ');
       expect(fixture.componentInstance.campos.descripcion.value).toBe('  Trabajo de pases  ');
       expect(fixture.componentInstance.publicando).toBe(false);
       expect(fixture.componentInstance.mensajePublicacion.length).toBeGreaterThan(0);
       expect(fixture.componentInstance.mensajeExito).toBe('');
-      http.expectNone(url);
+      http.expectNone((req) => req.url === url);
     },
   );
   it('lee publicaciones antiguas y nuevas sin cambiar sus datos', () => {
@@ -133,21 +145,26 @@ describe('Formulario y feed de publicaciones 3A', () => {
     };
     fixture.componentInstance.cargarPublicaciones();
     http
-      .expectOne(url)
-      .flush([
-        antigua,
-        {
-          ...antigua,
-          _id: 'nueva',
-          titulo: 'Título nuevo',
-          descripcion: 'Descripción nueva',
-          contenido: 'Descripción nueva',
-          activo: true,
-        },
-      ]);
+      .expectOne((req) => req.url === url)
+      .flush(
+        pagina([
+          antigua,
+          {
+            ...antigua,
+            _id: 'nueva',
+            titulo: 'Título nuevo',
+            descripcion: 'Descripción nueva',
+            contenido: 'Descripción nueva',
+            activo: true,
+          },
+        ]),
+      );
     fixture.detectChanges();
     const posts = fixture.nativeElement.querySelectorAll('.feed-post');
     expect(posts.length).toBe(2);
+    expect(fixture.componentInstance.totalPublicaciones).toBe(2);
+    expect(fixture.componentInstance.limit).toBe(10);
+    expect(fixture.componentInstance.hayMas).toBe(false);
     expect(posts[0].textContent).toContain('Publicación anterior');
     expect(posts[0].textContent).toContain('Parte antiguo');
     expect(posts[1].textContent).toContain('Título nuevo');

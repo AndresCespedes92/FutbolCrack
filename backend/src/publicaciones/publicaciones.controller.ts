@@ -6,6 +6,7 @@ import {
   Param,
   ParseFilePipeBuilder,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -17,6 +18,8 @@ import type { Request } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
 import { PublicacionesService } from './publicaciones.service.js';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto.js';
+import { ListarPublicacionesDto } from './dto/listar-publicaciones.dto.js';
+import { AutenticacionOpcionalGuard } from './guards/autenticacion-opcional.guard.js';
 import { MAXIMO_IMAGEN_BYTES } from './publicaciones.constants.js';
 
 interface RequestAutenticada extends Request {
@@ -28,8 +31,13 @@ export class PublicacionesController {
   constructor(private readonly publicacionesService: PublicacionesService) {}
 
   @Get()
-  listar() {
-    return this.publicacionesService.listar();
+  @UseGuards(AutenticacionOpcionalGuard)
+  listar(
+    @Query() consulta: ListarPublicacionesDto,
+    @Req() request: RequestAutenticada,
+  ) {
+    // usuarioId de query filtra al autor; la identidad del lector viene exclusivamente del JWT verificado.
+    return this.publicacionesService.listar(consulta, request.user?.sub);
   }
 
   @Post()
@@ -60,6 +68,18 @@ export class PublicacionesController {
     imagen?: Express.Multer.File,
   ) {
     return this.publicacionesService.crear(request.user!.sub, datos, imagen);
+  }
+
+  @Post(':id/likes')
+  @UseGuards(AuthGuard)
+  darMeGusta(@Param('id') id: string, @Req() request: RequestAutenticada) {
+    return this.publicacionesService.darMeGusta(id, request.user!.sub);
+  }
+
+  @Delete(':id/likes')
+  @UseGuards(AuthGuard)
+  quitarMeGusta(@Param('id') id: string, @Req() request: RequestAutenticada) {
+    return this.publicacionesService.quitarMeGusta(id, request.user!.sub);
   }
 
   @Delete(':id')

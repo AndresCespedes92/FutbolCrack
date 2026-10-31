@@ -286,6 +286,111 @@ Listo para revisión e integración del alcance 3A con suites locales aprobadas;
 
 ---
 
+## 31/10/2026 — Sprint 2, Tarea 3B: likes, filtros y páginas
+
+**Problema y ejemplo:** el club necesitaba votar jugadas sin repetir al mismo socio y consultar la cartelera de diez en diez, ordenada por fecha o apoyo recibido, sin descargar todo. Se implementa la lógica de S2-03/04/05/07 y avance de G-02, dejando la interfaz final para 3C.
+
+**Git:** inicio limpio en feature/publicaciones-modelo, HEAD 7b740f4 («fix publicaciones»), con 3A ya confirmado. Se ejecutaron antes ambas compilaciones y suites (FE 32/32, BE 59/59). No había cambios que respaldar: no se hizo un commit vacío. Se creó feature/publicaciones-likes-paginacion y HEAD permanece en 7b740f4. No hay commits nuevos, merge ni deploy.
+
+### Archivos y decisiones
+
+- backend/src/publicaciones/entities/publicacion.entity.ts y publicaciones.constants.ts: array de votantes default vacío y límites de listado 10/100.
+- backend/src/publicaciones/dto/listar-publicaciones.dto.ts (nuevo): parámetros concretos, enteros estrictos, orden y autor validados.
+- backend/src/publicaciones/guards/autenticacion-opcional.guard.ts (nuevo): lectura pública con identidad opcional verificada por el AuthGuard existente, sin renovar sesión.
+- backend/src/publicaciones/publicaciones.controller.ts y publicaciones.module.ts: GET con DTO/guard opcional y POST/DELETE :id/likes con autenticación obligatoria; guard registrado en el módulo existente.
+- backend/src/publicaciones/publicaciones.service.ts: filtro previo a agregación, conteo derivado, orden determinista, facet página/total, autores públicos solo de la página; darMeGusta/quitarMeGusta y helper cambiarMeGusta con actualización atómica condicionada.
+- frontend/src/app/services/publicaciones.ts: tipos de parámetros/respuestas, HttpParams, cookies y métodos de likes; crear conserva FormData.
+- frontend/src/app/pages/publicaciones/publicaciones.ts: extrae el array del nuevo sobre y conserva metadatos para 3C.
+- backend/src/publicaciones/publicaciones.controller.http.spec.ts: mantiene 43 casos previos y agrega 36; entities/publicacion.entity.spec.ts amplía defaults/índice sin quitar sus dos casos.
+- frontend/src/app/services/publicaciones.spec.ts (nuevo): tres casos de transporte; app.spec.ts y pages/publicaciones/publicaciones.spec.ts adaptan expectativas del GET conservando casos y aserciones de comportamiento.
+- docs/00-MAPA-DEL-PROYECTO.md, 03-PUBLICACIONES.md, 08-PRUEBAS-Y-DESPLIEGUE.md, 09-REQUISITOS-SPRINTS.md y 10-BITACORA-DE-CAMBIOS.md: mapa, contrato, ejemplos, evidencia, matriz y registro de esta tarea.
+
+**Datos y seguridad:** JWT verificado → actor → usuario actual → findOneAndUpdate activo con addToSet/pull → mensaje/cantidad/estado. Nunca se utiliza identidad proporcionada por el cliente. Un único array evita desincronización de contador y la actualización atómica evita duplicados concurrentes; no se agrega índice unique global de usuario. GET no expone votantes ni credenciales; recibe orden/autor/offset/limit, filtra antes de paginar y devuelve publicaciones/total/offset/limit/hayMas. Por fecha desempata id; por likes desempata fecha e id. Ver códigos 201/200/400/401/404/409 y recorrido completo en 03.
+
+**Compatibilidad:** likes ausente se interpreta como vacío y aparece al primer voto; título/descripcion/contenido/activo antiguos se normalizan solo en respuesta. No se migró Atlas ni se alteró creación, imágenes o baja lógica. GET cambia de array a sobre: Angular queda adaptado y requiere integración coordinada. No se modificaron HTML/CSS ni se implementó UI 3C.
+
+**Conceptos para estudiar:** DTO y transformaciones, guards e inyección reutilizada, referencias ObjectId, single-document update atómico, agregación/facet, orden y paginación, HttpParams y Observable tipado. Como en CineBera, la pantalla delega el HTTP al servicio; ahora recibe también metadatos de la cartelera de FutbolCrack.
+
+### Verificación y pendientes
+
+La comparación SHA-256 contra la base confirmó 16 archivos existentes modificados y 3 nuevos, exactamente los inventariados arriba. Autenticación/JWT/cookies, usuarios, Cloudinary productivo, dependencias, configuración y HTML/CSS mantienen su huella. git diff --check terminó sin errores; se comprobaron enlaces locales, bloques Markdown y los 44 IDs únicos de la matriz. No hay skip/todo/only en las pruebas cambiadas. Git advierte únicamente normalización LF/CRLF en los archivos Angular según su configuración.
+
+Ambas compilaciones salen 0. Frontend: 35/35, 5 suites (antes 32/32). Backend: 95/95, 6 suites (antes 59/59). No se eliminaron, saltaron ni deshabilitaron casos. Persiste solo el aviso previo de publicaciones.css: 4,88 KB / presupuesto 4 KB, +877 bytes. Comandos completos y alcance de dobles en 08.
+
+Los modelos de pruebas simulan consultas/actualizaciones y se inspeccionan filtros y operadores enviados. Ocho solicitudes simultáneas producen una 201 y siete 409 en ese entorno; falta verificarlo en una base MongoDB de ensayo. Tampoco se probaron Atlas/Cloudinary/Vercel ni la app contra un backend desplegado. La ordenación calculada, límites BSON/facet y cambios del conjunto entre páginas offset están explicados en 03.
+
+Pendientes: UI de likes/filtros/paginador numerado/tarjeta real/modal de baja en 3C, perfil real/comentarios según tareas posteriores, ensayo externo, integración/despliegue coordinado con aprobación y posible compensación de imagen huérfana ya registrada en 3A. Sin dependencias nuevas ni secretos/.env modificados; JWT/cookies originales conservados. Listo para revisión local del alcance 3B; no equivale a validación productiva. Se detiene al entregar para esperar aprobación.
+
+---
+
+## 31/10/2026 — Sprint 2, Tarea 3C: interfaz y Mi Perfil
+
+**Objetivo y ejemplo del club:** presentar jugadas reales en fichas reutilizables, votar, recorrer la cartelera de diez en diez y confirmar su retiro. El jugador ve sus últimas tres jugadas en el perfil; no se inventan autores, likes ni comentarios.
+
+**Git y respaldo:** inicio en feature/publicaciones-likes-paginacion con los 19 archivos pendientes esperados de 3B. Se verificaron antes compilaciones (salida 0), FE 35/35 y BE 95/95. La consigna autoriza guardar 3B: commit local 71c0525, «feat(publicaciones): agregar likes y listado paginado». Se creó feature/publicaciones-interfaz desde ese commit. HEAD permanece allí; no se hizo commit de 3C, merge ni deploy.
+
+### Inventario completo
+
+- docs/00-MAPA-DEL-PROYECTO.md
+- docs/03-PUBLICACIONES.md
+- docs/08-PRUEBAS-Y-DESPLIEGUE.md
+- docs/09-REQUISITOS-SPRINTS.md
+- docs/10-BITACORA-DE-CAMBIOS.md
+- docs/guia-angular.md
+- frontend/src/app/app.spec.ts
+- frontend/src/app/components/confirmacion-baja/confirmacion-baja.css
+- frontend/src/app/components/confirmacion-baja/confirmacion-baja.html
+- frontend/src/app/components/confirmacion-baja/confirmacion-baja.spec.ts
+- frontend/src/app/components/confirmacion-baja/confirmacion-baja.ts
+- frontend/src/app/components/publicacion-card/publicacion-card.css
+- frontend/src/app/components/publicacion-card/publicacion-card.html
+- frontend/src/app/components/publicacion-card/publicacion-card.spec.ts
+- frontend/src/app/components/publicacion-card/publicacion-card.ts
+- frontend/src/app/pages/mi-perfil/mi-perfil.css
+- frontend/src/app/pages/mi-perfil/mi-perfil.html
+- frontend/src/app/pages/mi-perfil/mi-perfil.spec.ts
+- frontend/src/app/pages/mi-perfil/mi-perfil.ts
+- frontend/src/app/pages/publicaciones/publicaciones-interacciones.spec.ts
+- frontend/src/app/pages/publicaciones/publicaciones.css
+- frontend/src/app/pages/publicaciones/publicaciones.html
+- frontend/src/app/pages/publicaciones/publicaciones.spec.ts
+- frontend/src/app/pages/publicaciones/publicaciones.ts
+- frontend/src/app/pipes/truncate.pipe.spec.ts
+- frontend/src/app/pipes/truncate.pipe.ts
+- frontend/src/app/services/acciones-publicaciones.ts
+- frontend/src/app/services/publicaciones.spec.ts
+- frontend/src/app/services/publicaciones.ts
+- frontend/src/app/testing/dialog-prueba.ts
+- frontend/src/app/testing/publicaciones-fixture.ts
+
+### Implementación y recorrido
+
+- **Tarjeta real compartida:** PublicacionCard recibe Inputs y emite cambiarLike/solicitarBaja/abrirDetalle. No ejecuta HTTP. Feed y perfil coordinan las acciones; detalleDisponible queda false hasta Sprint 3. Se muestran autor/foto/fecha, título/descripcion o contenido antiguo, imagen, cantidad y estado del voto.
+- **Pipe:** TruncatePipe puro y expansión Ver más/Ver menos a 280 caracteres, sin mutar el contenido; cuenta como uno de los tres de S4. Se documentan bindings y accesibilidad.
+- **Acciones compartidas:** AccionesPublicaciones usa señales locales por pantalla para pendientes, modal y mensajes. La implementación se reutiliza sin compartir el estado de pantallas distintas. Cada voto se bloquea mientras espera y recarga datos reales en éxito; conflictos 409/404 sincronizan sin simular éxito.
+- **Paginación/orden:** Publicaciones manda limit 10, offset por página y fecha/likes. Selector vuelve al inicio, controles numerados muestran una ventana de cinco más extremos, con anterior/siguiente. Lecturas anteriores se cancelan y las suscripciones terminan al destruir la pantalla. Una última página vacía tras una baja se reubica en la última válida.
+- **Baja:** solicitarBaja solo selecciona; dialog nativo con diseño propio identifica el título. Cancelar/Escape no solicitan. Confirmar envía DELETE mediante el servicio HTTP, bloquea doble confirmación y espera éxito antes de cerrar/mensaje/recarga. El rechazo conserva modal/publicación y muestra error. Nest sigue validando propiedad/rol actual, sin cambios de backend.
+- **Perfil:** /auth/me entrega usuario real y se consulta usuarioId/fecha/offset 0/limit 3, reutilizando tarjeta/acciones/modal. Se elimina el consumo de demos; errores de publicaciones no borran la ficha. Los comentarios se anuncian como próximos, sin sistema paralelo ni cifras ficticias.
+- **Estilo y estudio:** se conservan negro, verde musgo, gris y radios globales. Los estilos de tarjetas pasan al hijo; CSS comentado explica controles, fotos, estados y móvil. guia-angular.md desarrolla TS/HTML/CSS, routing, formularios, bindings, Input/Output, señales, servicios, recorrido y preguntas de defensa. El patrón de tarjeta/servicio/formulario se relaciona con CineBera sin afirmar equivalencia con un repositorio que no está aquí.
+
+Datos: componente padre → servicio de acciones/servicio HTTP Angular → endpoint NestJS 3A/3B → guard/DTO/servicio → MongoDB → respuesta → recarga de la página y Inputs de los hijos. Cookies HttpOnly se envían con withCredentials; no se leen, renuevan ni cambian. No se tocaron JWT, secretos, modelos o endpoints backend ni se instalaron dependencias.
+
+### Pruebas y cierre
+
+Final: frontend build salida 0 sin advertencias, 60/60 en 10 suites; backend build salida 0, 95/95 en 6 suites. Se conservan las 35 pruebas Angular anteriores y agregan 25. La advertencia CSS anterior de +877 bytes desaparece tras trasladar reglas a la tarjeta y quitar selectores/reglas duplicadas, sin aumentar presupuestos. No se modifican dependencias.
+
+Durante la verificación, JSDOM carecía de showModal/close, una comparación incluía whitespace de plantilla y la simulación directa de usuario no reproducía la sesión Angular. Se agregó un doble DOM exclusivo de pruebas, se compara texto con trim y se prueba permiso mediante respuestas GET /auth/me de sesiones distintas. También se marca el comienzo de carga con markForCheck para actualizar la vista de inmediato. Historial de ejecuciones y comandos en 08; sin saltar casos, debilitar permisos ni elevar timeouts.
+
+La cobertura verifica tarjeta/Input/Output, pipe, likes/cantidad/errores/bloqueos, 10/10/3 y páginas posteriores, cambio de orden, modal/cancelación/confirmación/403, última página vacía, datos/imagen de perfil y últimas tres propias, vacío/error/reintento y compatibilidad antigua. HTTP y API nativa de diálogo están simulados; backend conserva los dobles de 3B. No se probaron servicios externos, cookies/CORS reales, aspecto en dispositivos o la capa modal nativa en navegador.
+
+La revisión SHA-256 final confirma 18 archivos existentes modificados y 13 nuevos (31 en total), coincidentes con el inventario. Backend completo, autenticación/guard Angular, dependencias y configuración conservan su huella de 71c0525. git diff --check no tiene errores; enlaces y bloques Markdown válidos, 44 IDs únicos de matriz y sin pruebas skip/todo/only. Git solo avisa normalización LF/CRLF según configuración existente.
+
+**Pendientes:** comentarios y detalle de Sprint 3; otros dos pipes S4; resto de requisitos de sprints posteriores; ensayo real Atlas/Cloudinary/API y navegador; integración coordinada con 3A/3B. La URL Angular continúa siendo la del backend Vercel existente: no se verificó su versión desplegada y necesita el contrato paginado. El TTL JWT previo de 20 segundos permanece y puede interrumpir un ensayo prolongado. No se detectó impedimento que requiera cambiar contrato/backend; tampoco se declara validada producción. Compensación de imágenes huérfanas sigue pendiente de 3A.
+
+Listo para revisión local del alcance autorizado, con límites externos identificados. Se detiene y espera aprobación; sin merge/deploy ni commit de 3C.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

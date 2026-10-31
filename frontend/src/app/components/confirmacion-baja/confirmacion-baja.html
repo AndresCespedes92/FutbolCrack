@@ -1,0 +1,25 @@
+<dialog
+  #modal
+  aria-labelledby="titulo-baja"
+  aria-describedby="descripcion-baja"
+  [attr.aria-busy]="procesando"
+  (cancel)="cancelarConTeclado($event)"
+>
+  <span class="eyebrow">RETIRAR DE LA CARTELERA</span>
+  <h2 id="titulo-baja">¿Dar de baja esta publicación?</h2>
+  <p id="descripcion-baja">
+    «{{ publicacion.titulo || 'Publicación anterior' }}» dejará de mostrarse. Su información se
+    conservará.
+  </p>
+  @if (error) {
+    <p class="error" role="alert">{{ error }}</p>
+  }
+  <div class="acciones">
+    <button type="button" autofocus [disabled]="procesando" (click)="cancelarBaja()">
+      Cancelar
+    </button>
+    <button type="button" class="confirmar" [disabled]="procesando" (click)="confirmarBaja()">
+      {{ procesando ? 'Confirmando…' : 'Confirmar' }}
+    </button>
+  </div>
+</dialog>

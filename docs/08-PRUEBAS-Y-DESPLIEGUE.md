@@ -1,6 +1,57 @@
 # 08 — Pruebas y despliegue
 
-## Estado actual — Sprint 2, Tarea 3A
+## Estado actual — Sprint 2, Tarea 3C
+
+Antes de cambiar archivos se revisaron rama/estado y se repitieron ambas compilaciones y suites: frontend 35/35 (5 suites), backend 95/95 (6 suites), builds salida 0. El aviso inicial era CSS feed 4,88 KB / presupuesto 4 KB (+877 bytes). Los 19 archivos pendientes coincidían con 3B y se guardaron, según autorización de esta consigna, en el commit local 71c0525, «feat(publicaciones): agregar likes y listado paginado». Después se creó feature/publicaciones-interfaz. No se confirmó 3C, hizo merge ni deploy.
+
+| Comando | Resultado final 3C |
+| --- | --- |
+| frontend: npm run build | Correcto, salida 0, sin advertencia CSS. No se aumentaron presupuestos. |
+| frontend: node node_modules/@angular/cli/bin/ng.js test --watch=false | 60/60 aprobadas, 10 suites: conserva 35 y agrega 25. |
+| backend: npm run build | Correcto, salida 0; fuentes backend sin cambios. |
+| backend: npm test | 95/95 aprobadas, 6 suites. |
+
+Se agregan 4 casos de tarjeta, 3 del pipe, 2 del modal, 12 de interacción del feed y 4 de Mi Perfil. Los casos previos de navegación/formulario no se omiten: sus expectativas ahora comprueban consultas paginadas, sesión para acciones visibles y perfil real sin material demo. PublicacionesService conserva sus tres casos anteriores; solo se actualiza un comentario de alcance.
+
+### Causas de los ajustes durante la verificación
+
+- Primera ejecución: 45/60. JSDOM no define showModal/close; los dos tests de modal y doce de interacción fallaban antes de ejecutarse. Se agregó testing/dialog-prueba.ts para suplir exclusivamente esas APIs ausentes y restaurar sus descriptores al terminar; no se modificó el modal productivo para fingir soporte. El otro fallo era un título con espacios de plantilla: se normaliza whitespace con trim antes de comparar texto.
+- Segunda ejecución: 58/60. Faltaba notificar inmediatamente el estado de carga y una prueba intentaba cambiar usuario fuera del recorrido de sesión Angular. Se agregó markForCheck al inicio de cargas del contenedor y se revisó la simulación de permisos.
+- Tercera ejecución: 59/60. La mutación directa de usuario del fixture no reproducía la actualización real de sesión. Se reescribió ese caso reabriendo la pantalla y respondiendo GET /auth/me como usuario ajeno, administrador y visitante. Mantiene las aserciones de visibilidad/permisos y usa el camino real de la aplicación. No se relajaron aserciones ni se elevaron timeouts.
+- La suite final completa pasa 60/60. El CSS pasó inicialmente a 4,21 KB al agregar controles y trasladar tarjetas; se quitaron selectores sin uso y reglas duplicadas con styles.css. El build final ya no emite presupuesto excedido.
+
+### Qué se comprobó y qué sigue pendiente
+
+Se probaron Inputs/los tres Outputs, renderizado de datos reales y antiguos, pipe y Ver más/menos, bloqueo de doble voto, cambio visual de cantidad/estado tras POST/DELETE y recarga, mensajes 401/409/500, permisos de autor/admin/visitante, navegación 1/2/3 con offset 0/10/20 y limit 10, orden likes volviendo al inicio, estados de carga/error/vacío, apertura/cancelación/confirmación del modal, doble confirmación bloqueada, rechazo 403 y retorno desde última página vacía. Mi Perfil comprueba filtro usuarioId real, fecha/limit 3, foto/datos del usuario, vacío/error/reintento y like compartido.
+
+Los tests Angular usan HttpTestingController: no envían solicitudes a Vercel, Atlas ni Cloudinary. Los del backend mantienen los dobles/alcance de 3B. El doble de dialog verifica eventos y estado, no prueba la capa superior del navegador ni su navegación/foco inicial nativos. No se realizó ensayo manual visual en navegador o dispositivo ni integración con servicios externos.
+
+Antes de integrar en entorno real: probar con API que incluya 3A/3B (la URL Angular sigue apuntando al backend Vercel existente), comprobar cookie/CORS, votar/quitar, probar autor/admin/ajeno, cancelar/confirmar con teclado y recorrer 23 publicaciones en escritorio/móvil. Verificar efecto de popularidad al votar y perfil con más de tres publicaciones. El JWT de 20 segundos preexistente puede expirar durante el ensayo: no se modificó su duración ni renovación. Comentarios/detalle siguen pendientes Sprint 3; no confundir esa falta de alcance con pruebas aprobadas del resto.
+
+## Historial — Sprint 2, Tarea 3B
+
+Rama feature/publicaciones-likes-paginacion, creada desde feature/publicaciones-modelo en 7b740f4 (commit existente «fix publicaciones»). El árbol estaba limpio y 3A ya estaba confirmado por el usuario: no se creó un commit vacío de respaldo. No se realizaron commits nuevos, merge ni deploy.
+
+| Verificación | Antes (3A) | Después (3B) |
+| --- | --- | --- |
+| frontend: npm run build | Salida 0 | Salida 0 |
+| frontend: node node_modules/@angular/cli/bin/ng.js test --watch=false | 32/32, 4 suites | 35/35, 5 suites |
+| backend: npm run build | Salida 0 | Salida 0 |
+| backend: npm test | 59/59, 6 suites | 95/95, 6 suites |
+
+Advertencia existente: publicaciones.css pesa 4,88 KB, presupuesto 4 KB, excedente 877 bytes. No se modificaron CSS ni presupuestos. Las suites completas se ejecutaron fuera del sandbox para evitar las limitaciones temporales/procesos del entorno; no se instalaron dependencias.
+
+Se agregaron 36 casos HTTP backend (10 de likes y 26 de listado) y 3 de servicio Angular. Los casos previos se mantienen; las expectativas antiguas de array se adaptan al nuevo sobre paginado. Schema agrega comprobaciones de likes sin cambiar su número de casos.
+
+Cobertura nueva: identidad JWT frente a body ajeno; usuario ausente; add/remove propio; duplicado/conflicto; ocho altas concurrentes (una 201 y siete 409); votos de distintos usuarios; publicaciones inactivas/inexistentes; 10/10/3 de 23; offsets posteriores; filtro antes de página/total; límites 3 y 100; fecha/likes y desempates; sesión opcional sin exponer votantes; documento antiguo sin likes; 17 variantes de query inválida. Angular comprueba HttpParams, cookies y endpoints sin identidad en body; las suites de feed conservan creación, imágenes y errores.
+
+Las pruebas HTTP usan controller, DTO, guards, JWT y servicio reales con MongoDB/usuarios/transporte Cloudinary simulados. El doble de aggregate interpreta los filtros, cómputos y etapas de esta consulta; además se verifican los operadores y selección pública enviados. La prueba concurrente verifica la intención atómica y el contrato local, no la concurrencia real de MongoDB ni sus planes de ejecución. No se conectó Atlas, Cloudinary real o Vercel ni se modificaron datos externos.
+
+Para completar aceptación externa: en una base de ensayo crear 23 publicaciones de dos autores, pedir offsets 0/10/20, filtros y empates; enviar ocho likes simultáneos con el mismo JWT y comprobar un solo ObjectId; quitarlo y comprobar los demás votos. Usar tokens válidos: el TTL previo de 20 segundos se conserva. Verificar frontend/API conjuntamente porque GET dejó de devolver array. Estas comprobaciones están pendientes y no autorizan despliegue.
+
+Sin variables nuevas, secretos ni .env modificados. Detalles del contrato y límites de arrays/offset en [03](03-PUBLICACIONES.md).
+
+## Historial — Sprint 2, Tarea 3A
 
 Rama feature/publicaciones-modelo, base limpia c8383c9. Las tareas anteriores ya estaban confirmadas: no había cambios para un commit de respaldo y no se creó uno vacío. No se hicieron commits de esta tarea, merge o deploy.
 

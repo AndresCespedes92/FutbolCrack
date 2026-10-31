@@ -192,3 +192,14 @@ dd {
     grid-template-columns: 1fr;
   }
 }
+
+/* Colores semánticos de operaciones; el texto y los roles también identifican el resultado. */
+.action-success {
+  color: var(--color-success);
+}
+.action-error {
+  color: var(--color-error);
+}
+.player-art img {
+  border-radius: var(--radius-control);
+}

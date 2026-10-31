@@ -34,6 +34,11 @@ export class Publicacion {
   })
   tipoMultimedia: string;
 
+  // Un voto por usuario y publicación. No se usa índice unique en el array:
+  // la misma persona puede votar publicaciones distintas. La escritura usa $addToSet atómico.
+  @Prop({ type: [Types.ObjectId], ref: 'Usuario', default: [] })
+  likes: Types.ObjectId[];
+
   @Prop({ default: true })
   activo: boolean;
 }
