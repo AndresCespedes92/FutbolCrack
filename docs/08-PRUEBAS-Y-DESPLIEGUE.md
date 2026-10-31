@@ -1,6 +1,29 @@
 # 08 — Pruebas y despliegue
 
-## Estado actual — Sprint 2, Tarea 3A
+## Estado actual — Sprint 2, Tarea 3B
+
+Rama feature/publicaciones-likes-paginacion, creada desde feature/publicaciones-modelo en 7b740f4 (commit existente «fix publicaciones»). El árbol estaba limpio y 3A ya estaba confirmado por el usuario: no se creó un commit vacío de respaldo. No se realizaron commits nuevos, merge ni deploy.
+
+| Verificación | Antes (3A) | Después (3B) |
+| --- | --- | --- |
+| frontend: npm run build | Salida 0 | Salida 0 |
+| frontend: node node_modules/@angular/cli/bin/ng.js test --watch=false | 32/32, 4 suites | 35/35, 5 suites |
+| backend: npm run build | Salida 0 | Salida 0 |
+| backend: npm test | 59/59, 6 suites | 95/95, 6 suites |
+
+Advertencia existente: publicaciones.css pesa 4,88 KB, presupuesto 4 KB, excedente 877 bytes. No se modificaron CSS ni presupuestos. Las suites completas se ejecutaron fuera del sandbox para evitar las limitaciones temporales/procesos del entorno; no se instalaron dependencias.
+
+Se agregaron 36 casos HTTP backend (10 de likes y 26 de listado) y 3 de servicio Angular. Los casos previos se mantienen; las expectativas antiguas de array se adaptan al nuevo sobre paginado. Schema agrega comprobaciones de likes sin cambiar su número de casos.
+
+Cobertura nueva: identidad JWT frente a body ajeno; usuario ausente; add/remove propio; duplicado/conflicto; ocho altas concurrentes (una 201 y siete 409); votos de distintos usuarios; publicaciones inactivas/inexistentes; 10/10/3 de 23; offsets posteriores; filtro antes de página/total; límites 3 y 100; fecha/likes y desempates; sesión opcional sin exponer votantes; documento antiguo sin likes; 17 variantes de query inválida. Angular comprueba HttpParams, cookies y endpoints sin identidad en body; las suites de feed conservan creación, imágenes y errores.
+
+Las pruebas HTTP usan controller, DTO, guards, JWT y servicio reales con MongoDB/usuarios/transporte Cloudinary simulados. El doble de aggregate interpreta los filtros, cómputos y etapas de esta consulta; además se verifican los operadores y selección pública enviados. La prueba concurrente verifica la intención atómica y el contrato local, no la concurrencia real de MongoDB ni sus planes de ejecución. No se conectó Atlas, Cloudinary real o Vercel ni se modificaron datos externos.
+
+Para completar aceptación externa: en una base de ensayo crear 23 publicaciones de dos autores, pedir offsets 0/10/20, filtros y empates; enviar ocho likes simultáneos con el mismo JWT y comprobar un solo ObjectId; quitarlo y comprobar los demás votos. Usar tokens válidos: el TTL previo de 20 segundos se conserva. Verificar frontend/API conjuntamente porque GET dejó de devolver array. Estas comprobaciones están pendientes y no autorizan despliegue.
+
+Sin variables nuevas, secretos ni .env modificados. Detalles del contrato y límites de arrays/offset en [03](03-PUBLICACIONES.md).
+
+## Historial — Sprint 2, Tarea 3A
 
 Rama feature/publicaciones-modelo, base limpia c8383c9. Las tareas anteriores ya estaban confirmadas: no había cambios para un commit de respaldo y no se creó uno vacío. No se hicieron commits de esta tarea, merge o deploy.
 

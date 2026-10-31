@@ -2,7 +2,11 @@ import { Component, ChangeDetectorRef, ElementRef, OnInit, ViewChild, inject } f
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { PublicacionesService, Publicacion } from '../../services/publicaciones';
+import {
+  PublicacionesService,
+  Publicacion,
+  ParametrosListadoPublicaciones,
+} from '../../services/publicaciones';
 import { imagenPerfilValidator as imagenPublicacionValidator } from '../../validators/registro.validators';
 
 // Feed existente: incorpora título/descripción e imagen sin agregar acciones de baja todavía.
@@ -20,6 +24,11 @@ export class Publicaciones implements OnInit {
   @ViewChild('imagenPublicacion') private imagenInput?: ElementRef<HTMLInputElement>;
 
   publicaciones: Publicacion[] = [];
+  // Metadatos listos para la navegación visual de 3C; no recortamos registros en el navegador.
+  totalPublicaciones = 0;
+  offset = 0;
+  limit = 10;
+  hayMas = false;
   cargando = true;
   mensajeError = '';
   publicando = false;
@@ -98,12 +107,16 @@ export class Publicaciones implements OnInit {
       });
   }
 
-  cargarPublicaciones(): void {
+  cargarPublicaciones(parametros: ParametrosListadoPublicaciones = {}): void {
     this.cargando = true;
     this.mensajeError = '';
-    this.publicacionesService.listar().subscribe({
-      next: (publicaciones) => {
-        this.publicaciones = publicaciones;
+    this.publicacionesService.listar(parametros).subscribe({
+      next: (respuesta) => {
+        this.publicaciones = respuesta.publicaciones;
+        this.totalPublicaciones = respuesta.total;
+        this.offset = respuesta.offset;
+        this.limit = respuesta.limit;
+        this.hayMas = respuesta.hayMas;
         this.cargando = false;
         this.cdr.markForCheck();
       },

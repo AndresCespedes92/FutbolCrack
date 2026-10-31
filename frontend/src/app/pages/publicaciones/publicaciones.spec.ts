@@ -8,6 +8,13 @@ describe('Formulario y feed de publicaciones 3A', () => {
   let fixture: ComponentFixture<Publicaciones>;
   let http: HttpTestingController;
   const url = 'https://futbol-crackbackend.vercel.app/publicaciones';
+  const pagina = (publicaciones: unknown[]) => ({
+    publicaciones,
+    total: publicaciones.length,
+    offset: 0,
+    limit: 10,
+    hayMas: false,
+  });
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Publicaciones],
@@ -16,7 +23,7 @@ describe('Formulario y feed de publicaciones 3A', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(Publicaciones);
     fixture.detectChanges();
-    http.expectOne(url).flush([]);
+    http.expectOne(url).flush(pagina([]));
     await fixture.whenStable();
   });
   afterEach(() => http.verify());
@@ -64,7 +71,7 @@ describe('Formulario y feed de publicaciones 3A', () => {
     enviar();
     http.expectNone(url);
     solicitud.flush({ _id: 'nuevo' });
-    http.expectOne(url).flush([]);
+    http.expectOne(url).flush(pagina([]));
     fixture.detectChanges();
     expect(fixture.componentInstance.publicacionForm.value).toEqual({
       titulo: '',
@@ -80,7 +87,7 @@ describe('Formulario y feed de publicaciones 3A', () => {
     const solicitud = http.expectOne(url);
     expect((solicitud.request.body as FormData).get('imagen')).toBeNull();
     solicitud.flush({ _id: 'nuevo' });
-    http.expectOne(url).flush([]);
+    http.expectOne(url).flush(pagina([]));
     expect(fixture.componentInstance.publicando).toBe(false);
   });
   it.each([
@@ -132,9 +139,8 @@ describe('Formulario y feed de publicaciones 3A', () => {
       updatedAt: '2026-10-31',
     };
     fixture.componentInstance.cargarPublicaciones();
-    http
-      .expectOne(url)
-      .flush([
+    http.expectOne(url).flush(
+      pagina([
         antigua,
         {
           ...antigua,
@@ -144,10 +150,14 @@ describe('Formulario y feed de publicaciones 3A', () => {
           contenido: 'Descripción nueva',
           activo: true,
         },
-      ]);
+      ]),
+    );
     fixture.detectChanges();
     const posts = fixture.nativeElement.querySelectorAll('.feed-post');
     expect(posts.length).toBe(2);
+    expect(fixture.componentInstance.totalPublicaciones).toBe(2);
+    expect(fixture.componentInstance.limit).toBe(10);
+    expect(fixture.componentInstance.hayMas).toBe(false);
     expect(posts[0].textContent).toContain('Publicación anterior');
     expect(posts[0].textContent).toContain('Parte antiguo');
     expect(posts[1].textContent).toContain('Título nuevo');

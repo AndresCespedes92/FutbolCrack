@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 /**
@@ -27,6 +27,9 @@ export interface Publicacion {
   titulo?: string;
   descripcion?: string;
   activo?: boolean;
+  // Calculados por el listado; opcionales para conservar la respuesta de creación y datos antiguos.
+  cantidadLikes?: number;
+  meGusta?: boolean;
   multimediaUrl: string;
   tipoMultimedia: 'ninguno' | 'imagen' | 'video';
   createdAt: string;
@@ -42,6 +45,27 @@ export interface CrearPublicacionDto {
   imagen?: File;
 }
 
+// Contrato de consulta separado del formulario de creación: no agrega controles visuales todavía.
+export type OrdenPublicaciones = 'fecha' | 'likes';
+export interface ParametrosListadoPublicaciones {
+  orden?: OrdenPublicaciones;
+  usuarioId?: string;
+  offset?: number;
+  limit?: number;
+}
+export interface ListadoPublicaciones {
+  publicaciones: Publicacion[];
+  total: number;
+  offset: number;
+  limit: number;
+  hayMas: boolean;
+}
+export interface RespuestaMeGusta {
+  mensaje: string;
+  cantidadLikes: number;
+  meGusta: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -55,10 +79,33 @@ export class PublicacionesService {
    * GET /publicaciones
    *
    * Endpoint público.
-   * Devuelve las últimas publicaciones de MongoDB.
+   * Devuelve una página y el total filtrado desde MongoDB.
    */
-  listar(): Observable<Publicacion[]> {
-    return this.http.get<Publicacion[]>(this.apiUrl);
+  listar(parametros: ParametrosListadoPublicaciones = {}): Observable<ListadoPublicaciones> {
+    let query = new HttpParams();
+    for (const [nombre, valor] of Object.entries(parametros)) {
+      if (valor !== undefined) query = query.set(nombre, String(valor));
+    }
+    // GET sigue público; las cookies permiten calcular meGusta si hay una sesión válida.
+    return this.http.get<ListadoPublicaciones>(this.apiUrl, {
+      params: query,
+      withCredentials: true,
+    });
+  }
+
+  darMeGusta(id: string): Observable<RespuestaMeGusta> {
+    // No se recibe usuarioId: el servidor lo obtiene de la cookie/JWT.
+    return this.http.post<RespuestaMeGusta>(
+      `${this.apiUrl}/${id}/likes`,
+      {},
+      { withCredentials: true },
+    );
+  }
+
+  quitarMeGusta(id: string): Observable<RespuestaMeGusta> {
+    return this.http.delete<RespuestaMeGusta>(`${this.apiUrl}/${id}/likes`, {
+      withCredentials: true,
+    });
   }
 
   /**

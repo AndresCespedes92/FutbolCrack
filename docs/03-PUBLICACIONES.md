@@ -96,3 +96,77 @@ Frontend: se conservan 20 pruebas anteriores y se agregan 12 del feed/formulario
 Modelo/guardado MongoDB, usuarios y transporte Cloudinary se simulan en las pruebas HTTP; las de schema validan objetos Mongoose en memoria y el adaptador usa un stream simulado. No se probaron Atlas, Cloudinary real ni Vercel. No se crearon ni retiraron publicaciones reales.
 
 Si Cloudinary sube y después falla save, puede quedar una imagen huérfana: no se agregó compensación/borrado remoto en esta tarea. La baja no borra imágenes a propósito. Likes, paginación, filtro de usuario, orden selectable, comentarios, tarjeta real Input/Output, truncado y modal de 3C siguen pendientes.
+
+## Tarea 3B — Contrato vigente: likes, filtros y páginas
+
+Esta sección reemplaza la descripción del GET de 3A (array con límite 50). La creación, imágenes y baja lógica mantienen su comportamiento. El GET ahora usa aggregate en lugar de find/lean; la normalización antigua sigue siendo solo de lectura.
+
+### Un voto por socio
+
+Como una lista de socios que apoyan una jugada, Publicacion.likes guarda ObjectId de los usuarios. Su longitud es cantidadLikes; meGusta indica si contiene al lector autenticado. No hay contador persistido que pueda quedar desfasado ni índice unique sobre el array: ese índice impediría que un socio votara publicaciones distintas.
+
+POST /publicaciones/:id/likes devuelve 201 y DELETE /publicaciones/:id/likes devuelve 200. Ambos devuelven `{ mensaje, cantidadLikes, meGusta }`. AuthGuard existente verifica JWT/cookie y el controller utiliza exclusivamente sub, nunca un usuarioId del body. El servicio verifica además que ese usuario exista actualmente.
+
+cambiarMeGusta ejecuta findOneAndUpdate sobre id y activo distinto de false. Para agregar exige likes distinto del actor y usa `$addToSet`; para quitar exige que el array contenga al actor y usa `$pull`. Filtro y escritura son una sola operación atómica del documento: ocho solicitudes de alta del mismo socio no generan ocho votos. Quitar no afecta los votos de otros socios y permite votar nuevamente después.
+
+Respuestas: 400 id mal formado; 401 sin JWT válido o usuario eliminado; 404 publicación inexistente/inactiva; 409 voto repetido o intento de quitar un voto propio inexistente. Si la actualización no encuentra coincidencia, una segunda consulta distingue ausencia de publicación y conflicto. Esa consulta diagnóstica no es una transacción; si cambia el estado entre ambas lecturas, el diagnóstico refleja el estado observado entonces. No se anuncia un éxito sin actualización.
+
+### GET /publicaciones
+
+| Parámetro | Regla |
+| --- | --- |
+| orden | fecha (predeterminado) o likes, descendentes. |
+| usuarioId | Opcional: ObjectId válido del autor que se quiere consultar; no identifica al lector. |
+| offset | Entero decimal no negativo; default 0, máximo Number.MAX_SAFE_INTEGER. |
+| limit | Entero decimal entre 1 y 100; default 10. El feed actual pide el valor predeterminado. |
+
+El DTO rechaza con 400 valores vacíos, negativos, fracciones, notación exponencial, límites excesivos, arrays y campos ajenos. Se reutiliza ValidationPipe global. El máximo técnico 100 es una decisión local; permite consultar tres publicaciones de un perfil sin imponer diez a toda consulta.
+
+Ejemplo de contrato (ids y fechas ilustrativos):
+
+```json
+{
+  "publicaciones": [{ "_id": "000000000000000000000023", "titulo": "Entrenamiento", "descripcion": "Trabajo de pases", "contenido": "Trabajo de pases", "cantidadLikes": 2, "meGusta": true }],
+  "total": 23,
+  "offset": 0,
+  "limit": 10,
+  "hayMas": true
+}
+```
+
+El ejemplo abrevia los campos de una publicación; también se mantienen autorId poblado con datos públicos, multimedia, activo y timestamps. total cuenta todos los documentos filtrados, no solo los de la página; hayMas compara offset + cantidad recibida con total. Un offset posterior al final devuelve array vacío y conserva el total.
+
+Con 23 partes del club, offset 0/10/20 y limit 10 devuelven 10/10/3. Offset significa cuántos registros omitir, no el número de página. Para la página numerada n: `(n - 1) * 10`. Es paginación backend: MongoDB devuelve solo la página y Angular no descarga 23 para recortar diez.
+
+listar aplica `$match` por estado/autor antes de paginar, calcula cantidadLikes con `$size/$ifNull` y meGusta con `$in`, luego `$facet` calcula página y total del mismo filtro. El orden por fecha desempata con `_id` descendente; por likes usa cantidadLikes, createdAt y finalmente `_id`, todos descendentes. Después se resuelven solo los autores de esa página con populate y selección pública. El GET no expone el array de votantes.
+
+GET sigue público. AutenticacionOpcionalGuard delega al AuthGuard existente: si el JWT es válido aporta sub; sin sesión, con JWT inválido o vencido permite lectura anónima con meGusta false. No renueva cookies ni modifica el mecanismo JWT. POST/DELETE conservan autenticación estricta. usuarioId en query jamás se usa como identidad para votar.
+
+### Compatibilidad y consumo Angular
+
+Documentos sin likes cuentan cero; `$addToSet` crea el array ausente al primer voto. No se migran ni reescriben documentos al leer. Se conservan título de lectura «Publicación anterior», descripcion/contenido y activo ausente considerado visible. La estrategia presupone arrays válidos o campo ausente en datos existentes; no repara documentos manualmente corruptos.
+
+El servicio Angular tipa parámetros y respuestas, usa HttpParams y conserva withCredentials. cargarPublicaciones toma respuesta.publicaciones y guarda metadatos para 3C. crear sigue enviando FormData con imagen opcional. El nuevo sobre GET es un cambio de contrato: API y frontend deben integrarse/desplegarse coordinadamente. Un cliente antiguo que espere un array requiere adaptación.
+
+No se agregaron controles visuales de likes, filtros o páginas. El feed muestra sus primeros diez resultados; navegar visualmente y usar la tarjeta Input/Output corresponde a 3C. Tampoco se modificaron HTML/CSS, perfil demo, comentarios ni modal de baja.
+
+### Cómo estudiar y probar
+
+1. Leer ListarPublicacionesDto para entender valores predeterminados, Transform y decoradores de validación.
+2. Seguir controller.listar y AutenticacionOpcionalGuard: diferenciar identidad del lector y filtro de autor.
+3. Leer el pipeline de listar: filtro → campos derivados → orden/skip/limit y total → populate → normalización.
+4. Seguir darMeGusta/quitarMeGusta hasta cambiarMeGusta: comprobar las condiciones antes de la actualización atómica.
+5. Consultar servicios/publicaciones.ts de Angular: Observable tipado y HttpParams; luego cargarPublicaciones y su suscripción.
+6. Ejecutar las suites de [08](08-PRUEBAS-Y-DESPLIEGUE.md). Los fixtures crean 23 registros y verifican 10/10/3, autor, empates, cookies, invalidaciones y concurrencia simulada.
+
+Conceptos: referencias ObjectId, DTO/transformación/validación, inyección de dependencias, guards reutilizados, operaciones atómicas, agregación, paginación y contratos TypeScript/Observable. Se conserva el patrón de servicios y formularios conocido de CineBera; el listado incorpora metadatos propios de FutbolCrack.
+
+¿Por qué no sumar un contador aparte? Porque el array ya determina el total y evita mantener dos fuentes de verdad. ¿Por qué desempatar por id? Dos partes pueden tener la misma fecha y los mismos votos. ¿Por qué no filtrar después de paginar? Se perderían partes del autor y el total sería incorrecto.
+
+### Límites y pendientes
+
+El array es sencillo y adecuado al alcance académico. Crece dentro del documento (límite BSON de 16 MiB); ordenar por una cantidad calculada requiere procesar coincidencias y no aprovecha directamente un índice de contador. `$facet` y sus resultados también tienen límites de memoria/documento. Si el volumen lo exige, evaluar colección de votos e índices en una tarea posterior, sin agregarla ahora.
+
+Los desempates estabilizan un conjunto sin cambios; offset no ofrece una instantánea entre solicitudes si otros publican o votan. Las pruebas de concurrencia usan un doble que modela el operador atómico y verifican el filtro/update enviado; no sustituyen un ensayo concurrente contra MongoDB real. Pendientes Atlas/Cloudinary, comprobación de consultas/datos reales, despliegue coordinado y UI 3C. La posible imagen huérfana si falla save después de subir sigue pendiente de 3A.
+
+Resultado actual: frontend 35/35 en 5 suites, backend 95/95 en 6 suites, ambas compilaciones correctas. Se conservan todos los casos anteriores.

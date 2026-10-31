@@ -82,7 +82,14 @@ describe('Navegación de FutbolCrack', () => {
   function responderFeed(harness: RouterTestingHarness): void {
     const solicitud = http.expectOne(`${API}/publicaciones`);
     expect(solicitud.request.method).toBe('GET');
-    solicitud.flush(publicaciones);
+    expect(solicitud.request.withCredentials).toBe(true);
+    solicitud.flush({
+      publicaciones,
+      total: publicaciones.length,
+      offset: 0,
+      limit: 10,
+      hayMas: false,
+    });
     harness.detectChanges();
   }
 

@@ -127,3 +127,27 @@ Las pruebas son HTTP locales sin Atlas ni Cloudinary. El listado y la validació
 Para retirar un parte del club: DELETE verifica autor o administrador actual y marca activo false, sin borrar documento. Respuestas: 401 sin sesión, 403 ajeno no administrador, 404 inexistente/ya retirado, 200 al completar. El filtro público excluye false pero conserva documentos antiguos sin activo. No hay baja desde UI hasta la confirmación/modal de 3C.
 
 El árbol inicial estaba limpio en c8383c9, con tareas anteriores ya confirmadas. Se creó feature/publicaciones-modelo sin hacer otro commit vacío. No se hicieron merge/deploy ni migraciones reales. Resultados: Angular 32/32 y Nest 59/59; ver 08 y 10.
+
+## Tarea 3B — Mapa actual de likes y listado paginado
+
+Esta sección actualiza los contratos de listado descritos en la auditoría y en 3A. Se reutiliza PublicacionesModule; no se agregó ningún módulo funcional.
+
+| Archivo | Clase / método y responsabilidad |
+| --- | --- |
+| backend/src/publicaciones/entities/publicacion.entity.ts | Publicacion.likes: array de ObjectId de usuarios, default vacío; sin contador duplicado. |
+| backend/src/publicaciones/publicaciones.constants.ts | LIMITE_LISTADO_PREDETERMINADO = 10 y MAXIMO_LIMITE_LISTADO = 100. |
+| backend/src/publicaciones/dto/listar-publicaciones.dto.ts | ListarPublicacionesDto y enteroDeQuery: orden, autor, enteros y límites válidos. |
+| backend/src/publicaciones/guards/autenticacion-opcional.guard.ts | AutenticacionOpcionalGuard.canActivate reutiliza AuthGuard para identificar al lector sin privatizar el GET. |
+| backend/src/publicaciones/publicaciones.controller.ts | listar: GET /publicaciones; darMeGusta: POST /publicaciones/:id/likes; quitarMeGusta: DELETE /publicaciones/:id/likes. |
+| backend/src/publicaciones/publicaciones.service.ts | listar: match, cantidad, orden, facet/página/total y populate público; darMeGusta/quitarMeGusta delegan a cambiarMeGusta, actualización atómica. |
+| backend/src/publicaciones/publicaciones.module.ts | Registra el guard opcional y conserva las importaciones existentes. |
+| frontend/src/app/services/publicaciones.ts | Tipos ParametrosListadoPublicaciones, ListadoPublicaciones y RespuestaMeGusta; métodos listar, darMeGusta y quitarMeGusta. |
+| frontend/src/app/pages/publicaciones/publicaciones.ts | cargarPublicaciones extrae publicaciones y conserva total, offset, limit y hayMas. |
+| backend/src/publicaciones/publicaciones.controller.http.spec.ts | 79 pruebas HTTP de publicaciones: las 43 previas y 36 de likes/listado. Modelo MongoDB simulado. |
+| backend/src/publicaciones/entities/publicacion.entity.spec.ts | 2 pruebas de schema, ampliadas con default likes y ausencia de índice unique global. |
+| frontend/src/app/services/publicaciones.spec.ts | 3 pruebas nuevas de parámetros, cookies y endpoints de likes. |
+| frontend/src/app/app.spec.ts y pages/publicaciones/publicaciones.spec.ts | Expectativas del GET adaptadas al sobre paginado, sin quitar casos. |
+
+Recorrido: jugador abre cartelera → cargarPublicaciones → servicio Angular → GET + DTO/guard opcional → listar → agregación MongoDB y populate → sobre paginado → array visible. Una futura acción de like recorrerá servicio Angular → AuthGuard obligatorio → sub verificado → cambiarMeGusta → findOneAndUpdate → mensaje/cantidad/estado. Los botones, tarjeta real y paginador visual pertenecen a 3C.
+
+Resultados y límites en [08](08-PRUEBAS-Y-DESPLIEGUE.md); explicación y ejemplos en [03](03-PUBLICACIONES.md).

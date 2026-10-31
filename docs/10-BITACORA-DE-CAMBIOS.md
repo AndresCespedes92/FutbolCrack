@@ -286,6 +286,43 @@ Listo para revisión e integración del alcance 3A con suites locales aprobadas;
 
 ---
 
+## 31/10/2026 — Sprint 2, Tarea 3B: likes, filtros y páginas
+
+**Problema y ejemplo:** el club necesitaba votar jugadas sin repetir al mismo socio y consultar la cartelera de diez en diez, ordenada por fecha o apoyo recibido, sin descargar todo. Se implementa la lógica de S2-03/04/05/07 y avance de G-02, dejando la interfaz final para 3C.
+
+**Git:** inicio limpio en feature/publicaciones-modelo, HEAD 7b740f4 («fix publicaciones»), con 3A ya confirmado. Se ejecutaron antes ambas compilaciones y suites (FE 32/32, BE 59/59). No había cambios que respaldar: no se hizo un commit vacío. Se creó feature/publicaciones-likes-paginacion y HEAD permanece en 7b740f4. No hay commits nuevos, merge ni deploy.
+
+### Archivos y decisiones
+
+- backend/src/publicaciones/entities/publicacion.entity.ts y publicaciones.constants.ts: array de votantes default vacío y límites de listado 10/100.
+- backend/src/publicaciones/dto/listar-publicaciones.dto.ts (nuevo): parámetros concretos, enteros estrictos, orden y autor validados.
+- backend/src/publicaciones/guards/autenticacion-opcional.guard.ts (nuevo): lectura pública con identidad opcional verificada por el AuthGuard existente, sin renovar sesión.
+- backend/src/publicaciones/publicaciones.controller.ts y publicaciones.module.ts: GET con DTO/guard opcional y POST/DELETE :id/likes con autenticación obligatoria; guard registrado en el módulo existente.
+- backend/src/publicaciones/publicaciones.service.ts: filtro previo a agregación, conteo derivado, orden determinista, facet página/total, autores públicos solo de la página; darMeGusta/quitarMeGusta y helper cambiarMeGusta con actualización atómica condicionada.
+- frontend/src/app/services/publicaciones.ts: tipos de parámetros/respuestas, HttpParams, cookies y métodos de likes; crear conserva FormData.
+- frontend/src/app/pages/publicaciones/publicaciones.ts: extrae el array del nuevo sobre y conserva metadatos para 3C.
+- backend/src/publicaciones/publicaciones.controller.http.spec.ts: mantiene 43 casos previos y agrega 36; entities/publicacion.entity.spec.ts amplía defaults/índice sin quitar sus dos casos.
+- frontend/src/app/services/publicaciones.spec.ts (nuevo): tres casos de transporte; app.spec.ts y pages/publicaciones/publicaciones.spec.ts adaptan expectativas del GET conservando casos y aserciones de comportamiento.
+- docs/00-MAPA-DEL-PROYECTO.md, 03-PUBLICACIONES.md, 08-PRUEBAS-Y-DESPLIEGUE.md, 09-REQUISITOS-SPRINTS.md y 10-BITACORA-DE-CAMBIOS.md: mapa, contrato, ejemplos, evidencia, matriz y registro de esta tarea.
+
+**Datos y seguridad:** JWT verificado → actor → usuario actual → findOneAndUpdate activo con addToSet/pull → mensaje/cantidad/estado. Nunca se utiliza identidad proporcionada por el cliente. Un único array evita desincronización de contador y la actualización atómica evita duplicados concurrentes; no se agrega índice unique global de usuario. GET no expone votantes ni credenciales; recibe orden/autor/offset/limit, filtra antes de paginar y devuelve publicaciones/total/offset/limit/hayMas. Por fecha desempata id; por likes desempata fecha e id. Ver códigos 201/200/400/401/404/409 y recorrido completo en 03.
+
+**Compatibilidad:** likes ausente se interpreta como vacío y aparece al primer voto; título/descripcion/contenido/activo antiguos se normalizan solo en respuesta. No se migró Atlas ni se alteró creación, imágenes o baja lógica. GET cambia de array a sobre: Angular queda adaptado y requiere integración coordinada. No se modificaron HTML/CSS ni se implementó UI 3C.
+
+**Conceptos para estudiar:** DTO y transformaciones, guards e inyección reutilizada, referencias ObjectId, single-document update atómico, agregación/facet, orden y paginación, HttpParams y Observable tipado. Como en CineBera, la pantalla delega el HTTP al servicio; ahora recibe también metadatos de la cartelera de FutbolCrack.
+
+### Verificación y pendientes
+
+La comparación SHA-256 contra la base confirmó 16 archivos existentes modificados y 3 nuevos, exactamente los inventariados arriba. Autenticación/JWT/cookies, usuarios, Cloudinary productivo, dependencias, configuración y HTML/CSS mantienen su huella. git diff --check terminó sin errores; se comprobaron enlaces locales, bloques Markdown y los 44 IDs únicos de la matriz. No hay skip/todo/only en las pruebas cambiadas. Git advierte únicamente normalización LF/CRLF en los archivos Angular según su configuración.
+
+Ambas compilaciones salen 0. Frontend: 35/35, 5 suites (antes 32/32). Backend: 95/95, 6 suites (antes 59/59). No se eliminaron, saltaron ni deshabilitaron casos. Persiste solo el aviso previo de publicaciones.css: 4,88 KB / presupuesto 4 KB, +877 bytes. Comandos completos y alcance de dobles en 08.
+
+Los modelos de pruebas simulan consultas/actualizaciones y se inspeccionan filtros y operadores enviados. Ocho solicitudes simultáneas producen una 201 y siete 409 en ese entorno; falta verificarlo en una base MongoDB de ensayo. Tampoco se probaron Atlas/Cloudinary/Vercel ni la app contra un backend desplegado. La ordenación calculada, límites BSON/facet y cambios del conjunto entre páginas offset están explicados en 03.
+
+Pendientes: UI de likes/filtros/paginador numerado/tarjeta real/modal de baja en 3C, perfil real/comentarios según tareas posteriores, ensayo externo, integración/despliegue coordinado con aprobación y posible compensación de imagen huérfana ya registrada en 3A. Sin dependencias nuevas ni secretos/.env modificados; JWT/cookies originales conservados. Listo para revisión local del alcance 3B; no equivale a validación productiva. Se detiene al entregar para esperar aprobación.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

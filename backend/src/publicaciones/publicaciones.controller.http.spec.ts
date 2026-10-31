@@ -5,6 +5,8 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { vi } from 'vitest';
+import { Types } from 'mongoose';
+import { AutenticacionOpcionalGuard } from './guards/autenticacion-opcional.guard.js';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 import { UsuariosService } from '../usuarios/usuarios.service.js';
@@ -25,7 +27,9 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
   const cloudinary = { subirImagen: vi.fn() };
   const usuarios = { findById: vi.fn() };
   let documentos: any[];
-  const buscar = vi.fn();
+  const agregar = vi.fn();
+  const poblar = vi.fn();
+  const cambiarLike = vi.fn();
   const buscarUno = vi.fn();
   const actualizar = vi.fn();
   const png = Buffer.from(
@@ -34,7 +38,9 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
   );
 
   class ModeloDePrueba {
-    static find = buscar;
+    static aggregate = agregar;
+    static populate = poblar;
+    static findOneAndUpdate = cambiarLike;
     static findOne = buscarUno;
     static updateOne = actualizar;
     constructor(private readonly datos: Record<string, unknown>) {}
@@ -54,6 +60,7 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
       controllers: [PublicacionesController],
       providers: [
         AuthGuard,
+        AutenticacionOpcionalGuard,
         PublicacionesService,
         { provide: getModelToken(Publicacion.name), useValue: ModeloDePrueba },
         { provide: CloudinaryService, useValue: cloudinary },
@@ -82,19 +89,77 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
         'https://res.cloudinary.com/demo/image/upload/prueba.png',
       );
     usuarios.findById.mockReset().mockResolvedValue({ perfil: 'usuario' });
-    buscar.mockReset().mockImplementation((filtro) => {
-      const consulta = {
-        populate: vi.fn().mockReturnThis(),
-        sort: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        lean: vi.fn().mockReturnThis(),
-        exec: async () =>
-          documentos
-            .filter((doc) => !filtro?.activo || doc.activo !== false)
-            .slice(0, 50),
-      };
-      return consulta;
-    });
+    // Doble acotado: interpreta los campos del pipeline enviado, no consulta un motor MongoDB.
+    // Las pruebas también verifican operadores/filtros; la ejecución real en Atlas queda pendiente.
+    agregar.mockReset().mockImplementation((pipeline) => ({
+      exec: async () => {
+        const filtro = pipeline[0].$match;
+        const faceta = pipeline[2].$facet;
+        const lector = pipeline[1].$set.meGusta?.$in?.[0]?.toString();
+        const filas = documentos
+          .filter(
+            (doc) =>
+              (!filtro.activo || doc.activo !== false) &&
+              (!filtro.autorId ||
+                doc.autorId?.toString() === filtro.autorId.toString()),
+          )
+          .map((doc) => ({
+            ...doc,
+            cantidadLikes: (doc.likes ?? []).length,
+            meGusta: Boolean(
+              lector &&
+              (doc.likes ?? []).some((uid: any) => uid.toString() === lector),
+            ),
+          }));
+        const camposOrden = faceta.publicaciones[0].$sort;
+        const comparar = (valor: any) =>
+          valor instanceof Date ? valor.toISOString() : (valor ?? '');
+        filas.sort((a, b) => {
+          for (const [campo, direccion] of Object.entries(camposOrden)) {
+            const primero = comparar(a[campo]);
+            const segundo = comparar(b[campo]);
+            if (primero < segundo) return -Number(direccion);
+            if (primero > segundo) return Number(direccion);
+          }
+          return 0;
+        });
+        const inicio = faceta.publicaciones[1].$skip;
+        const limite = faceta.publicaciones[2].$limit;
+        const pagina = filas.slice(inicio, inicio + limite).map((doc) => {
+          const vista = { ...doc };
+          if (faceta.publicaciones[3].$project.likes === 0) delete vista.likes;
+          return vista;
+        });
+        return [
+          {
+            publicaciones: pagina,
+            conteo: filas.length ? [{ total: filas.length }] : [],
+          },
+        ];
+      },
+    }));
+    poblar.mockReset().mockImplementation(async (pagina) => pagina);
+    cambiarLike.mockReset().mockImplementation((filtro, cambio) => ({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockReturnThis(),
+      exec: async () => {
+        const doc = documentos.find(
+          (doc) =>
+            doc._id.toString() === filtro._id.toString() &&
+            doc.activo !== false,
+        );
+        if (!doc) return null;
+        const actor = (filtro.likes.$ne ?? filtro.likes).toString();
+        const votos = doc.likes ?? [];
+        const existe = votos.some((uid: any) => uid.toString() === actor);
+        if (filtro.likes.$ne ? existe : !existe) return null;
+        // Se modifica antes de resolver la promesa, modelando una sola actualización atómica.
+        doc.likes = cambio.$addToSet
+          ? [...votos, cambio.$addToSet.likes]
+          : votos.filter((uid: any) => uid.toString() !== actor);
+        return { likes: [...doc.likes] };
+      },
+    }));
     buscarUno.mockReset().mockImplementation((filtro) => ({
       exec: async () =>
         documentos.find(
@@ -329,9 +394,12 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
     const respuesta = await request(app.getHttpServer())
       .get('/publicaciones')
       .expect(200);
-    expect(buscar).toHaveBeenCalledWith({ activo: { $ne: false } });
-    expect(respuesta.body).toHaveLength(1);
-    expect(respuesta.body[0]).toMatchObject({
+    expect(agregar.mock.calls[0][0][0]).toEqual({
+      $match: { activo: { $ne: false } },
+    });
+    expect(respuesta.body.publicaciones).toHaveLength(1);
+    expect(respuesta.body.total).toBe(1);
+    expect(respuesta.body.publicaciones[0]).toMatchObject({
       titulo: 'Publicación anterior',
       descripcion: 'Parte antiguo',
       contenido: 'Parte antiguo',
@@ -356,7 +424,13 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
     const lista = await request(app.getHttpServer())
       .get('/publicaciones')
       .expect(200);
-    expect(lista.body).toEqual([]);
+    expect(lista.body).toEqual({
+      publicaciones: [],
+      total: 0,
+      offset: 0,
+      limit: 10,
+      hayMas: false,
+    });
   });
   it('permite al administrador actual dar de baja una publicación ajena', async () => {
     prepararPublicacion();
@@ -422,5 +496,384 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
       .delete(`/publicaciones/${id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
+  });
+
+  describe('Likes 3B: identidad y atomicidad', () => {
+    it('registra un like propio, cuenta uno y no usa el usuario enviado por cliente', async () => {
+      prepararPublicacion();
+      const respuesta = await postLike()
+        .send({ usuarioId: ajenoId })
+        .expect(201);
+      expect(respuesta.body).toEqual({
+        mensaje: 'Me gusta registrado correctamente',
+        cantidadLikes: 1,
+        meGusta: true,
+      });
+      expect(documentos[0].likes.map(String)).toEqual([autorId]);
+      expect(cambiarLike).toHaveBeenCalledWith(
+        expect.objectContaining({
+          activo: { $ne: false },
+          likes: { $ne: new Types.ObjectId(autorId) },
+        }),
+        { $addToSet: { likes: new Types.ObjectId(autorId) } },
+        { new: true },
+      );
+    });
+    it('rechaza un voto repetido sin duplicar ni aumentar el conteo', async () => {
+      prepararPublicacion();
+      await postLike().expect(201);
+      const repetido = await postLike().expect(409);
+      expect(repetido.body.message).toContain('Ya diste me gusta');
+      expect(documentos[0].likes).toHaveLength(1);
+    });
+    it('ante ocho solicitudes simultáneas solo una registra el voto', async () => {
+      prepararPublicacion();
+      const respuestas = await Promise.all(
+        Array.from({ length: 8 }, () => postLike()),
+      );
+      expect(respuestas.map((res) => res.status).sort()).toEqual([
+        201, 409, 409, 409, 409, 409, 409, 409,
+      ]);
+      expect(documentos[0].likes.map(String)).toEqual([autorId]);
+      for (const llamada of cambiarLike.mock.calls)
+        expect(llamada[1]).toHaveProperty('$addToSet');
+    });
+    it('permite que dos usuarios distintos voten la misma publicación', async () => {
+      prepararPublicacion();
+      await postLike().expect(201);
+      const otro = jwt.sign({ sub: ajenoId, perfil: 'usuario' });
+      const respuesta = await request(app.getHttpServer())
+        .post(`/publicaciones/${id}/likes`)
+        .set('Authorization', `Bearer ${otro}`)
+        .expect(201);
+      expect(respuesta.body.cantidadLikes).toBe(2);
+      expect(documentos[0].likes.map(String).sort()).toEqual(
+        [autorId, ajenoId].sort(),
+      );
+    });
+    it('quita únicamente el voto propio y permite volver a votar', async () => {
+      prepararPublicacion();
+      documentos[0].likes = [
+        new Types.ObjectId(autorId),
+        new Types.ObjectId(ajenoId),
+      ];
+      const respuesta = await request(app.getHttpServer())
+        .delete(`/publicaciones/${id}/likes`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ usuarioId: ajenoId })
+        .expect(200);
+      expect(respuesta.body.cantidadLikes).toBe(1);
+      expect(respuesta.body.meGusta).toBe(false);
+      expect(documentos[0].likes.map(String)).toEqual([ajenoId]);
+      expect(cambiarLike.mock.calls[0][1]).toEqual({
+        $pull: { likes: new Types.ObjectId(autorId) },
+      });
+      await postLike().expect(201);
+      expect(documentos[0].likes).toHaveLength(2);
+    });
+    it('rechaza quitar un voto inexistente sin tocar los de otros', async () => {
+      prepararPublicacion();
+      documentos[0].likes = [new Types.ObjectId(ajenoId)];
+      const respuesta = await request(app.getHttpServer())
+        .delete(`/publicaciones/${id}/likes`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(409);
+      expect(respuesta.body.message).toContain('No tenés un me gusta');
+      expect(documentos[0].likes.map(String)).toEqual([ajenoId]);
+    });
+    it('rechaza likes y su retiro sin autenticación', async () => {
+      prepararPublicacion();
+      await request(app.getHttpServer())
+        .post(`/publicaciones/${id}/likes`)
+        .expect(401);
+      await request(app.getHttpServer())
+        .delete(`/publicaciones/${id}/likes`)
+        .expect(401);
+      expect(cambiarLike).not.toHaveBeenCalled();
+    });
+    it('rechaza usuario inexistente aunque el JWT esté firmado', async () => {
+      prepararPublicacion();
+      usuarios.findById.mockResolvedValue(null);
+      await postLike().expect(401);
+      expect(cambiarLike).not.toHaveBeenCalled();
+    });
+    it('no permite likes ni retiros sobre publicaciones ausentes o dadas de baja', async () => {
+      for (const presente of [false, true]) {
+        documentos = presente
+          ? [
+              {
+                _id: id,
+                autorId,
+                activo: false,
+                likes: [new Types.ObjectId(autorId)],
+              },
+            ]
+          : [];
+        await postLike().expect(404);
+        await request(app.getHttpServer())
+          .delete(`/publicaciones/${id}/likes`)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(404);
+        if (presente)
+          expect(documentos[0].likes.map(String)).toEqual([autorId]);
+      }
+    });
+    it('rechaza un id inválido sin ejecutar la actualización', async () => {
+      await request(app.getHttpServer())
+        .post('/publicaciones/id-invalido/likes')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(400);
+      expect(cambiarLike).not.toHaveBeenCalled();
+    });
+  });
+
+  function postLike() {
+    return request(app.getHttpServer())
+      .post(`/publicaciones/${id}/likes`)
+      .set('Authorization', `Bearer ${token}`);
+  }
+  function generarPartes(cantidad: number) {
+    for (let numero = 1; numero <= cantidad; numero++)
+      documentos.push({
+        _id: new Types.ObjectId(numero.toString(16).padStart(24, '0')),
+        autorId: new Types.ObjectId(numero % 2 ? autorId : ajenoId),
+        titulo: `Parte ${numero}`,
+        descripcion: `Práctica ${numero}`,
+        contenido: `Práctica ${numero}`,
+        createdAt: new Date(Date.UTC(2026, 9, 1, 0, 0, numero)),
+        activo: true,
+      });
+  }
+
+  describe('Listado 3B: filtros, orden y paginación de servidor', () => {
+    it('devuelve por defecto diez registros y total filtrado, excluyendo inactivas', async () => {
+      generarPartes(23);
+      documentos.push({ _id: 'inactiva', activo: false });
+      const respuesta = await request(app.getHttpServer())
+        .get('/publicaciones')
+        .expect(200);
+      expect(respuesta.body).toMatchObject({
+        total: 23,
+        offset: 0,
+        limit: 10,
+        hayMas: true,
+      });
+      expect(
+        respuesta.body.publicaciones.map((pub: any) => pub.titulo),
+      ).toEqual(Array.from({ length: 10 }, (_, i) => `Parte ${23 - i}`));
+      const pipeline = agregar.mock.calls[0][0];
+      expect(pipeline[0]).toEqual({ $match: { activo: { $ne: false } } });
+      expect(pipeline[2].$facet.publicaciones.slice(0, 3)).toEqual([
+        { $sort: { createdAt: -1, _id: -1 } },
+        { $skip: 0 },
+        { $limit: 10 },
+      ]);
+      expect(pipeline[2].$facet.conteo).toEqual([{ $count: 'total' }]);
+      expect(poblar.mock.calls[0][0]).toHaveLength(10);
+      expect(poblar.mock.calls[0][1]).toEqual({
+        path: 'autorId',
+        select: 'nombre apellido nombreUsuario imagenPerfil',
+      });
+    });
+    it('navega a offset 10 y 20 sin repetir la primera página', async () => {
+      generarPartes(23);
+      const segunda = await request(app.getHttpServer())
+        .get('/publicaciones?offset=10&limit=10')
+        .expect(200);
+      const tercera = await request(app.getHttpServer())
+        .get('/publicaciones?offset=20&limit=10')
+        .expect(200);
+      expect(segunda.body).toMatchObject({
+        total: 23,
+        offset: 10,
+        limit: 10,
+        hayMas: true,
+      });
+      expect(segunda.body.publicaciones.map((pub: any) => pub.titulo)).toEqual(
+        Array.from({ length: 10 }, (_, i) => `Parte ${13 - i}`),
+      );
+      expect(tercera.body).toMatchObject({
+        total: 23,
+        offset: 20,
+        limit: 10,
+        hayMas: false,
+      });
+      expect(tercera.body.publicaciones.map((pub: any) => pub.titulo)).toEqual([
+        'Parte 3',
+        'Parte 2',
+        'Parte 1',
+      ]);
+    });
+    it('aplica filtro por autor antes del total y offset, y permite limit 3', async () => {
+      generarPartes(23);
+      const respuesta = await request(app.getHttpServer())
+        .get(`/publicaciones?usuarioId=${autorId}&offset=10&limit=10`)
+        .expect(200);
+      expect(respuesta.body).toMatchObject({
+        total: 12,
+        offset: 10,
+        limit: 10,
+        hayMas: false,
+      });
+      expect(
+        respuesta.body.publicaciones.map((pub: any) => pub.titulo),
+      ).toEqual(['Parte 3', 'Parte 1']);
+      expect(agregar.mock.calls[0][0][0].$match.autorId.toString()).toBe(
+        autorId,
+      );
+      const perfil = await request(app.getHttpServer())
+        .get(`/publicaciones?usuarioId=${autorId}&limit=3`)
+        .expect(200);
+      expect(perfil.body.publicaciones).toHaveLength(3);
+      expect(perfil.body.total).toBe(12);
+      expect(perfil.body.hayMas).toBe(true);
+    });
+    it('ordena por likes, luego fecha y finalmente id para desempatar', async () => {
+      generarPartes(5);
+      documentos[0].likes = [
+        new Types.ObjectId(autorId),
+        new Types.ObjectId(ajenoId),
+      ];
+      documentos[1].likes = [new Types.ObjectId(autorId)];
+      documentos[3].likes = [
+        new Types.ObjectId(autorId),
+        new Types.ObjectId(ajenoId),
+      ];
+      documentos[3].createdAt = documentos[0].createdAt;
+      documentos[4].likes = [
+        new Types.ObjectId(autorId),
+        new Types.ObjectId(ajenoId),
+      ];
+      const respuesta = await request(app.getHttpServer())
+        .get('/publicaciones?orden=likes')
+        .expect(200);
+      expect(
+        respuesta.body.publicaciones.map((pub: any) => pub.titulo),
+      ).toEqual(['Parte 5', 'Parte 4', 'Parte 1', 'Parte 2', 'Parte 3']);
+      expect(
+        respuesta.body.publicaciones.map((pub: any) => pub.cantidadLikes),
+      ).toEqual([2, 2, 2, 1, 0]);
+      expect(agregar.mock.calls[0][0][2].$facet.publicaciones[0]).toEqual({
+        $sort: { cantidadLikes: -1, createdAt: -1, _id: -1 },
+      });
+    });
+    it('desempata fecha por id de forma determinista entre páginas', async () => {
+      generarPartes(2);
+      documentos[1].createdAt = documentos[0].createdAt;
+      for (let repeticion = 0; repeticion < 2; repeticion++) {
+        const primera = await request(app.getHttpServer())
+          .get('/publicaciones?limit=1')
+          .expect(200);
+        const segunda = await request(app.getHttpServer())
+          .get('/publicaciones?limit=1&offset=1')
+          .expect(200);
+        expect(primera.body.publicaciones[0].titulo).toBe('Parte 2');
+        expect(segunda.body.publicaciones[0].titulo).toBe('Parte 1');
+      }
+    });
+    it('devuelve página vacía para offset posterior y total correcto para un filtro sin registros', async () => {
+      generarPartes(2);
+      const fuera = await request(app.getHttpServer())
+        .get('/publicaciones?offset=20')
+        .expect(200);
+      expect(fuera.body).toEqual({
+        publicaciones: [],
+        total: 2,
+        offset: 20,
+        limit: 10,
+        hayMas: false,
+      });
+      const vacio = await request(app.getHttpServer())
+        .get('/publicaciones?usuarioId=000000000000000000000099')
+        .expect(200);
+      expect(vacio.body).toEqual({
+        publicaciones: [],
+        total: 0,
+        offset: 0,
+        limit: 10,
+        hayMas: false,
+      });
+    });
+    it('calcula el like del lector autenticado sin confundirlo con el filtro de autor ni exponer votantes', async () => {
+      generarPartes(2);
+      documentos[0].autorId = new Types.ObjectId(ajenoId);
+      documentos[0].likes = [new Types.ObjectId(autorId)];
+      documentos[1].likes = [new Types.ObjectId(ajenoId)];
+      const respuesta = await request(app.getHttpServer())
+        .get(`/publicaciones?usuarioId=${ajenoId}`)
+        .set('Cookie', `token=${token}`)
+        .expect(200);
+      expect(
+        respuesta.body.publicaciones.map((pub: any) => pub.meGusta),
+      ).toEqual([false, true]);
+      for (const pub of respuesta.body.publicaciones)
+        expect(pub).not.toHaveProperty('likes');
+      const anonima = await request(app.getHttpServer())
+        .get('/publicaciones')
+        .set('Cookie', 'token=token-invalido')
+        .expect(200);
+      expect(
+        anonima.body.publicaciones.every((pub: any) => pub.meGusta === false),
+      ).toBe(true);
+    });
+    it('considera un documento antiguo sin likes como cero y permite su primer voto', async () => {
+      prepararPublicacion();
+      const anterior = await request(app.getHttpServer())
+        .get('/publicaciones')
+        .expect(200);
+      expect(anterior.body.publicaciones[0]).toMatchObject({
+        titulo: 'Publicación anterior',
+        cantidadLikes: 0,
+        meGusta: false,
+      });
+      expect(documentos[0]).not.toHaveProperty('likes');
+      await postLike().expect(201);
+      const votada = await request(app.getHttpServer())
+        .get('/publicaciones')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(votada.body.publicaciones[0]).toMatchObject({
+        cantidadLikes: 1,
+        meGusta: true,
+      });
+    });
+    it.each([
+      'orden=otro',
+      'offset=-1',
+      'offset=1.5',
+      'offset=',
+      'offset=1e2',
+      'offset=NaN',
+      'offset=9007199254740992',
+      'limit=0',
+      'limit=-1',
+      'limit=101',
+      'limit=1.5',
+      'limit=',
+      'limit=NaN',
+      'limit=1&limit=2',
+      'usuarioId=incorrecto',
+      'usuarioId=',
+      'campoExtra=1',
+    ])(
+      'rechaza query inválida %s antes de consultar MongoDB',
+      async (query) => {
+        await request(app.getHttpServer())
+          .get(`/publicaciones?${query}`)
+          .expect(400);
+        expect(agregar).not.toHaveBeenCalled();
+      },
+    );
+    it('acepta el límite máximo técnico de 100', async () => {
+      generarPartes(3);
+      const respuesta = await request(app.getHttpServer())
+        .get('/publicaciones?limit=100')
+        .expect(200);
+      expect(respuesta.body).toMatchObject({
+        limit: 100,
+        total: 3,
+        hayMas: false,
+      });
+    });
   });
 });

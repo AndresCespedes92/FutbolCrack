@@ -10,6 +10,7 @@ describe('Schema de publicaciones', () => {
       errors: { titulo: expect.anything(), descripcion: expect.anything() },
     });
     expect(nueva.activo).toBe(true);
+    expect(nueva.likes).toEqual([]);
   });
   it('valida nuevos campos y conserva contenido como alias opcional', async () => {
     const nueva = new Modelo({
@@ -20,5 +21,6 @@ describe('Schema de publicaciones', () => {
     await expect(nueva.validate()).resolves.toBeUndefined();
     expect(PublicacionSchema.path('contenido')).toBeDefined();
     expect(PublicacionSchema.path('activo').options.default).toBe(true);
+    expect(PublicacionSchema.path('likes').options.unique).not.toBe(true);
   });
 });
