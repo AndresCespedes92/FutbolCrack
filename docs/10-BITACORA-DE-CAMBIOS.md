@@ -323,6 +323,74 @@ Pendientes: UI de likes/filtros/paginador numerado/tarjeta real/modal de baja en
 
 ---
 
+## 31/10/2026 — Sprint 2, Tarea 3C: interfaz y Mi Perfil
+
+**Objetivo y ejemplo del club:** presentar jugadas reales en fichas reutilizables, votar, recorrer la cartelera de diez en diez y confirmar su retiro. El jugador ve sus últimas tres jugadas en el perfil; no se inventan autores, likes ni comentarios.
+
+**Git y respaldo:** inicio en feature/publicaciones-likes-paginacion con los 19 archivos pendientes esperados de 3B. Se verificaron antes compilaciones (salida 0), FE 35/35 y BE 95/95. La consigna autoriza guardar 3B: commit local 71c0525, «feat(publicaciones): agregar likes y listado paginado». Se creó feature/publicaciones-interfaz desde ese commit. HEAD permanece allí; no se hizo commit de 3C, merge ni deploy.
+
+### Inventario completo
+
+- docs/00-MAPA-DEL-PROYECTO.md
+- docs/03-PUBLICACIONES.md
+- docs/08-PRUEBAS-Y-DESPLIEGUE.md
+- docs/09-REQUISITOS-SPRINTS.md
+- docs/10-BITACORA-DE-CAMBIOS.md
+- docs/guia-angular.md
+- frontend/src/app/app.spec.ts
+- frontend/src/app/components/confirmacion-baja/confirmacion-baja.css
+- frontend/src/app/components/confirmacion-baja/confirmacion-baja.html
+- frontend/src/app/components/confirmacion-baja/confirmacion-baja.spec.ts
+- frontend/src/app/components/confirmacion-baja/confirmacion-baja.ts
+- frontend/src/app/components/publicacion-card/publicacion-card.css
+- frontend/src/app/components/publicacion-card/publicacion-card.html
+- frontend/src/app/components/publicacion-card/publicacion-card.spec.ts
+- frontend/src/app/components/publicacion-card/publicacion-card.ts
+- frontend/src/app/pages/mi-perfil/mi-perfil.css
+- frontend/src/app/pages/mi-perfil/mi-perfil.html
+- frontend/src/app/pages/mi-perfil/mi-perfil.spec.ts
+- frontend/src/app/pages/mi-perfil/mi-perfil.ts
+- frontend/src/app/pages/publicaciones/publicaciones-interacciones.spec.ts
+- frontend/src/app/pages/publicaciones/publicaciones.css
+- frontend/src/app/pages/publicaciones/publicaciones.html
+- frontend/src/app/pages/publicaciones/publicaciones.spec.ts
+- frontend/src/app/pages/publicaciones/publicaciones.ts
+- frontend/src/app/pipes/truncate.pipe.spec.ts
+- frontend/src/app/pipes/truncate.pipe.ts
+- frontend/src/app/services/acciones-publicaciones.ts
+- frontend/src/app/services/publicaciones.spec.ts
+- frontend/src/app/services/publicaciones.ts
+- frontend/src/app/testing/dialog-prueba.ts
+- frontend/src/app/testing/publicaciones-fixture.ts
+
+### Implementación y recorrido
+
+- **Tarjeta real compartida:** PublicacionCard recibe Inputs y emite cambiarLike/solicitarBaja/abrirDetalle. No ejecuta HTTP. Feed y perfil coordinan las acciones; detalleDisponible queda false hasta Sprint 3. Se muestran autor/foto/fecha, título/descripcion o contenido antiguo, imagen, cantidad y estado del voto.
+- **Pipe:** TruncatePipe puro y expansión Ver más/Ver menos a 280 caracteres, sin mutar el contenido; cuenta como uno de los tres de S4. Se documentan bindings y accesibilidad.
+- **Acciones compartidas:** AccionesPublicaciones usa señales locales por pantalla para pendientes, modal y mensajes. La implementación se reutiliza sin compartir el estado de pantallas distintas. Cada voto se bloquea mientras espera y recarga datos reales en éxito; conflictos 409/404 sincronizan sin simular éxito.
+- **Paginación/orden:** Publicaciones manda limit 10, offset por página y fecha/likes. Selector vuelve al inicio, controles numerados muestran una ventana de cinco más extremos, con anterior/siguiente. Lecturas anteriores se cancelan y las suscripciones terminan al destruir la pantalla. Una última página vacía tras una baja se reubica en la última válida.
+- **Baja:** solicitarBaja solo selecciona; dialog nativo con diseño propio identifica el título. Cancelar/Escape no solicitan. Confirmar envía DELETE mediante el servicio HTTP, bloquea doble confirmación y espera éxito antes de cerrar/mensaje/recarga. El rechazo conserva modal/publicación y muestra error. Nest sigue validando propiedad/rol actual, sin cambios de backend.
+- **Perfil:** /auth/me entrega usuario real y se consulta usuarioId/fecha/offset 0/limit 3, reutilizando tarjeta/acciones/modal. Se elimina el consumo de demos; errores de publicaciones no borran la ficha. Los comentarios se anuncian como próximos, sin sistema paralelo ni cifras ficticias.
+- **Estilo y estudio:** se conservan negro, verde musgo, gris y radios globales. Los estilos de tarjetas pasan al hijo; CSS comentado explica controles, fotos, estados y móvil. guia-angular.md desarrolla TS/HTML/CSS, routing, formularios, bindings, Input/Output, señales, servicios, recorrido y preguntas de defensa. El patrón de tarjeta/servicio/formulario se relaciona con CineBera sin afirmar equivalencia con un repositorio que no está aquí.
+
+Datos: componente padre → servicio de acciones/servicio HTTP Angular → endpoint NestJS 3A/3B → guard/DTO/servicio → MongoDB → respuesta → recarga de la página y Inputs de los hijos. Cookies HttpOnly se envían con withCredentials; no se leen, renuevan ni cambian. No se tocaron JWT, secretos, modelos o endpoints backend ni se instalaron dependencias.
+
+### Pruebas y cierre
+
+Final: frontend build salida 0 sin advertencias, 60/60 en 10 suites; backend build salida 0, 95/95 en 6 suites. Se conservan las 35 pruebas Angular anteriores y agregan 25. La advertencia CSS anterior de +877 bytes desaparece tras trasladar reglas a la tarjeta y quitar selectores/reglas duplicadas, sin aumentar presupuestos. No se modifican dependencias.
+
+Durante la verificación, JSDOM carecía de showModal/close, una comparación incluía whitespace de plantilla y la simulación directa de usuario no reproducía la sesión Angular. Se agregó un doble DOM exclusivo de pruebas, se compara texto con trim y se prueba permiso mediante respuestas GET /auth/me de sesiones distintas. También se marca el comienzo de carga con markForCheck para actualizar la vista de inmediato. Historial de ejecuciones y comandos en 08; sin saltar casos, debilitar permisos ni elevar timeouts.
+
+La cobertura verifica tarjeta/Input/Output, pipe, likes/cantidad/errores/bloqueos, 10/10/3 y páginas posteriores, cambio de orden, modal/cancelación/confirmación/403, última página vacía, datos/imagen de perfil y últimas tres propias, vacío/error/reintento y compatibilidad antigua. HTTP y API nativa de diálogo están simulados; backend conserva los dobles de 3B. No se probaron servicios externos, cookies/CORS reales, aspecto en dispositivos o la capa modal nativa en navegador.
+
+La revisión SHA-256 final confirma 18 archivos existentes modificados y 13 nuevos (31 en total), coincidentes con el inventario. Backend completo, autenticación/guard Angular, dependencias y configuración conservan su huella de 71c0525. git diff --check no tiene errores; enlaces y bloques Markdown válidos, 44 IDs únicos de matriz y sin pruebas skip/todo/only. Git solo avisa normalización LF/CRLF según configuración existente.
+
+**Pendientes:** comentarios y detalle de Sprint 3; otros dos pipes S4; resto de requisitos de sprints posteriores; ensayo real Atlas/Cloudinary/API y navegador; integración coordinada con 3A/3B. La URL Angular continúa siendo la del backend Vercel existente: no se verificó su versión desplegada y necesita el contrato paginado. El TTL JWT previo de 20 segundos permanece y puede interrumpir un ensayo prolongado. No se detectó impedimento que requiera cambiar contrato/backend; tampoco se declara validada producción. Compensación de imágenes huérfanas sigue pendiente de 3A.
+
+Listo para revisión local del alcance autorizado, con límites externos identificados. Se detiene y espera aprobación; sin merge/deploy ni commit de 3C.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

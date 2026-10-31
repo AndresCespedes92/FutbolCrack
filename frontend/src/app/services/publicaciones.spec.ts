@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ListadoPublicaciones, PublicacionesService } from './publicaciones';
 
-// Se verifica transporte/contrato real, sin agregar la interfaz de likes o paginador de 3C.
+// Transporte y contrato HTTP, independiente de la presentación de las tarjetas.
 describe('PublicacionesService: paginación y likes', () => {
   let http: HttpTestingController;
   let servicio: PublicacionesService;

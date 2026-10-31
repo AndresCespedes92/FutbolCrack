@@ -108,6 +108,11 @@ export class PublicacionesService {
     });
   }
 
+  // Solo el contenedor llama este método después de confirmar en el modal propio.
+  darDeBaja(id: string): Observable<{ mensaje: string }> {
+    return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/${id}`, { withCredentials: true });
+  }
+
   /**
    * POST /publicaciones
    *

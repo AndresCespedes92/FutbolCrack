@@ -170,3 +170,69 @@ El array es sencillo y adecuado al alcance académico. Crece dentro del document
 Los desempates estabilizan un conjunto sin cambios; offset no ofrece una instantánea entre solicitudes si otros publican o votan. Las pruebas de concurrencia usan un doble que modela el operador atómico y verifican el filtro/update enviado; no sustituyen un ensayo concurrente contra MongoDB real. Pendientes Atlas/Cloudinary, comprobación de consultas/datos reales, despliegue coordinado y UI 3C. La posible imagen huérfana si falla save después de subir sigue pendiente de 3A.
 
 Resultado actual: frontend 35/35 en 5 suites, backend 95/95 en 6 suites, ambas compilaciones correctas. Se conservan todos los casos anteriores.
+
+## Sprint 2, Tarea 3C — Usar la cartelera y el perfil
+
+Esta sección actualiza los pendientes de interfaz de 3A/3B. Se mantuvo la paleta negro/verde musgo/gris, radios compartidos y distribución general. No se modificaron backend, JWT, cookies ni contrato HTTP.
+
+### Padre, hijo y servicio: problema y recorrido
+
+Publicaciones y MiPerfil son contenedores (padres). PublicacionCard es una ficha reutilizable (hijo) de una jugada. Como en CineBera, la pantalla obtiene datos y los entrega a una tarjeta: Input baja información y Output sube una intención. Así se presenta la misma jugada sin copiar el marcado ni hacer peticiones desde cada hijo.
+
+```html
+<app-publicacion-card [publicacion]="publicacion"
+  [autenticado]="!!usuario"
+  [puedeDarBaja]="acciones.puedeDarBaja(publicacion, usuario)"
+  [procesando]="acciones.pendientes().has(publicacion._id)"
+  (cambiarLike)="acciones.alternarLike($event, usuario, cargarTrasAccion)"
+  (solicitarBaja)="acciones.solicitarBaja($event, usuario)" />
+```
+
+PublicacionCard recibe autor/foto/fecha/título/descripcion o contenido anterior, imagen, cantidadLikes y meGusta. Emite cambiarLike, solicitarBaja y abrirDetalle, siempre con la publicación. No conoce HttpClient. abrirDetalle solo se habilita si detalleDisponible es true; hoy permanece false por falta del detalle Sprint 3.
+
+AccionesPublicaciones se registra en providers de cada pantalla: la implementación se comparte, pero mensaje/modal/pendientes de una pantalla no contaminan la otra. Sus signal guardan estado reactivo; la plantilla lee mensaje(), error() o pendientes(). El servicio HTTP PublicacionesService conserva la comunicación con Nest.
+
+Recorrido de un voto: clic → Output de la tarjeta → alternarLike del servicio de acciones del contenedor → POST/DELETE :id/likes con cookies → AuthGuard y servicio Nest → actualización atómica MongoDB → mensaje → recarga de la página actual. La recarga recupera cantidad y estado reales, y mantiene el orden por popularidad consistente; no se suman números optimistas. Durante la solicitud, el Set de IDs pendientes impide otro pedido para esa publicación y su botón queda deshabilitado.
+
+Un 401 explica sesión vencida, 403 falta de permiso, 404 publicación no disponible, 409 conflicto de voto, y red/servidor permiten reintentar con mensajes comprensibles. Un 409/404 de like vuelve a consultar la página para sincronizar. Si el voto tuvo éxito y falla la recarga, se conserva el mensaje del voto confirmado y se muestra el error de lectura; no se inventan datos nuevos.
+
+El feed consulta /auth/me para decidir visibilidad sin leer la cookie HttpOnly. Sin sesión sigue siendo público y deshabilita likes; un error distinto de 401 informa que no se pudo comprobar sesión. Esto no cambia JWT, TTL ni política de cookies. La autorización definitiva siempre permanece en NestJS.
+
+### Paginación y orden
+
+La pantalla solicita siempre limit 10. La página n envía offset `(n - 1) * 10`. MongoDB aplica filtro/orden/skip/limit y devuelve `{ publicaciones, total, offset, limit, hayMas }`; Angular solo renderiza el array de esa página. No se descarga todo para recortarlo.
+
+Con 23 jugadas: página 1 recibe diez, página 2 diez y página 3 tres. Se muestran Anterior/Siguiente y hasta cinco números cercanos; si corresponde, también primera/última con puntos suspensivos. aria-current identifica la página actual y los controles se bloquean durante la carga. Más recientes usa orden fecha; Más populares usa likes y vuelve a offset 0. El alta también regresa a la primera página para consultar la cartelera actualizada.
+
+cargarPublicaciones cancela la lectura anterior con Subscription antes de reemplazarla y usa takeUntilDestroyed al abandonar la pantalla. Esto evita que una respuesta vieja pise una nueva página. Estados: carga, error con Reintentar, vacío y contenido. Si una baja deja vacía la página 3, calcula el último offset existente y lo consulta: no deja al usuario en una página vacía cuando aún hay publicaciones.
+
+### Baja con confirmación propia
+
+El botón solo aparece para autor o administrador según los datos de /auth/me. Esa condición es presentación; el servidor vuelve a verificar el rol actual y la propiedad.
+
+1. solicitarBaja guarda la publicación seleccionada, sin enviar HTTP.
+2. La plantilla crea ConfirmacionBaja; dialog.showModal abre un modal nativo con diseño propio, nombre de la publicación, explicación, Cancelar y Confirmar.
+3. Cancelar o Escape emiten cancelar y no ejecutan DELETE. Cancelar recibe foco inicial; el diálogo modal nativo limita la navegación al contenido modal.
+4. Confirmar llama a confirmarBaja; recién entonces PublicacionesService.darDeBaja envía DELETE /publicaciones/:id con cookies. Durante la espera se bloquean confirmación, cancelación y Escape para impedir acciones ambiguas o duplicadas.
+5. Solo después de 200 se cierra el modal, se muestra «Publicación dada de baja correctamente» y se consulta el listado. No se vuelve a presentar el documento inactivo.
+6. Un rechazo mantiene el modal con el error y permite cancelar o reintentar. Al cerrar se restaura foco al disparador si todavía existe; después de una recarga que reemplaza la tarjeta ese disparador puede desaparecer.
+
+No se utiliza alert ni window.confirm. La eliminación sigue siendo lógica en Nest/MongoDB y conserva documento/imagen como en 3A.
+
+### Texto largo y datos antiguos
+
+TruncatePipe es un pipe puro propio: recibe texto, límite (280) y expandido. La tarjeta usa `descripcion | truncate: limiteTexto : expandido`; Ver más/Ver menos cambia únicamente el estado local. aria-expanded y aria-controls relacionan el botón con el párrafo. No hay innerHTML ni edición del texto persistido. Este pipe cuenta una vez para los tres de S4; faltan los otros dos.
+
+Sin título se muestra «Publicación anterior», sin descripcion se usa contenido, autor ausente usa «Usuario no disponible», sin foto usa FC, sin cantidadLikes usa cero. Las publicaciones inactivas no permiten acciones incluso si llegan a la tarjeta. Creación con FormData, imagen opcional y validaciones se conserva y sigue cubierta por sus pruebas previas.
+
+### Mi Perfil y comentarios pendientes
+
+cargarMiPerfil obtiene usuario real y luego cargarPublicaciones consulta `{ usuarioId: usuario.id, orden: 'fecha', offset: 0, limit: 3 }`. El backend filtra al autor antes de limitar y devuelve hasta tres publicaciones, presentadas con la misma tarjeta. Se mantienen los datos e imagen de la ficha y el cierre de sesión existentes. El estado/error de publicaciones es independiente del perfil: un fallo de la cartelera no borra los datos del jugador.
+
+Se retiró PUBLICACIONES_DEMO de esta pantalla; no se inventan likes, jugadas ni autores. El requisito de últimas tres queda implementado; **sus comentarios siguen pendientes de Sprint 3** (modelo/endpoints, carga 3 en 3 y edición propia). Se muestra una nota temporal, sin contador falso, formulario paralelo ni consulta a un endpoint inexistente. Los archivos demo permanecen como material histórico sin uso en estas pantallas.
+
+### Pruebas y edición manual
+
+El mapa de archivos está en 00 y la [guía Angular](guia-angular.md) incluye ejemplos y preguntas de defensa. Los CSS explican radio/padding, colores de estados, fotos y reglas móviles; para ajustar todas las tarjetas se cambia publicacion-card.css, no el feed por separado. La paleta/radios globales de styles.css se reutilizan sin modificarlos.
+
+Las pruebas DOM/HTTP locales cubren renderizado, los tres Outputs, bloqueo, expansión, diez registros/páginas, orden, modal/cancelación/errores, última página tras baja y perfil real. Ver ejecución y límites en 08. El comportamiento modal nativo, aspecto en distintos dispositivos y ciclo con Atlas/Cloudinary/cookies reales deben verificarse en navegador/entorno de ensayo: JSDOM no demuestra esos puntos.

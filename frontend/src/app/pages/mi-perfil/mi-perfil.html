@@ -1,15 +1,10 @@
-
 <span class="eyebrow">TU PERFIL / TU CV FUTBOLÍSTICO</span>
 
 <div class="section-heading">
   <h1>Mi perfil</h1>
 
   @if (usuario) {
-    <button
-      type="button"
-      (click)="cerrarSesion()"
-      [disabled]="cerrandoSesion"
-    >
+    <button class="button" type="button" (click)="cerrarSesion()" [disabled]="cerrandoSesion">
       {{ cerrandoSesion ? 'Cerrando sesión...' : 'Cerrar sesión' }}
     </button>
   }
@@ -24,21 +19,13 @@
     {{ mensajeError }}
   </p>
 
-  <button type="button" (click)="cargarMiPerfil()">
-    Reintentar
-  </button>
+  <button class="button" type="button" (click)="cargarMiPerfil()">Reintentar</button>
 }
 
 @if (usuario; as jugador) {
-
   <!-- Datos reales del usuario autenticado -->
-  <section
-    class="player-card"
-    aria-labelledby="nombre-jugador"
-  >
-
+  <section class="player-card" aria-labelledby="nombre-jugador">
     <div class="player-art">
-
       @if (jugador.imagenPerfil) {
         <img
           [src]="jugador.imagenPerfil"
@@ -59,26 +46,20 @@
     </div>
 
     <div class="player-info">
-
-      <span class="availability">
-        Futbolista registrado
-      </span>
+      <span class="availability"> Futbolista registrado </span>
 
       <h2 id="nombre-jugador">
         {{ jugador.nombre }}
         {{ jugador.apellido }}
       </h2>
 
-      <p class="player-user">
-        @{{ jugador.nombreUsuario }}
-      </p>
+      <p class="player-user">@{{ jugador.nombreUsuario }}</p>
 
       <p>
         {{ jugador.descripcion || 'Todavía no agregaste una descripción.' }}
       </p>
 
       <dl class="player-facts">
-
         <div>
           <dt>Nombre</dt>
           <dd>{{ jugador.nombre }} {{ jugador.apellido }}</dd>
@@ -103,37 +84,23 @@
           <dt>Tipo de perfil</dt>
           <dd>{{ jugador.perfil }}</dd>
         </div>
-
       </dl>
     </div>
   </section>
 
   <!-- Información de ejemplo hasta implementar el CV deportivo -->
   <div class="cv-layout">
-
-    <section
-      class="cv-panel"
-      aria-labelledby="titulo-trayectoria"
-    >
+    <section class="cv-panel" aria-labelledby="titulo-trayectoria">
       <span class="eyebrow">CV / RECORRIDO DEPORTIVO</span>
 
       <h2 id="titulo-trayectoria">Trayectoria</h2>
 
-      <p>
-        Próximamente podrás registrar los clubes,
-        categorías y equipos en los que jugaste.
-      </p>
+      <p>Próximamente podrás registrar los clubes, categorías y equipos en los que jugaste.</p>
 
-      <p class="cv-caption">
-        Esta información todavía no está disponible
-        en el perfil registrado.
-      </p>
+      <p class="cv-caption">Esta información todavía no está disponible en el perfil registrado.</p>
     </section>
 
-    <section
-      class="cv-panel"
-      aria-labelledby="titulo-juego"
-    >
+    <section class="cv-panel" aria-labelledby="titulo-juego">
       <span class="eyebrow">CV / PERFIL DE JUEGO</span>
 
       <h2 id="titulo-juego">Lo que aporto</h2>
@@ -143,37 +110,58 @@
       </p>
 
       <p class="cv-caption">
-        Las posiciones, clubes y estadísticas deportivas
-        se incorporarán en próximas funcionalidades.
+        Las posiciones, clubes y estadísticas deportivas se incorporarán en próximas
+        funcionalidades.
       </p>
     </section>
-
   </div>
 
-  <!-- Publicaciones ficticias: aún no asociadas al usuario real -->
-  <section
-    class="player-posts"
-    aria-labelledby="titulo-publicaciones"
-  >
+  <!-- El backend filtra por usuario antes de devolver sus tres publicaciones más recientes. -->
+  <section class="player-posts" aria-labelledby="titulo-publicaciones">
     <div class="section-heading">
       <div>
         <span class="eyebrow">MATERIAL DEL JUGADOR</span>
-        <h2 id="titulo-publicaciones">
-          Mis jugadas y publicaciones
-        </h2>
+        <h2 id="titulo-publicaciones">Mis jugadas y publicaciones</h2>
       </div>
-
-      <span>CONTENIDO DE DEMOSTRACIÓN</span>
+      <span>ÚLTIMAS TRES</span>
     </div>
-
-    <p class="material-note">
-      Estas publicaciones son ejemplos visuales.
-      Todavía no están asociadas a tu cuenta.
-    </p>
-
-    @for (publicacion of publicaciones; track publicacion.id) {
-      <app-publicacion-card [publicacion]="publicacion" />
+    @if (acciones.mensaje()) {
+      <p class="action-success" role="status">{{ acciones.mensaje() }}</p>
     }
-
+    @if (acciones.error() && !acciones.seleccionada()) {
+      <p class="action-error" role="alert">{{ acciones.error() }}</p>
+    }
+    @if (cargandoPublicaciones) {
+      <p role="status">Cargando tus publicaciones...</p>
+    } @else if (errorPublicaciones) {
+      <p role="alert">{{ errorPublicaciones }}</p>
+      <button class="button" type="button" (click)="cargarPublicaciones()">Reintentar</button>
+    } @else {
+      @if (publicaciones.length === 0) {
+        <p class="material-note">Todavía no publicaste tus jugadas. Podés hacerlo desde el feed.</p>
+      }
+      @for (publicacion of publicaciones; track publicacion._id) {
+        <app-publicacion-card
+          [publicacion]="publicacion"
+          [autenticado]="!!usuario"
+          [puedeDarBaja]="acciones.puedeDarBaja(publicacion, usuario)"
+          [procesando]="acciones.pendientes().has(publicacion._id)"
+          (cambiarLike)="acciones.alternarLike($event, usuario, cargarTrasAccion)"
+          (solicitarBaja)="acciones.solicitarBaja($event, usuario)"
+        />
+      }
+    }
+    <p class="material-note">
+      Los comentarios de estas publicaciones estarán disponibles próximamente.
+    </p>
   </section>
+}
+@if (acciones.seleccionada(); as publicacion) {
+  <app-confirmacion-baja
+    [publicacion]="publicacion"
+    [procesando]="acciones.eliminando()"
+    [error]="acciones.error()"
+    (cancelar)="acciones.cancelarBaja()"
+    (confirmar)="confirmarBaja()"
+  />
 }

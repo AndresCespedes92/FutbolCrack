@@ -151,3 +151,29 @@ Esta sección actualiza los contratos de listado descritos en la auditoría y en
 Recorrido: jugador abre cartelera → cargarPublicaciones → servicio Angular → GET + DTO/guard opcional → listar → agregación MongoDB y populate → sobre paginado → array visible. Una futura acción de like recorrerá servicio Angular → AuthGuard obligatorio → sub verificado → cambiarMeGusta → findOneAndUpdate → mensaje/cantidad/estado. Los botones, tarjeta real y paginador visual pertenecen a 3C.
 
 Resultados y límites en [08](08-PRUEBAS-Y-DESPLIEGUE.md); explicación y ejemplos en [03](03-PUBLICACIONES.md).
+
+## Sprint 2, Tarea 3C — Interfaz vigente
+
+La tarjeta real reemplaza la demo en feed y Mi Perfil; no cambian endpoints, modelos ni permisos NestJS de 3A/3B. Esta sección actualiza las referencias históricas que indicaban UI pendiente.
+
+| Archivo (desde la raíz) | Clase / método y responsabilidad |
+| --- | --- |
+| frontend/src/app/components/publicacion-card/publicacion-card.ts/html/css | PublicacionCard: Input publicacion/autenticado/puedeDarBaja/procesando/detalleDisponible; Output cambiarLike/solicitarBaja/abrirDetalle. Presenta autor, foto, fecha, contenido, imagen y voto; no hace HTTP. |
+| frontend/src/app/pipes/truncate.pipe.ts | TruncatePipe.transform: recorta a 280 caracteres por defecto, devuelve texto íntegro al expandir. Primer pipe propio de los tres de S4. |
+| frontend/src/app/components/confirmacion-baja/confirmacion-baja.ts/html/css | ConfirmacionBaja: ngAfterViewInit abre dialog; cancelarBaja/confirmarBaja y cancelarConTeclado emiten eventos; ngOnDestroy cierra y restaura foco si el disparador existe. |
+| frontend/src/app/services/acciones-publicaciones.ts | AccionesPublicaciones: puedeDarBaja, alternarLike, solicitarBaja, cancelarBaja, confirmarBaja; señales locales de pendientes, seleccionada, eliminando, mensaje/error. Se provee por pantalla. |
+| frontend/src/app/services/publicaciones.ts | darDeBaja: DELETE /publicaciones/:id con cookies; se conservan listar, crear, darMeGusta y quitarMeGusta de 3B. |
+| frontend/src/app/pages/publicaciones/publicaciones.ts/html/css | Publicaciones: cargarPublicaciones, cambiarOrden, irAPagina, confirmarBaja; formulario preservado, diez registros, selector y ventana de páginas numeradas. |
+| frontend/src/app/pages/mi-perfil/mi-perfil.ts/html/css | MiPerfil: cargarMiPerfil obtiene datos reales; cargarPublicaciones pide usuarioId/fecha/offset 0/limit 3; comparte tarjeta, acciones y modal. |
+| frontend/src/app/components/publicacion-card/publicacion-card.spec.ts | 4 pruebas: datos reales/antiguos, eventos y bloqueo de acciones. |
+| frontend/src/app/components/confirmacion-baja/confirmacion-baja.spec.ts | 2 pruebas: Escape, bloqueo durante DELETE y restauración del foco. |
+| frontend/src/app/pipes/truncate.pipe.spec.ts | 3 pruebas de límite, vacíos y expansión. |
+| frontend/src/app/pages/publicaciones/publicaciones-interacciones.spec.ts | 12 pruebas de páginas, orden, likes, permisos, modal, cancelación, errores y última página tras baja. |
+| frontend/src/app/pages/mi-perfil/mi-perfil.spec.ts | 4 pruebas: filtro real/últimas tres, vacío, error/reintento y likes compartidos. |
+| frontend/src/app/testing/publicaciones-fixture.ts y dialog-prueba.ts | Fixtures exclusivos de tests y doble de API modal ausente en JSDOM; no se usan en producción. |
+| frontend/src/app/app.spec.ts y pages/publicaciones/publicaciones.spec.ts | Se conservan los 18 casos combinados, adaptando solicitudes y expectativa de perfil sin demos. |
+| docs/guia-angular.md | Guía de estudio: recorrido, bindings, formularios, Input/Output, señales, routing y cambios CSS. |
+
+Ejemplo del club: el entrenador (padre) entrega a la tarjeta la ficha de una jugada. La tarjeta avisa «quiero votar»; el contenedor coordina al servicio, espera la confirmación de Nest y consulta otra vez la cartelera. No se permite que cada tarjeta gestione una conexión propia.
+
+La salida de detalle está preparada y probada, pero detalleDisponible permanece false porque la pantalla/API de detalle y comentarios son de Sprint 3. No hay enlaces a rutas inexistentes ni comentarios inventados. Ver [03](03-PUBLICACIONES.md), [08](08-PRUEBAS-Y-DESPLIEGUE.md) y [guía Angular](guia-angular.md).

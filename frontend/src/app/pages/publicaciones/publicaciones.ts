@@ -1,4 +1,18 @@
-import { Component, ChangeDetectorRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
+import { AuthService, Usuario } from '../../services/auth';
+import { AccionesPublicaciones } from '../../services/acciones-publicaciones';
+import { PublicacionCard } from '../../components/publicacion-card/publicacion-card';
+import { ConfirmacionBaja } from '../../components/confirmacion-baja/confirmacion-baja';
+import {
+  Component,
+  ChangeDetectorRef,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  ViewChild,
+  inject,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -6,14 +20,16 @@ import {
   PublicacionesService,
   Publicacion,
   ParametrosListadoPublicaciones,
+  OrdenPublicaciones,
 } from '../../services/publicaciones';
 import { imagenPerfilValidator as imagenPublicacionValidator } from '../../validators/registro.validators';
 
-// Feed existente: incorpora título/descripción e imagen sin agregar acciones de baja todavía.
+// Padre del feed: coordina formulario, consultas paginadas y eventos de las tarjetas.
 @Component({
   selector: 'app-publicaciones',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule],
+  imports: [RouterLink, ReactiveFormsModule, PublicacionCard, ConfirmacionBaja],
+  providers: [AccionesPublicaciones],
   templateUrl: './publicaciones.html',
   styleUrl: './publicaciones.css',
 })
@@ -21,10 +37,29 @@ export class Publicaciones implements OnInit {
   private readonly publicacionesService = inject(PublicacionesService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
+  private solicitudListado?: Subscription;
+  readonly acciones = inject(AccionesPublicaciones);
+  usuario: Usuario | null = null;
+  orden: OrdenPublicaciones = 'fecha';
+  mensajeSesion = '';
+  get paginaActual(): number {
+    return Math.floor(this.offset / this.limit) + 1;
+  }
+  get totalPaginas(): number {
+    return Math.ceil(this.totalPublicaciones / this.limit);
+  }
+  // Ventana acotada: siempre ofrece varias páginas sin crear miles de botones.
+  get paginasVisibles(): number[] {
+    const inicio = Math.max(1, Math.min(this.paginaActual - 2, this.totalPaginas - 4));
+    return Array.from({ length: Math.min(5, this.totalPaginas) }, (_, indice) => inicio + indice);
+  }
+
   @ViewChild('imagenPublicacion') private imagenInput?: ElementRef<HTMLInputElement>;
 
   publicaciones: Publicacion[] = [];
-  // Metadatos listos para la navegación visual de 3C; no recortamos registros en el navegador.
+  // Los metadatos vienen de MongoDB: el navegador nunca recorta una descarga completa.
   totalPublicaciones = 0;
   offset = 0;
   limit = 10;
@@ -51,6 +86,44 @@ export class Publicaciones implements OnInit {
 
   ngOnInit(): void {
     this.cargarPublicaciones();
+    // El feed sigue público; /auth/me solo determina las acciones visibles, sin leer la cookie HttpOnly.
+    this.auth
+      .obtenerMiPerfil()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (usuario) => {
+          this.usuario = usuario;
+          this.cdr.markForCheck();
+        },
+        error: (error: HttpErrorResponse) => {
+          if (error.status !== 401)
+            this.mensajeSesion =
+              'No pudimos comprobar tu sesión. Recargá para habilitar las acciones.';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  cambiarOrden(evento: Event): void {
+    const valor = (evento.target as HTMLSelectElement).value;
+    if (valor !== 'fecha' && valor !== 'likes') return;
+    this.orden = valor;
+    this.cargarPublicaciones({ offset: 0 });
+  }
+  irAPagina(pagina: number): void {
+    if (
+      this.cargando ||
+      !Number.isInteger(pagina) ||
+      pagina < 1 ||
+      pagina > this.totalPaginas ||
+      pagina === this.paginaActual
+    )
+      return;
+    this.cargarPublicaciones({ offset: (pagina - 1) * 10 });
+  }
+  readonly cargarTrasAccion = () => this.cargarPublicaciones();
+  confirmarBaja(): void {
+    this.acciones.confirmarBaja(() => this.cargarPublicaciones());
   }
 
   seleccionarImagen(evento: Event): void {
@@ -75,6 +148,7 @@ export class Publicaciones implements OnInit {
         descripcion: this.campos.descripcion.value.trim(),
         imagen: this.campos.imagen.value ?? undefined,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.publicando = false;
@@ -82,7 +156,7 @@ export class Publicaciones implements OnInit {
           // File no usa formControlName: limpiamos también el selector nativo tras confirmar el guardado.
           if (this.imagenInput) this.imagenInput.nativeElement.value = '';
           this.mensajeExito = 'Publicación creada correctamente.';
-          this.cargarPublicaciones();
+          this.cargarPublicaciones({ offset: 0 });
           this.cdr.markForCheck();
         },
         error: (error: HttpErrorResponse) => {
@@ -110,24 +184,38 @@ export class Publicaciones implements OnInit {
   cargarPublicaciones(parametros: ParametrosListadoPublicaciones = {}): void {
     this.cargando = true;
     this.mensajeError = '';
-    this.publicacionesService.listar(parametros).subscribe({
-      next: (respuesta) => {
-        this.publicaciones = respuesta.publicaciones;
-        this.totalPublicaciones = respuesta.total;
-        this.offset = respuesta.offset;
-        this.limit = respuesta.limit;
-        this.hayMas = respuesta.hayMas;
-        this.cargando = false;
-        this.cdr.markForCheck();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.cargando = false;
-        this.mensajeError =
-          error.status === 0
-            ? 'No se pudo conectar con el servidor.'
-            : 'No pudimos cargar las publicaciones.';
-        this.cdr.markForCheck();
-      },
-    });
+    this.cdr.markForCheck();
+    // Cancelar la consulta previa evita que una respuesta vieja reemplace otra página/orden.
+    this.solicitudListado?.unsubscribe();
+    this.solicitudListado = this.publicacionesService
+      .listar({ orden: this.orden, offset: this.offset, ...parametros, limit: 10 })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (respuesta) => {
+          // Si se retiró el último registro de una página, volvemos a la última que aún existe.
+          if (respuesta.publicaciones.length === 0 && respuesta.offset > 0) {
+            const ultimoOffset = Math.max(0, (Math.ceil(respuesta.total / 10) - 1) * 10);
+            if (ultimoOffset !== respuesta.offset) {
+              this.cargarPublicaciones({ offset: ultimoOffset });
+              return;
+            }
+          }
+          this.publicaciones = respuesta.publicaciones;
+          this.totalPublicaciones = respuesta.total;
+          this.offset = respuesta.offset;
+          this.limit = respuesta.limit;
+          this.hayMas = respuesta.hayMas;
+          this.cargando = false;
+          this.cdr.markForCheck();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.cargando = false;
+          this.mensajeError =
+            error.status === 0
+              ? 'No se pudo conectar con el servidor.'
+              : 'No pudimos cargar las publicaciones.';
+          this.cdr.markForCheck();
+        },
+      });
   }
 }

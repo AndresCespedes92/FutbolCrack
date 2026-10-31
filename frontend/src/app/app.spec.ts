@@ -80,9 +80,11 @@ describe('Navegación de FutbolCrack', () => {
   afterEach(() => http.verify());
 
   function responderFeed(harness: RouterTestingHarness): void {
-    const solicitud = http.expectOne(`${API}/publicaciones`);
+    const solicitud = http.expectOne((req) => req.url === `${API}/publicaciones`);
     expect(solicitud.request.method).toBe('GET');
     expect(solicitud.request.withCredentials).toBe(true);
+    expect(solicitud.request.params.get('limit')).toBe('10');
+    http.expectOne(`${API}/auth/me`).flush(usuario);
     solicitud.flush({
       publicaciones,
       total: publicaciones.length,
@@ -108,6 +110,18 @@ describe('Navegación de FutbolCrack', () => {
     expect(perfil.request.method).toBe('GET');
     expect(perfil.request.withCredentials).toBe(true);
     perfil.flush(usuario);
+    const propias = http.expectOne((req) => req.url === `${API}/publicaciones`);
+    expect(propias.request.params.get('usuarioId')).toBe(usuario.id);
+    expect(propias.request.params.get('limit')).toBe('3');
+    expect(propias.request.params.get('orden')).toBe('fecha');
+    const materialPropio = publicaciones.filter((pub) => pub.autorId?._id === usuario.id);
+    propias.flush({
+      publicaciones: materialPropio,
+      total: materialPropio.length,
+      offset: 0,
+      limit: 3,
+      hayMas: false,
+    });
     harness.detectChanges();
   }
 
@@ -167,7 +181,7 @@ describe('Navegación de FutbolCrack', () => {
     expect(page.querySelector('.input-invalido, .input-valido')).toBeNull();
   });
 
-  it('muestra el feed de la API y distingue los datos del perfil de su material de demostración', async () => {
+  it('muestra el feed y solo las publicaciones reales del usuario en su perfil', async () => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/publicaciones');
     expect(harness.routeNativeElement?.textContent).toContain('Cargando publicaciones');
@@ -192,17 +206,18 @@ describe('Navegación de FutbolCrack', () => {
     const perfil = harness.routeNativeElement!;
     expect(perfil.querySelector('#nombre-jugador')?.textContent).toContain('Camila');
     expect(perfil.querySelector('.player-facts')?.textContent).toContain('camila@ejemplo.com');
-    expect(perfil.querySelector('.material-note')?.textContent).toContain(
-      'Todavía no están asociadas a tu cuenta',
+    expect(perfil.textContent).toContain(
+      'Los comentarios de estas publicaciones estarán disponibles próximamente',
     );
     const cards = perfil.querySelectorAll('app-publicacion-card');
-    expect(cards.length).toBe(2);
-    expect(perfil.querySelectorAll('.video-demo').length).toBe(1);
+    expect(cards.length).toBe(1);
+    expect(perfil.querySelectorAll('.video-demo').length).toBe(0);
     expect(perfil.querySelector('.trial-details')).toBeNull();
     for (const card of cards) {
-      expect(card.textContent).toContain('Mateo Ríos');
+      expect(card.textContent).toContain('Camila Gómez');
       expect(card.textContent).not.toContain('Lucía Torres');
-      expect(card.textContent).toContain('DEMO');
+      expect(card.textContent).not.toContain('DEMO');
+      expect(card.textContent).toContain('Hoy entrenamos pases cortos.');
     }
   });
 

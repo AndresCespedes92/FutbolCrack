@@ -18,10 +18,10 @@
   <section class="feed" aria-labelledby="titulo-feed">
     <div class="section-heading">
       <h2 id="titulo-feed">En el radar</h2>
-      <span>{{ publicaciones.length }} PUBLICACIONES</span>
+      <span>{{ totalPublicaciones }} PUBLICACIONES</span>
     </div>
 
-    <!-- La creación nueva usa FormData. No hay botón de baja hasta implementar el modal de 3C. -->
+    <!-- El formulario se conserva; las tarjetas delegan sus acciones al contenedor. -->
     <form class="composer-preview" [formGroup]="publicacionForm" (ngSubmit)="publicar()" novalidate>
       <div class="composer-avatar" aria-hidden="true">FC</div>
       <div class="composer-content">
@@ -91,79 +91,89 @@
       </div>
     </form>
 
-    <!-- ESTADOS DEL FEED -->
-    @if (cargando) {
-      <p class="material-note">Cargando publicaciones...</p>
+    <div class="feed-controls">
+      <label for="orden-publicaciones">Ordenar por</label>
+      <select
+        id="orden-publicaciones"
+        [value]="orden"
+        [disabled]="cargando"
+        (change)="cambiarOrden($event)"
+      >
+        <option value="fecha">Más recientes</option>
+        <option value="likes">Más populares</option>
+      </select>
+    </div>
+    @if (mensajeSesion) {
+      <p class="material-note" role="status">{{ mensajeSesion }}</p>
     }
-
-    @if (mensajeError) {
+    @if (acciones.mensaje()) {
+      <p class="action-success" role="status">{{ acciones.mensaje() }}</p>
+    }
+    @if (acciones.error() && !acciones.seleccionada()) {
+      <p class="composer-error" role="alert">{{ acciones.error() }}</p>
+    }
+    @if (cargando) {
+      <p class="material-note" role="status">Cargando publicaciones...</p>
+    } @else if (mensajeError) {
       <div class="feed-message" role="alert">
         <p>{{ mensajeError }}</p>
-
         <button class="button" type="button" (click)="cargarPublicaciones()">Reintentar</button>
       </div>
+    } @else {
+      @if (publicaciones.length === 0) {
+        <div class="feed-message">
+          <p>Todavía no hay publicaciones. ¡Sé el primero en mostrar tu talento!</p>
+        </div>
+      }
+      @for (publicacion of publicaciones; track publicacion._id) {
+        <app-publicacion-card
+          [publicacion]="publicacion"
+          [autenticado]="!!usuario"
+          [puedeDarBaja]="acciones.puedeDarBaja(publicacion, usuario)"
+          [procesando]="acciones.pendientes().has(publicacion._id)"
+          (cambiarLike)="acciones.alternarLike($event, usuario, cargarTrasAccion)"
+          (solicitarBaja)="acciones.solicitarBaja($event, usuario)"
+        />
+      }
     }
-
-    @if (!cargando && !mensajeError && publicaciones.length === 0) {
-      <div class="feed-message">
-        <p>Todavía no hay publicaciones. ¡Sé el primero en mostrar tu talento!</p>
-      </div>
-    }
-
-    <!-- PUBLICACIONES REALES DE MONGODB -->
-    @for (publicacion of publicaciones; track publicacion._id) {
-      <article class="feed-post">
-        <div class="post-header">
-          @if (publicacion.autorId?.imagenPerfil) {
-            <img
-              class="post-avatar"
-              [src]="publicacion.autorId!.imagenPerfil"
-              alt="Foto de perfil del autor"
-              loading="lazy"
-            />
-          } @else {
-            <div class="post-avatar post-avatar-fallback">FC</div>
-          }
-
-          <div class="post-author">
-            <h3>
-              @if (publicacion.autorId) {
-                {{ publicacion.autorId.nombre }}
-                {{ publicacion.autorId.apellido }}
-              } @else {
-                Usuario no disponible
-              }
-            </h3>
-
-            @if (publicacion.autorId) {
-              <span> @{{ publicacion.autorId.nombreUsuario }} </span>
-            }
-          </div>
-
-          <span class="post-date">
-            {{ publicacion.createdAt.slice(0, 10) }}
-          </span>
-        </div>
-
-        <div class="post-body">
-          <!-- Los fallbacks también toleran un backend/documento anterior durante la transición. -->
-          <h2>{{ publicacion.titulo || 'Publicación anterior' }}</h2>
-          <p>{{ publicacion.descripcion ?? publicacion.contenido }}</p>
-
-          @if (publicacion.tipoMultimedia === 'imagen' && publicacion.multimediaUrl) {
-            <img
-              class="post-image"
-              [src]="publicacion.multimediaUrl"
-              alt="Imagen compartida en la publicación"
-              loading="lazy"
-            />
-          }
-        </div>
-
-        <div class="post-footer">
-          <span>FUTBOLCRACK · TALENTO EN JUEGO</span>
-        </div>
-      </article>
+    @if (totalPaginas > 1) {
+      <nav class="pagination" aria-label="Páginas de publicaciones">
+        <button
+          type="button"
+          [disabled]="cargando || paginaActual === 1"
+          (click)="irAPagina(paginaActual - 1)"
+        >
+          Anterior
+        </button>
+        @if (paginasVisibles[0] > 1) {
+          <button type="button" [disabled]="cargando" (click)="irAPagina(1)">1</button
+          ><span>…</span>
+        }
+        @for (pagina of paginasVisibles; track pagina) {
+          <button
+            type="button"
+            [attr.aria-current]="pagina === paginaActual ? 'page' : null"
+            [disabled]="cargando || pagina === paginaActual"
+            (click)="irAPagina(pagina)"
+          >
+            {{ pagina }}
+          </button>
+        }
+        @if (paginasVisibles[paginasVisibles.length - 1] < totalPaginas) {
+          <span>…</span
+          ><button type="button" [disabled]="cargando" (click)="irAPagina(totalPaginas)">
+            {{ totalPaginas }}
+          </button>
+        }
+        <button
+          type="button"
+          [disabled]="cargando || !hayMas"
+          (click)="irAPagina(paginaActual + 1)"
+        >
+          Siguiente
+        </button>
+        <small>Página {{ paginaActual }} de {{ totalPaginas }}</small>
+      </nav>
     }
   </section>
 
@@ -203,3 +213,13 @@
     <p class="aside-caption">UN PERFIL. TU RECORRIDO. TU PRÓXIMA OPORTUNIDAD.</p>
   </aside>
 </div>
+
+@if (acciones.seleccionada(); as publicacion) {
+  <app-confirmacion-baja
+    [publicacion]="publicacion"
+    [procesando]="acciones.eliminando()"
+    [error]="acciones.error()"
+    (cancelar)="acciones.cancelarBaja()"
+    (confirmar)="confirmarBaja()"
+  />
+}

@@ -1,72 +1,84 @@
-<article class="post" [attr.aria-labelledby]="'publicacion-' + publicacion.id">
+<article
+  class="feed-post"
+  [attr.aria-labelledby]="'publicacion-' + publicacion._id"
+  [attr.aria-busy]="procesando"
+>
   <header class="post-header">
-    <span class="avatar" aria-hidden="true">{{ publicacion.iniciales }}</span>
-    <div>
-      <strong>{{ publicacion.autor }}</strong
-      ><span class="post-user">@{{ publicacion.usuario }}</span
-      ><small>{{ publicacion.contexto }}</small>
-    </div>
-    <span class="demo-tag">DEMO</span>
-  </header>
-  <div class="post-body">
-    <span class="post-type" [class.trial-type]="publicacion.convocatoria">{{
-      publicacion.tipo
-    }}</span>
-    <h2 [id]="'publicacion-' + publicacion.id">{{ publicacion.titulo }}</h2>
-    <p>{{ publicacion.mensaje }}</p>
-    <!-- @if diferencia el contenido de una prueba sin agregar otro tipo de cuenta. -->
-    @if (publicacion.convocatoria; as prueba) {
-      <dl class="trial-details">
-        <div>
-          <dt>Categoría y posiciones</dt>
-          <dd>{{ prueba.categoria }}</dd>
-        </div>
-        <div>
-          <dt>Dónde</dt>
-          <dd>{{ prueba.lugar }}</dd>
-        </div>
-        <div>
-          <dt>Cuándo</dt>
-          <dd>{{ prueba.fecha }}</dd>
-        </div>
-        <div>
-          <dt>Qué llevar</dt>
-          <dd>{{ prueba.requisitos }}</dd>
-        </div>
-      </dl>
-      <p class="trial-note">
-        Convocatoria ficticia. No hay inscripción ni postulación disponible en esta demo.
-      </p>
-    }
-  </div>
-  <!-- No mostramos un reproductor falso: esta pieza solo reserva el espacio del futuro video. -->
-  @if (publicacion.videoDemo) {
-    <div
-      class="video-demo"
-      role="note"
-      aria-label="Espacio para video de jugada, sin reproducción disponible"
-    >
-      <span class="video-label">VIDEO DE JUGADA / VISTA PREVIA</span>
-      <strong>Tu juego,<br />en primera persona.</strong>
-      <span class="video-caption">Espacio para video · Sin reproducción en esta demo</span>
-    </div>
-  }
-  @if (publicacion.imagen) {
-    <figure class="post-media">
+    @if (publicacion.autorId?.imagenPerfil) {
       <img
-        class="post-image"
-        [src]="publicacion.imagen"
-        [alt]="publicacion.imagenDescripcion || 'Imagen de la publicación de ejemplo'"
-        width="800"
-        height="400"
+        class="post-avatar"
+        [src]="publicacion.autorId!.imagenPerfil"
+        alt="Foto de perfil del autor"
         loading="lazy"
       />
-      <figcaption>Espacio para fotos · Ilustración de demostración</figcaption>
-    </figure>
-  }
+    } @else {
+      <span class="post-avatar avatar-fallback" aria-hidden="true">FC</span>
+    }
+    <div class="post-author">
+      <h3>
+        {{
+          publicacion.autorId
+            ? publicacion.autorId.nombre + ' ' + publicacion.autorId.apellido
+            : 'Usuario no disponible'
+        }}
+      </h3>
+      @if (publicacion.autorId) {
+        <span>@{{ publicacion.autorId.nombreUsuario }}</span>
+      }
+    </div>
+    <time [attr.datetime]="publicacion.createdAt">{{ publicacion.createdAt.slice(0, 10) }}</time>
+  </header>
+  <div class="post-body">
+    <h2 [id]="'publicacion-' + publicacion._id">
+      {{ publicacion.titulo || 'Publicación anterior' }}
+    </h2>
+    <p [id]="'texto-' + publicacion._id">{{ descripcion | truncate: limiteTexto : expandido }}</p>
+    @if (descripcion.length > limiteTexto) {
+      <button
+        type="button"
+        class="expandir"
+        [attr.aria-expanded]="expandido"
+        [attr.aria-controls]="'texto-' + publicacion._id"
+        (click)="expandido = !expandido"
+      >
+        {{ expandido ? 'Ver menos' : 'Ver más' }}
+      </button>
+    }
+    @if (publicacion.tipoMultimedia === 'imagen' && publicacion.multimediaUrl) {
+      <img
+        class="post-image"
+        [src]="publicacion.multimediaUrl"
+        [alt]="publicacion.titulo || 'Imagen compartida en la publicación'"
+        loading="lazy"
+      />
+    }
+  </div>
   <footer class="post-footer">
-    <span>{{ publicacion.likes }} Me gusta</span>
-    <span>{{ publicacion.comentarios }} comentarios</span>
-    <small>Cifras de ejemplo · Sin interacción</small>
+    <span class="cantidad-likes">{{ publicacion.cantidadLikes ?? 0 }} Me gusta</span>
+    @if (activa) {
+      <button
+        type="button"
+        class="like"
+        [class.seleccionado]="publicacion.meGusta"
+        [attr.aria-pressed]="!!publicacion.meGusta"
+        [disabled]="!autenticado || procesando"
+        (click)="emitirLike()"
+      >
+        {{ procesando ? 'Procesando…' : publicacion.meGusta ? 'Quitar me gusta' : 'Dar me gusta' }}
+      </button>
+      @if (puedeDarBaja) {
+        <button type="button" class="baja" [disabled]="procesando" (click)="emitirBaja()">
+          Dar de baja
+        </button>
+      }
+      @if (detalleDisponible) {
+        <button type="button" (click)="emitirDetalle()">Ver detalle</button>
+      }
+      @if (!autenticado) {
+        <small>Iniciá sesión para dar me gusta.</small>
+      }
+    } @else {
+      <small>Publicación dada de baja.</small>
+    }
   </footer>
 </article>
