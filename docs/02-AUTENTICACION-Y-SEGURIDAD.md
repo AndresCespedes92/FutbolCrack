@@ -95,3 +95,9 @@ AdministradorGuard está en `backend/src/usuarios/guards/administrador.guard.ts`
 La analogía es revisar el carnet y después el cargo vigente del socio antes de entregar el padrón del club. El modelo y el método existentes permiten hacerlo sin cambiar la sesión ni introducir nuevos roles.
 
 Los ocho casos HTTP usan guards reales y claves exclusivas de test, pero sustituyen UsuariosService para no conectar Atlas. Una prueba aparte ejecuta findAll del servicio con un modelo simulado para verificar su selección positiva. No se afirma que se haya probado el servidor MongoDB real ni la configuración de producción. Las duraciones de 20 segundos y los pendientes de Sprint 3 siguen iguales.
+
+## Permiso adicional de 3A, sin cambiar autenticación
+
+DELETE /publicaciones/:id usa el AuthGuard existente. PublicacionesService.darDeBaja obtiene al usuario actual con UsuariosService.findById y permite autor o administrador vigente. No usa un rol del body ni concede permisos solo por un claim viejo. El modelo de usuario y la configuración JWT/cookies no cambiaron.
+
+Como en el club, un socio puede retirar su propio parte; para retirar el de otro tiene que figurar hoy como administrador. Sin usuario vigente se rechaza y nunca se borra físicamente el documento. Creación de imágenes y lógica de bajas se describen en 03, con HTTP local y datos externos simulados.

@@ -1,6 +1,9 @@
 
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module.js';
+import { UsuariosModule } from '../usuarios/usuarios.module.js';
+import { SeguridadModule } from '../auth/seguridad.module.js';
 import { PublicacionesService } from './publicaciones.service.js';
 import { PublicacionesController } from './publicaciones.controller.js';
 
@@ -19,6 +22,7 @@ import {
  */
 @Module({
   imports: [
+    CloudinaryModule, UsuariosModule, SeguridadModule,
     MongooseModule.forFeature([
       {
         name: Publicacion.name,
@@ -27,10 +31,10 @@ import {
     ]),
   ],
 
-  // Incorporaremos el controller en el siguiente paso.
+  // Reutilizamos los módulos existentes para imágenes, identidad y permisos.
   controllers: [PublicacionesController],
 
-  // Incorporaremos el servicio en el siguiente paso.
+  // Un único servicio conserva creación, listado y baja lógica.
   providers: [PublicacionesService],
 })
 export class PublicacionesModule {}

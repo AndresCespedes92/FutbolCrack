@@ -1,5 +1,40 @@
 # 08 — Pruebas y despliegue
 
+## Estado actual — Sprint 2, Tarea 3A
+
+Rama feature/publicaciones-modelo, base limpia c8383c9. Las tareas anteriores ya estaban confirmadas: no había cambios para un commit de respaldo y no se creó uno vacío. No se hicieron commits de esta tarea, merge o deploy.
+
+| Comando                                                               | Resultado final                                                                                                             |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| frontend: npm run build                                               | Correcto; aviso del CSS del feed: 4,88 KB frente a 4 KB, excedente 877 bytes. No se cambió el presupuesto.                  |
+| frontend: node node_modules/@angular/cli/bin/ng.js test --watch=false | 32/32 aprobadas, 4 suites. Las 20 anteriores permanecen y se agregan 12.                                                    |
+| backend: npm run build                                                | Correcto, salida 0, incluida repetición después del ajuste de límite de archivo.                                            |
+| backend: npm test                                                     | 59/59 aprobadas, 6 suites. Incluye 43 HTTP publicaciones, 2 schema, 3 Cloudinary y las 11 anteriores de usuarios/seguridad. |
+
+No se omitieron pruebas. Los 18 casos HTTP de creación de Tarea 2 se adaptaron al nuevo contrato obligatorio; los tipos incorrectos y vacíos se siguen comprobando con el otro campo válido. La prueba de propiedad adicional usa una propiedad realmente ajena, porque titulo ya es parte del contrato.
+
+### Ajustes encontrados al verificar
+
+El primer intento Nest pasó 55 de 56; el archivo de 5 MiB + 1 byte era rechazado con 400 por el pipe, pero la prueba esperaba 413. Se inspeccionó la versión instalada de Multer: su límite ya es inclusivo. Se corrigió limits.fileSize a 5 MiB y se mantuvo máximo + 1 solamente en MaxFileSizeValidator, que compara estrictamente con `<`. La prueba exacta de 5 MiB pasa y el exceso devuelve 413 antes de subir.
+
+También se reemplazó validateSync en los tests nuevos por validate asíncrono para evitar la deprecación de Mongoose. Un fallo de Cloudinary se simula con la excepción controlada que ya emite el adaptador. La ejecución final no dejó esos avisos/errores simulados en la salida; solo persiste el presupuesto CSS del frontend.
+
+### Qué se prueba sin servicios externos
+
+- Controllers, AuthGuard, DTO, validación real de firma del archivo y servicio de publicaciones mediante HTTP local. Solo datos/guardado MongoDB, usuarios y transporte Cloudinary se simulan.
+- Campos nuevos, alias contenido, activo true, títulos/descripcion vacíos o de tipos incorrectos, límites de texto y autor desde JWT.
+- PNG/JPEG/WebP, archivo disfrazado, GIF rechazado, 5 MiB exactos y exceso, sin imagen y fallo de subida sin guardar.
+- Baja del autor y del administrador actual, rechazo de tercero aunque su JWT viejo diga admin, usuario inexistente, id inválido, 404 por ausencia/ya retirada/carrera y conservación del documento.
+- Filtro público activo != false y adaptación de respuesta antigua sin mutar los documentos de prueba.
+- Schema Mongoose real validado en memoria y adaptador Cloudinary con stream simulado: default perfiles y carpeta publicaciones.
+- Angular envía FormData, no elige autor, bloquea doble envío, limpia solo tras éxito, conserva datos ante 400/413/500 y muestra documentos nuevos/antiguos. No hay acción de baja en UI.
+
+Las pruebas de consultas usan modelos simulados; no demuestran la ejecución del filtro en un Atlas real. No se subieron ni dieron de baja publicaciones reales. Sigue pendiente un ciclo de ensayo con Atlas/Cloudinary/Vercel y publicación coordinada de frontend/backend. La duración JWT no se cambió.
+
+Variables necesarias: CONNECTION_STRING, JWT_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET y FRONTEND_URL; NODE_ENV, PORT y VERCEL siguen condicionando el arranque/cookies como antes. No se agregaron variables ni se leyeron sus valores.
+
+Las secciones siguientes conservan resultados históricos de Tareas 0, 1 y 2. El contrato y los resultados actuales son los de esta sección y 03.
+
 ## Estado actual — Tarea 2: seguridad y DTO, 31/10/2026
 
 Rama `fix/seguridad-validaciones`, creada desde el estado de `test/recuperar-pruebas`. Los tests recuperados y los 11 documentos previos se conservaron sin commit ni descarte. No se instalaron dependencias ni se cambió configuración JWT/cookies.
@@ -129,18 +164,19 @@ ConfigModule.forRoot carga variables, pero SeguridadModule lee JWT_SECRET al eva
 
 Base configurada en Angular: backend Vercel con prefijos auth y publicaciones; dirección local prevista por main.ts: localhost:3000. No hay prefijo global /api en las fuentes.
 
-| Método y ruta         | Acceso y cuerpo                                                             | Respuesta esperada por código                                                                                                  |
-| --------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| GET `/`               | Público                                                                     | Texto de saludo; no prueba salud de Atlas/Cloudinary.                                                                          |
-| POST `/auth/registro` | Público; multipart/FormData con datos de CreateUsuarioDto e imagen opcional | Mensaje y usuario sin hash; duplicados 409; validaciones 400; imagen/servicio externo requieren comprobar errores reales.      |
-| POST `/auth/login`    | Público; identificador y password                                           | 200, mensaje y Set-Cookie HttpOnly; credenciales incorrectas 401.                                                              |
-| GET `/auth/me`        | AuthGuard; cookie o Bearer                                                  | Datos personales propios; JWT inválido/vencido 401; usuario inexistente 404.                                                   |
-| POST `/auth/logout`   | Sin AuthGuard; middleware de origen                                         | 200 y clearCookie.                                                                                                             |
-| GET `/usuarios`       | AuthGuard + AdministradorGuard, rol actual desde MongoDB                    | Array con selección positiva de campos sin credenciales; exclusivo para administrador.                                         |
-| GET `/publicaciones`  | Público                                                                     | Array de hasta 50, más recientes primero; autor con campos públicos por populate.                                              |
-| POST `/publicaciones` | AuthGuard; contenido                                                        | Documento nuevo; texto inválido 400 según comprobación; DTO rechaza tipos incorrectos/campos extra con 400 antes del guardado. |
+| Método y ruta               | Acceso y cuerpo                                                                | Respuesta esperada por código                                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| GET `/`                     | Público                                                                        | Texto de saludo; no prueba salud de Atlas/Cloudinary.                                                                     |
+| POST `/auth/registro`       | Público; multipart/FormData con datos de CreateUsuarioDto e imagen opcional    | Mensaje y usuario sin hash; duplicados 409; validaciones 400; imagen/servicio externo requieren comprobar errores reales. |
+| POST `/auth/login`          | Público; identificador y password                                              | 200, mensaje y Set-Cookie HttpOnly; credenciales incorrectas 401.                                                         |
+| GET `/auth/me`              | AuthGuard; cookie o Bearer                                                     | Datos personales propios; JWT inválido/vencido 401; usuario inexistente 404.                                              |
+| POST `/auth/logout`         | Sin AuthGuard; middleware de origen                                            | 200 y clearCookie.                                                                                                        |
+| GET `/usuarios`             | AuthGuard + AdministradorGuard, rol actual desde MongoDB                       | Array con selección positiva de campos sin credenciales; exclusivo para administrador.                                    |
+| GET `/publicaciones`        | Público                                                                        | Array de hasta 50, más recientes primero; autor con campos públicos por populate.                                         |
+| POST `/publicaciones`       | AuthGuard; titulo, descripcion e imagen opcional multipart (o JSON sin imagen) | 201 con campos nuevos y alias contenido; 400 validación, 401 sesión, 413 exceso y 500 fallo de servicio.                  |
+| DELETE `/publicaciones/:id` | AuthGuard; autor o administrador actual según UsuariosService                  | 200 mensaje; 400 id inválido, 401 sesión/usuario, 403 ajeno y 404 ausente/ya retirada. No borra documento.                |
 
-No existen POST autorizar/refrescar, detalle por id, comentarios, likes, bajas o estadísticas. Las rutas similares de otros documentos son propuestas, no deben probarse como si estuvieran desplegadas.
+No existen POST autorizar/refrescar, detalle por id, comentarios, likes o estadísticas. DELETE de baja lógica sí existe desde 3A. Las rutas similares de otros documentos son propuestas, no deben probarse como si estuvieran desplegadas.
 
 ## Vercel: evidencia y límites
 

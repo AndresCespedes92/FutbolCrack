@@ -75,7 +75,7 @@ Un 401 al publicar navega al login; otros errores muestran un mensaje. En éxito
 ## Modelos existentes y límites
 
 - **Usuario:** nombre, apellido, correo único normalizado, nombreUsuario único, passwordHash excluido por defecto, fechaNacimiento, descripción, imagenPerfil, perfil usuario/administrador y timestamps. No hay campo de habilitación ni CV deportivo persistente.
-- **Publicacion:** autorId referenciado a Usuario, contenido hasta 2000, multimediaUrl, tipoMultimedia y timestamps. No hay título, likes, comentarios ni estado de baja.
+- **Publicacion:** autorId referenciado a Usuario, titulo y descripcion obligatorios, contenido como alias de transición, multimediaUrl, tipoMultimedia, activo y timestamps. No hay likes ni comentarios reales.
 - **Dos interfaces Angular llamadas Publicacion:** `models/publicacion.ts` corresponde a demos con ids numéricos y contadores ficticios; `services/publicaciones.ts` al contrato API con _id y autor poblado. No son intercambiables. Se deberá adaptar la tarjeta, evitando duplicar reglas.
 - **Referencia no equivale a integridad automática:** la existencia del usuario al crear una publicación no se consulta en PublicacionesService.crear; solo se verifica el formato de ObjectId y la firma previa. La baja/habilitación futura deberá contemplarlo.
 
@@ -94,3 +94,11 @@ Las compilaciones constan en [08](08-PRUEBAS-Y-DESPLIEGUE.md). Para un recorrido
 GET usuarios usa la cadena AuthGuard → AdministradorGuard → UsuariosService.findById → validación del rol actual → UsuariosService.findAll con campos permitidos. El guard de rol pertenece a UsuariosModule para reutilizar su servicio sin introducir un ciclo de imports hacia SeguridadModule. No cambia la verificación de firma/expiración.
 
 POST publicaciones usa CreatePublicacionDto en lugar de la interface. El ValidationPipe global existente puede validar esa clase; el servicio conserva su validación y guardado. Como en el club, revisar la ficha en recepción evita pasar un dato de tipo equivocado al encargado de registrar el parte. Ambos recorridos se probaron por HTTP local con almacenamiento simulado; no se ejecutaron escrituras externas.
+
+## Tarea 3A — Ampliación del recorrido de publicaciones
+
+El parte del club ahora tiene título y descripción obligatorios y una fotografía opcional. Angular usa FormGroup y FormData; Nest valida DTO/archivo antes del servicio; Cloudinary recibe solo imágenes permitidas y devuelve la URL que guarda MongoDB junto al autor del JWT. PublicacionesModule reutiliza CloudinaryModule y UsuariosModule, sin duplicarlos. La carpeta por defecto del adaptador sigue siendo perfiles para el registro.
+
+El modelo agrega titulo/descripcion requeridos y activo true; conserva contenido como alias de transición. GET usa lean, filtro activo != false y adaptación de respuesta para documentos previos. No hay actualización masiva ni títulos ficticios persistidos. La baja usa una lectura del documento y del usuario actual, comprobación autor/administrador y actualización condicional del estado. No borra documentos ni archivos.
+
+La creación vieja solo con contenido deja de ser válida: el formulario se actualizó en conjunto. Las lecturas antiguas siguen disponibles con fallback. Detalles del contrato y pendientes en 03.

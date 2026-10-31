@@ -33,7 +33,7 @@ export class CloudinaryService {
    * Recibe una imagen almacenada temporalmente en memoria.
    * La sube a Cloudinary y devuelve su URL HTTPS.
    */
-  async subirImagen(archivo: ArchivoImagen): Promise<string> {
+  async subirImagen(archivo: ArchivoImagen, carpeta: 'perfiles' | 'publicaciones' = 'perfiles'): Promise<string> {
 
     try {
       // Creamos una promesa porque upload_stream
@@ -44,7 +44,8 @@ export class CloudinaryService {
           // Creamos el canal de subida a Cloudinary.
           const uploadStream = cloudinary.uploader.upload_stream(
             {
-              folder: 'futbolcrack/perfiles',
+              // El valor predeterminado mantiene intactas las llamadas actuales de registro.
+              folder: `futbolcrack/${carpeta}`,
               resource_type: 'image',
             },
             (error, result) => {

@@ -209,6 +209,83 @@ Los cambios están listos para revisión e integración de este alcance con suit
 
 ---
 
+## 31/10/2026 — Sprint 2, Tarea 3A: modelo, imágenes y baja lógica
+
+### Git, objetivo y alcance
+
+Se revisaron rama y estado antes de editar. La rama era fix/seguridad-validaciones y el árbol estaba limpio; c8383c9 ya incluía tareas anteriores verificadas. No había cambios para el commit de respaldo solicitado condicionalmente, así que no se generó un commit vacío. Se creó feature/publicaciones-modelo desde ese estado.
+
+Se implementaron título y descripción obligatorios, imagen opcional, activo y baja lógica con permisos reales. No se agregaron likes, paginación, selector de orden, comentarios, cambios visuales grandes ni botón de baja. No se hicieron merge/deploy ni commits de esta tarea.
+
+### Archivos creados/modificados
+
+Backend productivo:
+
+- backend/src/publicaciones/publicaciones.constants.ts (nuevo): límites de título, descripción y archivo.
+- backend/src/publicaciones/entities/publicacion.entity.ts: titulo/descripcion requeridos, contenido conservado y activo true.
+- backend/src/publicaciones/dto/create-publicacion.dto.ts: validación de los dos textos, sin autor ni campos adicionales del cliente.
+- backend/src/publicaciones/publicaciones.controller.ts: imagen opcional en POST y DELETE /publicaciones/:id.
+- backend/src/publicaciones/publicaciones.service.ts: creación, respuesta compatible y baja lógica condicionada.
+- backend/src/publicaciones/publicaciones.module.ts: reutilización de Cloudinary/Usuarios/Seguridad.
+- backend/src/cloudinary/cloudinary.service.ts: carpeta opcional con default perfiles para conservar registro.
+
+Pruebas backend:
+
+- backend/src/publicaciones/publicaciones.controller.http.spec.ts: conserva los 18 casos anteriores adaptados y amplía a 43.
+- backend/src/publicaciones/entities/publicacion.entity.spec.ts (nuevo): 2 casos del schema en memoria.
+- backend/src/cloudinary/cloudinary.service.spec.ts (nuevo): 3 casos de carpeta/compatibilidad/error con stream simulado.
+
+Frontend:
+
+- frontend/src/app/services/publicaciones.ts: FormData con titulo/descripcion/imagen; interface de lectura tolerante a documentos/respuestas anteriores.
+- frontend/src/app/pages/publicaciones/publicaciones.ts: FormGroup, imagen reutilizando validador existente, mensajes y estados.
+- frontend/src/app/pages/publicaciones/publicaciones.html: campos, título del post y fallback antiguo, sin botón de baja.
+- frontend/src/app/pages/publicaciones/publicaciones.css: reutiliza superficie de controles y foco visible, sin rediseño.
+- frontend/src/app/pages/publicaciones/publicaciones.spec.ts (nuevo): 12 casos; los 20 anteriores no se modificaron.
+
+Documentos actualizados: 00, 01, 02, 03, 05, 06, 08, 09 y 10. Los relacionados se actualizaron para no describir la imagen/baja como inexistentes. Se conservó el historial de las tareas anteriores.
+
+### Decisiones y ejemplo del club
+
+Un parte del club ahora tiene encabezado obligatorio y descripción. Si trae fotografía, Nest comprueba el archivo y Cloudinary guarda la imagen; MongoDB conserva su URL y el ObjectId del jugador que lo presentó. AutorId siempre viene del JWT validado, no de Angular.
+
+Contenido sigue existiendo: los documentos nuevos lo reciben como alias de descripcion y GET también lo devuelve. Los documentos viejos se muestran con «Publicación anterior» y descripción desde contenido, sin escribir esos fallbacks a MongoDB. El filtro activo distinto de false incluye ausentes/null antiguos; los nuevos nacen con true. No se ejecutó migración. La creación antigua solo contenido se rechaza porque titulo/descripcion son obligatorios; formulario/API deben desplegarse coordinados.
+
+Retirar un parte de la cartelera es marcar activo false, no romper la ficha ni borrar su foto. El socio puede retirar el suyo; un administrador vigente puede retirar uno ajeno. UsuariosService.findById comprueba el rol actual y la existencia del actor. Un JWT viejo que diga administrador no concede permiso si la ficha actual ya es usuario. El updateOne condicionado evita confirmar dos bajas simultáneas y permite retirar documentos antiguos sin validar nuevamente todo su título/descripcion.
+
+Título máximo 120: límite técnico elegido para cabecera legible, no valor fijado en el enunciado. Descripción máximo 2000: mantiene el límite de texto existente. Archivo opcional hasta 5 MiB; JPEG/PNG/WebP según firma, no solo MIME declarado. El servicio Cloudinary conserva default perfiles y usa publicaciones cuando se solicita; no duplica el adaptador.
+
+### Validaciones y respuestas
+
+POST: AuthGuard, DTO, archivo opcional validado y reglas de servicio. 201 correcto; 400 por vacío/tipo/longitud/propiedades/imagen inválida; 401 sesión; 413 exceso de archivo; 500 si falla servicio. No se guarda cuando falla la subida. Angular muestra estados/mensajes y conserva datos ante error; después de éxito limpia también el selector nativo de archivos.
+
+DELETE: 400 por id inválido, 401 sin sesión/usuario vigente, 403 ajeno no administrador, 404 inexistente/retirada/carrera y 200 con mensaje de confirmación. No existe acción Angular de baja: el modal con Cancelar/Confirmar se implementará en 3C.
+
+### Pruebas y verificación
+
+| Comando                                                              | Resultado final                                                                                  |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Frontend npm run build                                               | Correcto; publicaciones.css 4,88 KB frente al presupuesto de aviso de 4 KB, excedente 877 bytes. |
+| Frontend node node_modules/@angular/cli/bin/ng.js test --watch=false | 32/32 aprobadas, 4 suites (20 anteriores + 12 nuevas).                                           |
+| Backend npm run build                                                | Correcto, incluida repetición tras ajuste del límite de imagen.                                  |
+| Backend npm test                                                     | 59/59 aprobadas, 6 suites.                                                                       |
+
+Primer intento Nest: 55/56 aprobadas; el caso de 5 MiB + 1 byte daba 400 y se esperaba 413. Al inspeccionar la implementación instalada se corrigió Multer a máximo exacto y se dejó máximo + 1 solo en el pipe de comparación estricta. La prueba de 5 MiB exactos y la de exceso pasaron sin debilitar aserciones. Se usó validate asíncrono en tests de modelo para evitar deprecación de validateSync. El fallo Cloudinary simulado usa su excepción HTTP controlada. Se agregaron después los tres casos del adaptador y la suite final pasó completa.
+
+Las pruebas usan HTTP local con AuthGuard/DTO/pipes/servicio reales y modelos/usuarios/transportes simulados. Schema se valida en memoria. No conectan Atlas/Cloudinary ni crean/retiran contenido real. No se omitió ni deshabilitó ningún caso; los cambios de expectativas responden al contrato obligatorio nuevo. No se instalaron dependencias ni se alteró el presupuesto CSS.
+
+La comparación SHA-256 final confirmó que autenticación/JWT/cookies, usuarios/seguridad, las suites recuperadas ajenas al contrato ampliado, configuración y dependencias conservan su huella. Cambiaron 20 archivos existentes y se agregaron 4 (24 en total), exactamente los indicados. Se validaron enlaces, bloques Markdown y 44 IDs únicos de trazabilidad; no hay skip/todo/only ni errores de espacios en git diff --check. HEAD sigue en c8383c9, sin commits nuevos.
+
+### Variables y pendientes
+
+Sin variables nuevas. Se mantienen CONNECTION_STRING, JWT_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET y FRONTEND_URL; NODE_ENV, PORT y VERCEL según el entorno. No se muestran ni leen sus valores.
+
+Pendiente: ensayo real con Atlas y Cloudinary, despliegue conjunto, posible compensación de imagen huérfana si Cloudinary sube y falla save, modal/botón de baja 3C y demás requisitos de Sprint 2–4. La baja conserva imagen/documento a propósito. JWT/cookies siguen como antes, incluidos los 20 segundos de prueba.
+
+Listo para revisión e integración del alcance 3A con suites locales aprobadas; no equivale a validar producción. Se detiene la tarea a la espera de aprobación.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

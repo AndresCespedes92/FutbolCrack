@@ -1,78 +1,98 @@
 # 03 — Publicaciones
 
-## Qué resuelve hoy
+## Estado actual: Sprint 2, Tarea 3A
 
-Un jugador puede escribir un entrenamiento o experiencia y enviarlo al feed. El código obtiene el autor desde la sesión, guarda el texto en MongoDB y vuelve a consultar el listado. No hay título, likes operativos, comentarios ni carga de imagen de publicación.
+Las publicaciones nuevas requieren título y descripción y admiten una imagen opcional. GET mantiene el array del feed y su límite previo de 50; no se agregaron paginación, selector de orden, likes o comentarios. DELETE publica una baja lógica protegida por backend, sin botón de eliminación en Angular: la interfaz/modal pertenece a Tarea 3C.
 
-| Etapa        | Archivo y método real                                                           | Datos que maneja                                            |
-| ------------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Formulario   | `frontend/src/app/pages/publicaciones/publicaciones.ts`, Publicaciones.publicar | contenidoControl, trim, publicando y mensajePublicacion.    |
-| Transporte   | `frontend/src/app/services/publicaciones.ts`, crear/listar                      | POST con cookie y GET público, contra URL Vercel fija.      |
-| Controller   | `backend/src/publicaciones/publicaciones.controller.ts`, crear/listar           | CreatePublicacionDto; autorId desde request.user.sub.       |
-| Negocio      | `backend/src/publicaciones/publicaciones.service.ts`, crear/listar              | Texto 1–2000 y ObjectId; guardar; find/populate/sort/limit. |
-| Persistencia | `backend/src/publicaciones/entities/publicacion.entity.ts`                      | Publicacion, colección publicaciones, timestamps.           |
+| Capa         | Archivo y método real                                                                                 | Responsabilidad                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Formulario   | frontend/src/app/pages/publicaciones/publicaciones.ts, Publicaciones.publicar/seleccionarImagen       | FormGroup de título, descripción y archivo; mensajes, bloqueo de doble envío y limpieza tras éxito.    |
+| Plantilla    | frontend/src/app/pages/publicaciones/publicaciones.html y CSS                                         | Mantiene la estética; agrega campos e imagen y muestra título/descripcion con fallback antiguo.        |
+| Transporte   | frontend/src/app/services/publicaciones.ts, PublicacionesService.crear/listar                         | POST FormData con withCredentials; GET público. No fija Content-Type ni permite elegir autorId.        |
+| Entrada HTTP | backend/src/publicaciones/publicaciones.controller.ts, PublicacionesController.crear/listar/darDeBaja | POST con imagen opcional, GET y DELETE /publicaciones/:id; AuthGuard en creación y baja.               |
+| Validación   | backend/src/publicaciones/dto/create-publicacion.dto.ts, CreatePublicacionDto                         | Textos obligatorios, trim sin conversión de tipos y límites.                                           |
+| Negocio      | backend/src/publicaciones/publicaciones.service.ts, PublicacionesService.crear/listar/darDeBaja       | Guardado, adaptación de lecturas antiguas y permisos/actualización atómica de baja.                    |
+| Modelo       | backend/src/publicaciones/entities/publicacion.entity.ts                                              | Publicacion, autor referenciado, título/descripcion, alias contenido, multimedia, activo y timestamps. |
+| Límites      | backend/src/publicaciones/publicaciones.constants.ts                                                  | Máximo de título 120, descripción 2000 e imagen 5 × 1024 × 1024 bytes.                                 |
+| Imágenes     | backend/src/cloudinary/cloudinary.service.ts, CloudinaryService.subirImagen                           | Guarda imagen en carpeta publicaciones; parámetro predeterminado perfiles conserva el registro.        |
+| Permisos     | backend/src/usuarios/usuarios.service.ts, UsuariosService.findById                                    | Se reutiliza para obtener el rol real del actor de la baja. No se cambia ese servicio en 3A.           |
 
-Ejemplo real de recorrido: Angular manda `{ contenido: 'Hoy entrené pases cortos' }`; AuthGuard identifica al jugador; el servicio crea el documento con multimediaUrl vacío y tipoMultimedia ninguno; `.save()` persiste; Angular limpia el textarea y pide nuevamente GET publicaciones.
+PublicacionesModule importa los módulos existentes CloudinaryModule, UsuariosModule y SeguridadModule, además del modelo Mongoose. No se duplicó ningún módulo o servicio.
 
-## Listado actual y tarjeta reutilizable
+## Modelo y reglas
 
-El listado usa `.find().populate('autorId', 'nombre apellido nombreUsuario imagenPerfil').sort({ createdAt: -1 }).limit(50).exec()`. La respuesta es un array sin total ni metadatos de paginación. No usa skip, offset ni parámetros de orden/usuario.
+- autorId: ObjectId con ref Usuario, obligatorio; siempre se toma del JWT verificado.
+- titulo: obligatorio para nuevas publicaciones; 1–120 caracteres después de trim.
+- descripcion: obligatoria; 1–2000 después de trim, conservando también la comprobación String.length del servicio.
+- contenido: campo de transición, no se elimina. En nuevas publicaciones se asigna desde descripcion una sola vez; no tiene una entrada independiente en el formulario/DTO.
+- multimediaUrl: URL HTTPS que devuelve Cloudinary o cadena vacía.
+- tipoMultimedia: imagen o ninguno al crear. Se conserva video en el enum para no invalidar posibles datos anteriores, sin implementar carga de video.
+- activo: boolean con default true para nuevos documentos.
+- createdAt/updatedAt: timestamps de Mongoose; una baja actualiza el documento sin borrar su historia.
 
-El feed recorre los datos reales mediante @for pero dibuja `<article class="feed-post">` en `publicaciones.html`. PublicacionCard existe con @Input requerido y sin @Output, pero está conectada a la interface de demo de `models/publicacion.ts` y se usa en MiPerfil. La interface API está declarada por separado en `services/publicaciones.ts`; ambas se llaman Publicacion y tienen campos diferentes.
+El límite 120 del título es una decisión técnica para mantener legible la cabecera; la consigna no fijaba un máximo. Está centralizado en backend y coincide con el formulario Angular. Cambiarlo requiere revisar ambos proyectos y las pruebas.
 
-El template del feed puede mostrar una multimediaUrl de tipo imagen, pero el endpoint de creación nunca la carga ni recibe una imagen. Esto es presentación parcial, no una funcionalidad de subida terminada. CloudinaryService se usa hoy para avatares, en la carpeta de perfiles.
+## Crear una publicación: ejemplo del club
 
-## Validaciones, permisos y mensajes encontrados
+El jugador escribe «Entrenamiento de definición», explica la práctica y elige una foto opcional. Angular valida el formulario y envía FormData con titulo, descripcion y, si existe, imagen. El navegador genera el boundary multipart; el servicio no agrega Content-Type manualmente.
 
-- Angular valida requerido y máximo 2000. Publicar comprueba trim y evita solicitudes duplicadas desde la pantalla.
-- POST tiene AuthGuard. El cliente no elige autorId; se toma del JWT.
-- El servicio rechaza vacío, texto mayor de 2000 y ObjectId mal formado.
-- CreatePublicacionDto reemplaza la interface: el ValidationPipe global existente valida tipos, vacío y máximo 2000. Transform recorta solo strings; no convierte números u objetos. Los bodies incorrectos producen 400 antes de guardar. La clase aporta los metadatos necesarios para el pipe, según la [documentación de Nest](https://docs.nestjs.com/techniques/validation).
-- Un contenido formado solo por espacios puede retornar sin un mensaje visible: el control required no lo considera vacío, aunque publicar sí lo rechaza al hacer trim.
-- Ante 401 se navega al login; ante error de conexión o servidor se muestra un texto. En éxito se recarga el feed sin notificación explícita de éxito.
-- Persisten console.log de depuración que incluyen el contenido a publicar. Se propone revisarlos después; no se eliminaron.
+1. AuthGuard verifica la sesión antes de procesar la creación.
+2. Multer mantiene temporalmente el archivo en memoria y limita el tamaño.
+3. ValidationPipe global valida CreatePublicacionDto. No convierte números u objetos a texto y rechaza propiedades ajenas como autorId o activo.
+4. ParseFilePipe valida firma real JPEG, PNG o WebP y tamaño; no basta con un nombre foto.png o MIME declarado.
+5. PublicacionesService.crear conserva validación de negocio e id del autor. Si hay imagen, llama a subirImagen(imagen, 'publicaciones').
+6. CloudinaryService usa upload_stream con carpeta futbolcrack/publicaciones y devuelve secure_url. Sin imagen no se llama a Cloudinary.
+7. El modelo guarda título, descripción, contenido como alias, autorId, activo true y multimedia. Angular muestra éxito, limpia campos/selector y recarga el feed.
 
-## Cambios necesarios para Sprint 2 y requisitos generales
+Si falla la solicitud, el formulario conserva los datos para reintentar. Los errores de validación, tamaño, conexión y sesión tienen mensajes integrados. No se usa alert.
 
-Todo lo siguiente es **propuesta**, no implementación:
+### Imagen y códigos HTTP
 
-1. Ampliar el DTO básico de contenido con título y descripción/contenido e imagen cuando se autorice esa parte del enunciado. Acordar una única traducción entre descripción del TP y contenido actual para evitar duplicados de negocio. Contemplar registros existentes sin título antes de hacer cambios obligatorios.
-2. Reutilizar CloudinaryModule para imágenes de publicaciones, separando claramente avatar y publicación. Validar archivo en el servidor; definir errores y qué hacer si se sube un archivo pero falla MongoDB.
-3. Agregar paginación real. Propuesta: GET `/publicaciones?offset=0&limit=10&orden=fecha` devuelve items, total, offset y limit. El backend valida enteros, rangos y orden permitido; aplica skip/limit y countDocuments con los mismos filtros. El feed usa siempre 10 por página; el perfil podrá solicitar limit 3.
-4. Agregar filtro autorId validado. El usuario autenticado del perfil viene del backend; no debe confundirse con los ids numéricos de demo.
-5. Mostrar páginas numeradas a partir de total y limit, con página actual, acceso a varias páginas, vacío y error; anterior/siguiente pueden acompañar, pero no reemplazar los números.
-6. Permitir orden por fecha y por cantidad de likes. Usar desempate estable por _id y reiniciar offset al cambiar orden/filtro.
-7. Adaptar PublicacionCard al contrato real, conservando Input y agregando Outputs para comunicar solicitudes de acción al padre. El padre coordina servicio y mensajes; no duplicar llamadas en cada tarjeta.
-8. Diseñar like/quitar like autenticados, sin duplicados. Una alternativa a evaluar es guardar ids con `$addToSet` y quitar con `$pull`; el conteo debe ser coherente y resistir solicitudes simultáneas. No hay campos ni endpoints actuales de likes.
-9. Incorporar baja lógica y permisos autor o administrador. Definir estado y filtrado consistente, contemplando documentos existentes que no tienen ese campo. No usar borrado físico donde el TP pide baja lógica.
-10. Antes de la solicitud de baja, abrir un modal propio que identifique la publicación y ofrezca Cancelar/Confirmar. Cancelar no envía HTTP. Confirmar espera el resultado y muestra éxito/error; también revisa permisos en Nest.
-11. El perfil debe consultar las últimas tres publicaciones reales del usuario y sus comentarios. Los contadores y demos actuales no cumplen ese punto.
-12. Usar TruncatePipe para textos largos y alternar Ver más/Ver menos. Se lo contabiliza como el primero de los tres pipes del Sprint 4; no crear otro truncador en paralelo.
+Hasta 5 MiB inclusive: 5.242.880 bytes. La versión instalada de Multer admite ese máximo; MaxFileSizeValidator de Nest compara con `<`, por eso el pipe recibe máximo + 1, con comentario en el código. La prueba del límite exacto comprueba que no se rechace una imagen de 5 MiB.
 
-## Ejemplo de aceptación de paginación
+- 201: creación correcta, con o sin imagen.
+- 400: textos/tipos/propiedades inválidos, formato de imagen no admitido o archivo disfrazado.
+- 401: falta sesión o JWT no válido.
+- 413: archivo mayor que 5 MiB, rechazado antes de subir a Cloudinary.
+- 500: fallo controlado de subida o persistencia; no se informa un éxito falso.
 
-Con 23 publicaciones habilitadas: página 1 usa offset 0 y limit 10; página 2, offset 10; página 3, offset 20 y muestra 3 registros. Deben verse los accesos 1, 2 y 3. total debe corresponder al filtro y no a toda la colección. Probar cambios de orden, filtros, offsets inválidos y que una baja no deje un número de página imposible. No sirve descargar 50 y recortar el array en Angular.
+Se conserva la protección HTTP de Tarea 2 con un contrato ampliado explícitamente. Las peticiones JSON con titulo y descripcion también pueden crear sin imagen. Una creación antigua que manda solo contenido ahora recibe 400: los campos nuevos son obligatorios. El frontend se adaptó en conjunto. La compatibilidad prometida es de documentos/lectura, no mantener indefinidamente POST sin título.
 
-## Plan de pruebas
+## Compatibilidad de documentos antiguos
 
-En una base aislada, crear fixtures de al menos 23 publicaciones y dos autores. Comprobar persistencia/autor, rechazo de body inválido, imagen y duplicados de envío; luego páginas 10/10/3, orden por fecha/likes con empates, filtro autor, like repetido/concurrente, baja del autor, baja admin, rechazo de tercero, cancelar sin solicitud, éxito/error visible y últimas tres del perfil. Para TruncatePipe probar texto nulo, corto y largo, y expandir/contraer desde la tarjeta.
+No se ejecutó una migración ni se modificaron datos de Atlas. GET usa lean y normaliza únicamente la respuesta:
 
-Tarea 1 recuperó las pruebas Angular; Tarea 2 agregó HTTP local para la creación de texto con DTO y servicio reales, sin almacenamiento externo. Los casos futuros de paginación, likes, imágenes y bajas siguen pendientes. Los resultados ejecutados están en [08](08-PRUEBAS-Y-DESPLIEGUE.md). Conceptos: Input/Output, formularios reactivos, Observable/subscribe, controller/service, DTO, referencias, populate, sort, skip/limit, count y autorización.
+| Documento guardado             | Presentación devuelta                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Sin titulo                     | titulo: «Publicación anterior». Es una etiqueta de lectura, no un título escrito a MongoDB.      |
+| Sin descripcion, con contenido | descripcion y contenido toman el texto anterior.                                                 |
+| Sin activo, o con null antiguo | Se considera visible mientras no tenga activo false; respuesta normaliza el ausente/null a true. |
+| activo false                   | Excluido por el filtro `{ activo: { $ne: false } }`.                                             |
+| Nuevo con descripcion          | contenido sigue devolviéndose como alias para clientes de lectura anteriores.                    |
 
-## Tarea 2 — DTO del contrato actual
+El fallback Angular también admite respuestas viejas: titulo opcional y descripcion ?? contenido. La interface Angular mantiene esos campos opcionales para la lectura durante la transición, aunque el DTO de creación los exige.
 
-Archivo nuevo: `backend/src/publicaciones/dto/create-publicacion.dto.ts`, clase CreatePublicacionDto. PublicacionesController.crear la usa en @Body. No se agregó título, imagen ni otro campo y no se modificó PublicacionesService ni el frontend.
+La baja usa updateOne del estado, no save de todo un documento antiguo; no obliga a inventarle un título para retirarlo. Si se agrega edición futura deberá acordarse una migración o completar datos requeridos. El despliegue del formulario y API debe coordinarse porque el POST anterior ya no cumple el contrato nuevo.
 
-Reglas:
+## Baja lógica: retirar un parte de la cartelera
 
-1. Transform aplica trim únicamente si el valor ya es string, igual que la normalización actual del servicio.
-2. IsString rechaza números, booleanos, arrays, objetos y null.
-3. IsNotEmpty rechaza ausencia, vacío y texto que quedó vacío después de trim.
-4. MaxLength(2000) controla el máximo; el servicio conserva su límite String.length y ObjectId como defensa de negocio, incluidos casos Unicode.
-5. Las opciones whitelist y forbidNonWhitelisted ya presentes en main.ts rechazan propiedades ajenas al DTO. Un autorId o título enviado adicionalmente da 400; el autor sigue saliendo del JWT.
+DELETE `/publicaciones/:id` no destruye el papel del club: marca activo false para que deje de verse, conservando documento, autor, fechas e imagen.
 
-Ejemplo del club: el parte «Hoy entrenamos pases» se acepta; un parte vacío o cuyo texto sea un objeto no pasa la revisión de la ficha y no llega al guardado.
+1. AuthGuard verifica identidad. Un id de publicación mal formado produce 400.
+2. El servicio busca por id y activo distinto de false. Inexistente o ya retirado: 404.
+3. UsuariosService.findById obtiene al usuario actual. Si ya no existe: 401.
+4. El autor puede retirar su publicación; otro usuario solo puede hacerlo si su rol actual en MongoDB es administrador. Un claim viejo o dato de Angular no concede permiso. Si no corresponde: 403.
+5. updateOne vuelve a exigir el mismo id y estado visible, y ejecuta únicamente `$set: { activo: false }`. Si otro proceso ya lo retiró, responde 404. No se usa deleteOne/deleteMany.
+6. Responde 200 con «Publicación dada de baja correctamente». GET ya no lo devuelve.
 
-Las pruebas HTTP verifican 201 para texto válido de 1/2000 caracteres, espacios externos y saltos internos; 400 para ausencia, vacío, espacios, null, número, booleano, array, objeto, longitud excesiva y campos adicionales. También verifican 401 sin sesión, autor del JWT y multimedia vacía como antes. Se conserva el límite previo de String.length cuando un emoji ocupa dos unidades UTF-16; no se amplió la longitud efectiva de la API.
+No hay botón, método de baja en el servicio Angular ni solicitud DELETE desde la interfaz. En 3C se deberá implementar el modal propio identificando el elemento, Cancelar/Confirmar, sin enviar nada al cancelar y con mensajes posteriores al resultado.
 
-Los 18 casos usan controller, DTO, ValidationPipe y PublicacionesService reales y un modelo de guardado simulado. La prueba confirma contrato/validación/normalización y que no se invoca save ante rechazo; no comprueba persistencia en Atlas. Todos los campos que Angular envía siguen siendo aceptados; sus 20 pruebas recuperadas se ejecutan como regresión.
+## Pruebas y límites
+
+Backend: 43 casos HTTP de publicaciones, 2 de schema real sin conexión, 3 del adaptador Cloudinary, más las 11 pruebas anteriores de usuarios/seguridad: 59 aprobadas. Se conservan y actualizan los 18 casos HTTP anteriores para la nueva creación obligatoria. Hay límites de texto, tipos, imágenes válidas/falsas/5 MiB/exceso, subida fallida, roles, 404, carreras y normalización sin mutar el documento antiguo.
+
+Frontend: se conservan 20 pruebas anteriores y se agregan 12 del feed/formulario, total 32 aprobadas: FormData, imagen opcional, inválidos sin POST, errores sin limpiar, éxito y lectura nueva/antigua sin interfaz de baja.
+
+Modelo/guardado MongoDB, usuarios y transporte Cloudinary se simulan en las pruebas HTTP; las de schema validan objetos Mongoose en memoria y el adaptador usa un stream simulado. No se probaron Atlas, Cloudinary real ni Vercel. No se crearon ni retiraron publicaciones reales.
+
+Si Cloudinary sube y después falla save, puede quedar una imagen huérfana: no se agregó compensación/borrado remoto en esta tarea. La baja no borra imágenes a propósito. Likes, paginación, filtro de usuario, orden selectable, comentarios, tarjeta real Input/Output, truncado y modal de 3C siguen pendientes.

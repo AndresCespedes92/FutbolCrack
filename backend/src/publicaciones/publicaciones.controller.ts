@@ -1,78 +1,71 @@
-
 import {
-  Controller,
-  Get,
-  Post,
   Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseFilePipeBuilder,
+  Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import type { Request } from 'express';
-
 import { AuthGuard } from '../auth/guards/auth.guard.js';
 import { PublicacionesService } from './publicaciones.service.js';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto.js';
+import { MAXIMO_IMAGEN_BYTES } from './publicaciones.constants.js';
 
-/**
- * Request autenticada.
- *
- * AuthGuard agrega los datos del JWT
- * a request.user después de verificarlo.
- */
 interface RequestAutenticada extends Request {
-  user?: {
-    sub: string;
-    perfil: string;
-  };
+  user?: { sub: string; perfil: string };
 }
 
-/**
- * CONTROLLER DE PUBLICACIONES
- *
- * Recibe las peticiones HTTP y delega
- * la lógica de negocio a PublicacionesService.
- */
 @Controller('publicaciones')
 export class PublicacionesController {
+  constructor(private readonly publicacionesService: PublicacionesService) {}
 
-  constructor(
-    private readonly publicacionesService: PublicacionesService,
-  ) {}
-
-  /**
-   * GET /publicaciones
-   *
-   * Endpoint público.
-   * Permite consultar las últimas 50 publicaciones.
-   */
   @Get()
   listar() {
     return this.publicacionesService.listar();
   }
 
-  /**
-   * POST /publicaciones
-   *
-   * Endpoint privado.
-   * Solamente un usuario autenticado puede publicar.
-   */
   @Post()
   @UseGuards(AuthGuard)
+  @UseInterceptors(
+    FileInterceptor('imagen', {
+      storage: memoryStorage(),
+      // Multer admite hasta este tamaño; el pipe usa < y por eso recibe máximo + 1 abajo.
+      limits: { fileSize: MAXIMO_IMAGEN_BYTES },
+    }),
+  )
   crear(
     @Req() request: RequestAutenticada,
     @Body() datos: CreatePublicacionDto,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        // Se validan firmas del archivo, no solo extensión/MIME declarado por el navegador.
+        .addFileTypeValidator({
+          fileType: /^(image\/jpeg|image\/png|image\/webp)$/,
+          errorMessage: 'La imagen debe ser JPEG, PNG o WebP',
+        })
+        .addMaxSizeValidator({
+          maxSize: MAXIMO_IMAGEN_BYTES + 1,
+          message: 'La imagen admite hasta 5 MB',
+        })
+        .build({ fileIsRequired: false }),
+    )
+    imagen?: Express.Multer.File,
   ) {
+    return this.publicacionesService.crear(request.user!.sub, datos, imagen);
+  }
 
-    // El autor se obtiene del JWT validado.
-    // No aceptamos autorId desde el frontend.
-    const autorId = request.user!.sub;
-
-    // ValidationPipe global valida el DTO antes de entrar aquí.
-    // El servicio conserva sus reglas de negocio y el contrato existente de guardado.
-    return this.publicacionesService.crear(
-      autorId,
-      datos.contenido,
-    );
+  @Delete(':id')
+  @UseGuards(AuthGuard)
+  darDeBaja(@Param('id') id: string, @Req() request: RequestAutenticada) {
+    // Nunca se recibe el rol ni el autor desde el body para conceder permisos de baja.
+    return this.publicacionesService.darDeBaja(id, request.user!.sub);
   }
 }

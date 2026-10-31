@@ -1,74 +1,41 @@
-
-import {
-  Prop,
-  Schema,
-  SchemaFactory,
-} from '@nestjs/mongoose';
-
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import {
+  MAXIMO_DESCRIPCION,
+  MAXIMO_TITULO,
+} from '../publicaciones.constants.js';
 
-// Tipo de documento utilizado por Mongoose.
 export type PublicacionDocument = HydratedDocument<Publicacion>;
 
-/**
- * PUBLICACIÓN
- *
- * Representa una publicación realizada
- * por un usuario de FutbolCrack.
- */
-@Schema({
-  timestamps: true,
-  collection: 'publicaciones',
-})
+// Como un parte del club: conserva autor y fechas aunque después se retire de la cartelera.
+@Schema({ timestamps: true, collection: 'publicaciones' })
 export class Publicacion {
-
-  /**
-   * Usuario que creó la publicación.
-   *
-   * Guardamos una referencia al documento
-   * correspondiente en la colección usuarios.
-   */
-  @Prop({
-    type: Types.ObjectId,
-    ref: 'Usuario',
-    required: true,
-  })
+  @Prop({ type: Types.ObjectId, ref: 'Usuario', required: true })
   autorId: Types.ObjectId;
 
-  /**
-   * Texto principal de la publicación.
-   */
-  @Prop({
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 2000,
-  })
-  contenido: string;
+  @Prop({ required: true, trim: true, maxlength: MAXIMO_TITULO })
+  titulo: string;
 
-  /**
-   * URL opcional de una imagen o video.
-   *
-   * Más adelante podremos almacenar
-   * archivos multimedia en Cloudinary.
-   */
-  @Prop({
-    type: String,
-    default: '',
-  })
+  @Prop({ required: true, trim: true, maxlength: MAXIMO_DESCRIPCION })
+  descripcion: string;
+
+  // Alias de transición: no se elimina el campo de documentos antiguos ni de la respuesta.
+  @Prop({ type: String, trim: true, maxlength: MAXIMO_DESCRIPCION })
+  contenido?: string;
+
+  @Prop({ default: '' })
   multimediaUrl: string;
 
-  /**
-   * Tipo de contenido multimedia.
-   */
+  // Se conserva video para leer documentos previos; esta tarea solo permite subir imágenes.
   @Prop({
     type: String,
     enum: ['ninguno', 'imagen', 'video'],
     default: 'ninguno',
   })
   tipoMultimedia: string;
+
+  @Prop({ default: true })
+  activo: boolean;
 }
 
-// Generamos el esquema que utilizará MongoDB.
-export const PublicacionSchema =
-  SchemaFactory.createForClass(Publicacion);
+export const PublicacionSchema = SchemaFactory.createForClass(Publicacion);
