@@ -110,10 +110,14 @@ async login(
     path: '/',
   });
 
-  // Conservamos temporalmente access_token para que
-  // las pruebas existentes de Postman sigan funcionando.
-  // Lo retiraremos cuando completemos el flujo con cookies.
-  return resultado;
+  // El JWT queda almacenado exclusivamente
+// en la cookie HttpOnly.
+//
+// No devolvemos access_token en el JSON
+// para evitar que JavaScript pueda leerlo.
+return {
+  mensaje: 'Inicio de sesión correcto',
+};
 }
 
 

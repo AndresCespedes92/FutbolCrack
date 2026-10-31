@@ -23,10 +23,10 @@ export interface RespuestaRegistro {
   usuario: Usuario;
 }
 
-// Respuesta del endpoint POST /auth/login.
+// El backend confirma el login.
+// El JWT viaja únicamente en la cookie HttpOnly.
 export interface RespuestaLogin {
-  access_token: string;
-  usuario: Usuario;
+  mensaje: string;
 }
 
 // Datos que enviaremos al iniciar sesión.
