@@ -12,16 +12,7 @@ import type { Request } from 'express';
 
 import { AuthGuard } from '../auth/guards/auth.guard.js';
 import { PublicacionesService } from './publicaciones.service.js';
-
-/**
- * Estructura de los datos recibidos al publicar.
- *
- * En el siguiente ajuste incorporaremos un DTO
- * con validaciones de class-validator.
- */
-interface CrearPublicacionBody {
-  contenido: string;
-}
+import { CreatePublicacionDto } from './dto/create-publicacion.dto.js';
 
 /**
  * Request autenticada.
@@ -70,14 +61,15 @@ export class PublicacionesController {
   @UseGuards(AuthGuard)
   crear(
     @Req() request: RequestAutenticada,
-    @Body() datos: CrearPublicacionBody,
+    @Body() datos: CreatePublicacionDto,
   ) {
 
     // El autor se obtiene del JWT validado.
     // No aceptamos autorId desde el frontend.
     const autorId = request.user!.sub;
 
-    // El servicio valida el texto y guarda en MongoDB.
+    // ValidationPipe global valida el DTO antes de entrar aquí.
+    // El servicio conserva sus reglas de negocio y el contrato existente de guardado.
     return this.publicacionesService.crear(
       autorId,
       datos.contenido,

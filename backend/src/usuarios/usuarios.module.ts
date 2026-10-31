@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { UsuariosService } from './usuarios.service.js';
+import { AdministradorGuard } from './guards/administrador.guard.js';
 import { UsuariosController } from './usuarios.controller.js';
 import { Usuario, UsuarioSchema } from './entities/usuario.entity.js';
 
@@ -25,7 +26,8 @@ import { SeguridadModule } from '../auth/seguridad.module.js';
 
   controllers: [UsuariosController],
 
-  providers: [UsuariosService],
+  // El guard de rol reutiliza el servicio existente; no modifica JWT ni cookies.
+  providers: [UsuariosService, AdministradorGuard],
 
   // AuthModule necesita UsuariosService para registro y login.
   exports: [UsuariosService],
