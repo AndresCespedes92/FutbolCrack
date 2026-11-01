@@ -142,3 +142,9 @@ El flujo oficial agrega paquete, manifest, registro del service worker y configu
 Seguir la navegación en app.routes.ts, luego el binding de una tarjeta y el FormGroup del registro. Buscar los imports de cada standalone para explicar qué directivas habilita. Para los futuros pipes/directivas, usar pruebas unitarias y de DOM que comprueben el resultado visible, no solamente la creación de una clase.
 
 Conceptos actuales: standalone, DI, observables, estado de componente, forms y bindings. Conceptos futuros: PipeTransform, directivas de atributo, eventos del host y ciclo de vida; service worker y caché diferenciados de la API. Ninguna propuesta está implementada todavía.
+
+## Evidencia final 5D
+
+Repetidas 11/11 verificaciones PWA sobre el build actual; exactamente tres @Pipe y tres @Directive propios conservados con uso real. No se modificó el worker ni sus reglas de caché. Se intentó navegador contra localhost con servidor estático escuchando; la conexión dio timeout tanto en el entorno restringido como tras autorizar servidor/sonda. No se cambiaron firewall ni permisos para forzarla. Los servidores temporales se detuvieron.
+
+Por ello instalación, activación/cache runtime, actualización, offline real y móvil siguen **no verificados en navegador**. No se sustituyen por la suite Node. S4-08 permanece Parcial. Avatar del perfil sin foto ahora es el escudo propio; se retiró ilustración con apellido ficticio. Estado/recorrido manual en 11/12.

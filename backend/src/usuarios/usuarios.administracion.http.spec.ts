@@ -476,4 +476,33 @@ describe('Administración 5A: integración de módulos, roles, estado y sesiones
       .expect(403);
     expect(actualizar).not.toHaveBeenCalled();
   });
+  it.each(['/usuarios', '/auth/registro'])(
+    'alta %s rechaza Unicode que bcrypt truncaría sin guardar usuario',
+    async (ruta) => {
+      const clave = 'A1' + 'é'.repeat(36);
+      const cuerpo = { ...datos(), password: clave, repetirPassword: clave };
+      if (ruta === '/auth/registro') delete (cuerpo as any).perfil;
+      await pedir('post', ruta).send(cuerpo).expect(400);
+      expect(guardar).not.toHaveBeenCalled();
+    },
+  );
+  it('registro público rechaza más de 64 caracteres también por DTO', async () => {
+    const cuerpo = {
+      ...datos(),
+      password: 'A1' + 'a'.repeat(63),
+      repetirPassword: 'A1' + 'a'.repeat(63),
+    };
+    delete (cuerpo as any).perfil;
+    await pedir('post', '/auth/registro').send(cuerpo).expect(400);
+    expect(guardar).not.toHaveBeenCalled();
+  });
+  it.each(['nombre', 'apellido', 'nombreUsuario'])(
+    'registro público rechaza %s con espacios como 400, no como error MongoDB',
+    async (campo) => {
+      const cuerpo = { ...datos(), [campo]: '   ' };
+      delete (cuerpo as any).perfil;
+      await pedir('post', '/auth/registro').send(cuerpo).expect(400);
+      expect(guardar).not.toHaveBeenCalled();
+    },
+  );
 });

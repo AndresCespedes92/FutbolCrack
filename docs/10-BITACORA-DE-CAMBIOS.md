@@ -868,6 +868,82 @@ Sin ensayo de instalación ni runtime PWA en navegador, sin despliegue ni escrit
 
 ---
 
+## 2026-11-01 — Tarea 5D: Auditoría final, integración y preparación de entrega
+
+### Base y conservación
+
+Inicio en **main 7f327ec**, árbol limpio. A diferencia del cierre anterior, el usuario ya había confirmado 5C en **1ca14cb** y la había integrado mediante 7f327ec. Se repitieron builds/suites: Angular 230/230, Nest 265/265 y PWA 11/11, todo correcto. No había cambios de 5C por respaldar, por lo que no se creó commit vacío ni duplicado. Se creó **test/auditoria-final** desde esa base; cambios 5D quedan sin commit. Sin merge ni deploy de esta auditoría.
+
+### Alcance y dictamen
+
+Revisados los 44 IDs contra fuente y pruebas reales: **39 Cumple, 4 Parcial, 0 No cumple y 1 No verificado**. Cumple significa criterio local comprobado, no integración de producción certificada. Parciales: S2-02 upload real, S4-04 política que impide baja de todos los admins, S4-08 PWA runtime, G-14 cierre integral. G-15 es histórico de Tarea 0: la primera documentación versionada aparece agrupada con modificaciones posteriores; no hay checkpoint exclusivo que permita certificar retrospectivamente todo el criterio. Esta limitación no se convierte en falla funcional actual.
+
+La matriz de 44 no incluye Sprint 1; se contrastó el adjunto original y se recuperó docs/sprint-1.md faltante como reconstrucción del estado actual. Se inspeccionaron solo lectura factoría de formulario, registro/ngClass y PeliculaCard de CineBera: se documentan conceptos/adaptaciones verificables, no copia literal histórica. No se modificó el proyecto vecino.
+
+### Problemas reproducidos y arreglos mínimos
+
+1. Hash de clave larga: bcrypt acepta diferencias posteriores al byte 72, confirmado con claves sintéticas. generarHashPassword ahora rechaza UTF-8 >72 bytes antes de hash; DTO público máximo 64 caracteres y validator compartido de Angular con feedback coherente. Se conserva bcrypt costo 12, JWT/cookies/login y hashes previos. Dos regresiones fallaron antes; nuevas pruebas de ambas altas comprueban 400 y no guardado.
+2. 401 de estadísticas: interceptor no las clasificaba como privadas. Tres regresiones fallaron antes; se añadió /estadisticas y se conserva sesión ante 403.
+3. Campos obligatorios con espacios: registro público devolvía 500 al fallar trim/required de Mongoose. Tres casos lo reprodujeron. Transform trim antes de IsNotEmpty ahora responde 400 sin persistir y sin convertir tipos inválidos a texto.
+4. Restos de demo: se retiraron dataset/tipo sin imports y avatar con apellido/dorsal ficticios; perfil sin foto usa escudo FC con prueba reforzada. Footer dice Red de futbolistas. Ningún registro real fue eliminado.
+
+Como en la recepción del club, un dato inválido se explica antes de archivarlo y una credencial inválida no conserva un permiso visual. Flujo de los arreglos: formulario/validator Angular → DTO/helper Nest → persistencia solo si válido; errores 401 de reportes → interceptor → AuthService/Router. Sin módulos nuevos, dependencias ni refactors grandes.
+
+### Integración real y límites
+
+Solo lectura: API raíz/feed 200; me/usuarios/estadística sin sesión 401; OPTIONS localhost permitido con credenciales y origen ajeno sin allow-origin. Ping Atlas correcto con autoCreate/autoIndex desactivados; ping Cloudinary correcto. Se cargó configuración internamente, nunca se imprimieron secretos ni se consultaron usuarios para los pings. No hubo alta de cuentas, uploads, votos, comentarios, bajas ni cambios de índices/datos externos. Ping no se presenta como prueba de upload ni de estadísticas reales.
+
+Servidor estático temporal intentado en restringido y autorizado, puerto 4200 escuchando, pero sonda/navegador no accedieron (timeout). No se alteraron firewall ni permisos para forzar acceso. Servidores temporales detenidos. Sin frontend de ensayo/administrador suministrados; FRONTEND_URL no está presente en configuración local (no implica ausencia en producción). Login/cookies/admin/reportes/PWA/móvil externos quedan en matriz manual M01–M18.
+
+### Pruebas finales e incidencias
+
+**Angular build exit 0; 236/236 en 26 archivos. Nest build exit 0; 275/275 en 14 archivos. PWA 11/11 tras último build.** Se agregaron seis casos Angular y diez backend; se reforzó el caso de avatar sin foto. Ninguna prueba previa eliminada, omitida ni debilitada. Sin cambios de configuraciones de test ni timeouts.
+
+Una ejecución concurrente Angular tuvo 218/236: timeout inicial de navegación y errores derivados de petición pendiente/limpieza de TestBed. Aislada 6/6 y repetición completa 236/236 sin builds concurrentes; se conserva evidencia del intento fallido, sin aumentar límites. Los fallos de regresión de claves/espacios/interceptor fueron causales, se arreglaron en producción y pasaron. Detalle y comandos en 08/11.
+
+### Archivos creados/modificados/retirados
+
+- `backend/src/common/password.spec.ts`
+- `backend/src/common/password.ts`
+- `backend/src/usuarios/dto/create-usuario.dto.ts`
+- `backend/src/usuarios/usuarios.administracion.http.spec.ts`
+- `docs/00-MAPA-DEL-PROYECTO.md`
+- `docs/02-AUTENTICACION-Y-SEGURIDAD.md`
+- `docs/05-ADMINISTRACION.md`
+- `docs/07-ANGULAR-PWA-PIPES-DIRECTIVAS.md`
+- `docs/08-PRUEBAS-Y-DESPLIEGUE.md`
+- `docs/09-REQUISITOS-SPRINTS.md`
+- `docs/10-BITACORA-DE-CAMBIOS.md`
+- `docs/11-AUDITORIA-FINAL.md`
+- `docs/12-GUIA-DE-DEMOSTRACION.md`
+- `docs/guia-angular.md`
+- `docs/sprint-1.md`
+- `frontend/public/images/jugador-demo.svg`
+- `frontend/src/app/app.html`
+- `frontend/src/app/data/publicaciones-demo.ts`
+- `frontend/src/app/forms/registro-form.spec.ts`
+- `frontend/src/app/forms/registro-form.ts`
+- `frontend/src/app/interceptors/sesion.interceptor.spec.ts`
+- `frontend/src/app/interceptors/sesion.interceptor.ts`
+- `frontend/src/app/models/publicacion.ts`
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.ts`
+- `frontend/src/app/pages/mi-perfil/mi-perfil.html`
+- `frontend/src/app/pages/mi-perfil/mi-perfil.spec.ts`
+- `frontend/src/app/pages/registro/registro.html`
+- `frontend/src/app/pages/registro/registro.spec.ts`
+- `frontend/src/app/pages/registro/registro.ts`
+- `frontend/src/app/validators/registro.validators.ts`
+
+### Documentación y entrega
+
+11 contiene resumen, matriz, niveles I/L/A/R, seguridad, pruebas y M01–M18; 12 describe pantallas/acciones/conceptos para defensa; sprint-1 recupera documentación faltante. Actualizados mapa, seguridad, administración, PWA, pruebas, requisitos, guía y bitácora. Riesgos se distinguen de fallos confirmados: cuentas históricas truncadas, tokens stateless tras logout, cookies de terceros, archivo huérfano tras fallo de guardado y rendimiento de reportes no se presentan como ataques observados.
+
+Revisión final SHA-256: 26 archivos existentes modificados/retirados y cuatro nuevos (30 total), inventario coincidente. Tres retirados son demos/tipo heredado, no datos reales. Sin cambios en dependencias, secretos ni configuración de tests. 09 y 11 contienen los mismos 44 IDs únicos y estados 39/4/0/1; enlaces/bloques Markdown correctos, pruebas citadas existentes, sin skip/only/todo y con tres pipes/tres directivas. git diff --check correcto; avisos LF/CRLF de configuración existente.
+
+Preparado para revisión/local y ensayo con cuentas de prueba, **no cerrado para aceptación integrada de los cuatro sprints**. Faltan la matriz manual, PWA navegador, upload real y decisión de política S4-04. No se agregaron funciones ajenas. Se detiene y espera aprobación, sin commit 5D/merge/deploy.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

@@ -1,9 +1,10 @@
+import { Transform } from 'class-transformer';
 //	Define qué datos deben presentar para inscribirse
 
 //Define qué datos acepta NestJS y cómo validarlos - DTO significa Data Transfer Object (objeto de transferencia de datos)
 //
 //Recibe datos del formulario
-// 
+//
 // define qué información puede enviar Angular cuando un usuario intenta registrarse y qué condiciones debe cumplir
 // Por ejemplo, si alguien escribe:
 // - Nombre: Juan
@@ -19,18 +20,30 @@
 // Schema — Estructura de MongoDB
 // ¿Qué campos guardamos? ¿Cuáles son obligatorios? ¿Qué valores tienen por defecto?
 
-
-import {IsString,IsNotEmpty,IsEmail,MinLength,Matches,IsDateString,IsOptional,MaxLength,} from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEmail,
+  MinLength,
+  Matches,
+  IsDateString,
+  IsOptional,
+  MaxLength,
+} from 'class-validator';
 
 // Define y valida los datos recibidos al registrar un usuario.
 export class CreateUsuarioDto {
   //Comprueba que el dato sea texto - Impide valores vacíos
   @IsString()
   @IsNotEmpty()
+  // Evita que espacios pasen el DTO y terminen en un 500 al aplicar trim de Mongoose.
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   nombre: string;
 
   @IsString()
   @IsNotEmpty()
+  // Evita que espacios pasen el DTO y terminen en un 500 al aplicar trim de Mongoose.
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   apellido: string;
 
   // Verifica que el correo tenga un formato válido.
@@ -40,6 +53,8 @@ export class CreateUsuarioDto {
 
   @IsString()
   @IsNotEmpty()
+  // Evita que espacios pasen el DTO y terminen en un 500 al aplicar trim de Mongoose.
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   nombreUsuario: string;
 
   // Mínimo 8 caracteres, una mayúscula y un número.
@@ -47,6 +62,7 @@ export class CreateUsuarioDto {
   @MinLength(8, {
     message: 'La contraseña debe tener al menos 8 caracteres',
   })
+  @MaxLength(64, { message: 'La contraseña admite hasta 64 caracteres' })
   @Matches(/^(?=.*[A-Z])(?=.*\d).+$/, {
     message: 'La contraseña debe contener una mayúscula y un número',
   })
@@ -58,9 +74,12 @@ export class CreateUsuarioDto {
   repetirPassword: string;
 
   // Comprueba que la fecha tenga formato ISO válido.
-  @IsDateString({}, {
-    message: 'Ingresá una fecha de nacimiento válida',
-  })
+  @IsDateString(
+    {},
+    {
+      message: 'Ingresá una fecha de nacimiento válida',
+    },
+  )
   fechaNacimiento: string;
 
   // La descripción es opcional y admite hasta 300 caracteres.

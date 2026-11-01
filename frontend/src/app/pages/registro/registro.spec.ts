@@ -177,4 +177,14 @@ describe('Estados visuales del registro', () => {
     );
     expect(pagina.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false);
   });
+  it('explica una clave Unicode demasiado larga y no envía el registro', () => {
+    const control = fixture.componentInstance.campos.clave;
+    control.setValue('A1' + 'é'.repeat(36));
+    control.markAsTouched();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#estado-clave').textContent).toContain(
+      'Reducí la longitud',
+    );
+    expect(control.invalid).toBe(true);
+  });
 });

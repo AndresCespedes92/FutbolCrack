@@ -49,3 +49,11 @@ export function fechaLocalHoy(): string {
   const dia = String(hoy.getDate()).padStart(2, '0');
   return `${hoy.getFullYear()}-${mes}-${dia}`;
 }
+
+// Acentos/emojis ocupan varios bytes UTF-8. Acompaña el límite real de bcrypt en Nest,
+// además del máximo de 64 caracteres; no recorta silenciosamente lo escrito por el usuario.
+export function maximoBytesClaveValidator(control: AbstractControl): ValidationErrors | null {
+  return typeof control.value === 'string' && new TextEncoder().encode(control.value).length > 72
+    ? { claveDemasiadoLarga: true }
+    : null;
+}

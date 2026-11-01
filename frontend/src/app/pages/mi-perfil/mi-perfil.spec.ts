@@ -64,7 +64,7 @@ describe('Mi Perfil: material real del jugador', () => {
     expect(fixture.nativeElement.textContent).toContain('Todavía no hay comentarios');
   });
   it('muestra vacío sin inventar datos ni consultar comentarios', () => {
-    http.expectOne(`${API_PRUEBA}/auth/me`).flush(jugadorPrueba);
+    http.expectOne(`${API_PRUEBA}/auth/me`).flush({ ...jugadorPrueba, imagenPerfil: '' });
     propias().flush(paginaPrueba([], 0, 0, 3));
     fixture.detectChanges();
     responderComentariosVacios(http);
@@ -72,6 +72,9 @@ describe('Mi Perfil: material real del jugador', () => {
     expect(fixture.nativeElement.textContent).toContain('Todavía no publicaste');
     expect(fixture.nativeElement.querySelector('app-publicacion-card')).toBeNull();
     http.expectNone((req) => req.url.includes('comentarios'));
+    const avatar = fixture.nativeElement.querySelector('.player-art img');
+    expect(avatar.getAttribute('src')).toBe('icons/futbolcrack.svg');
+    expect(avatar.getAttribute('alt')).toContain('Avatar predeterminado');
   });
   it('distingue error de publicaciones del perfil y permite reintentar la misma consulta', () => {
     http.expectOne(`${API_PRUEBA}/auth/me`).flush(jugadorPrueba);

@@ -428,3 +428,23 @@ Incidencias resueltas: primera suite Angular tuvo 180/181 por la expectativa de 
 Las once pruebas de PWA verifican configuración/artefactos, **no ejecutan ni instalan el worker en un navegador**. Las suites de auth son regresión con HTTP simulado y worker desactivado, no prueba integral de cookies con worker activo. Pendientes: instalación HTTPS/localhost, activación/actualización y Cache Storage real, offline tras primera carga, login/logout/autorizar/refrescar con worker activo, móvil/responsive y condiciones externas previas de Atlas/Cloudinary/CORS/HTTPS. Recorrido en 07.
 
 No se hizo merge/deploy ni se tocaron backend/secretos. Avisos Git LF/CRLF son de configuración existente. La dependencia exacta del worker debe mantenerse alineada con core en futuras actualizaciones; npm ci reproduce el lock. No se afirma completo el cierre de los cuatro sprints en producción solo por pasar suites locales.
+
+## Auditoría final 5D — 2026-11-01
+
+Base main 7f327ec limpia, con 5C ya confirmada 1ca14cb. Preparación repitió ambos builds correctos, Angular 230/230, Nest 265/265 y PWA 11/11. Se creó test/auditoria-final sin un commit vacío/duplicado de respaldo.
+
+| Comando | Resultado final |
+| --- | --- |
+| `npm run build`, frontend | exit 0, sin advertencias de presupuesto |
+| `node node_modules/@angular/cli/bin/ng.js test --watch=false`, frontend | **236/236**, 26 archivos, exit 0 |
+| `npm run test:pwa`, frontend tras último build | **11/11**, exit 0; artefactos/configuración |
+| `npm run build`, backend | exit 0 |
+| `node node_modules/vitest/vitest.mjs run --no-file-parallelism --pool=threads`, backend | **275/275**, 14 archivos, exit 0 |
+
+Nuevos casos: 6 Angular (formulario UTF-8, feedback de registro y cuatro de interceptor); 10 Nest (cuatro helper clave y seis HTTP de altas/DTO). Caso existente de perfil vacío reforzado con avatar neutro y usuario sin foto. Sin dependencias nuevas ni pruebas eliminadas/omitidas, sin cambio de timeouts/configuraciones.
+
+Antes de arreglar: dos casos rechazando clave truncable fallaron, tres 401 estadísticas fallaron y tres registros con espacios devolvieron 500 en vez de 400. Se corrigieron las causas productivas y se mantuvieron los casos. Una ejecución completa concurrente Angular tuvo 218/236 por timeout inicial de navegación y errores derivados de limpieza; aislada 6/6 y repetición completa 236/236. Se documenta el intento fallido, sin suavizar aserciones ni aumentar límites. Node v24.15.0.
+
+Integración real de solo lectura: API raíz/feed 200, me/usuarios/reportes 401 anónimos; preflight localhost con origen exacto y credenciales, ajeno sin allow-origin; Atlas ping y Cloudinary ping ok. Sin subir/borrar imágenes, crear cuentas, comentar, votar ni modificar datos/índices. No se imprimieron valores de configuración secretos ni respuestas con datos reales.
+
+El navegador no accedió al servidor local (timeout aun con puerto escuchando); no se verificaron móvil/PWA runtime ni las operaciones autenticadas externas. Un ping no verifica upload y los pipelines simulados no certifican agregaciones reales. Matriz de aceptación manual M01–M18 y dictamen por sprint en 11. Guía docente en 12. No merge/deploy.

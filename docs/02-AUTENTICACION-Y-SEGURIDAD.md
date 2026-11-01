@@ -262,3 +262,13 @@ Los ocho casos HTTP usan guards reales y claves exclusivas de test, pero sustitu
 DELETE /publicaciones/:id usa el AuthGuard existente. PublicacionesService.darDeBaja obtiene al usuario actual con UsuariosService.findById y permite autor o administrador vigente. No usa un rol del body ni concede permisos solo por un claim viejo. El modelo de usuario y la configuración JWT/cookies no cambiaron.
 
 Como en el club, un socio puede retirar su propio parte; para retirar el de otro tiene que figurar hoy como administrador. Sin usuario vigente se rechaza y nunca se borra físicamente el documento. Creación de imágenes y lógica de bajas se describen en 03, con HTTP local y datos externos simulados.
+
+## Auditoría 5D — Correcciones y límites comprobados
+
+Se confirmó localmente que bcrypt solo considera 72 bytes: dos claves sintéticas con prefijo común se aceptaban como iguales. generarHashPassword ahora rechaza más de 72 bytes UTF-8 antes de hash (registro/admin); DTO público limita además a 64 caracteres como el formulario. TextEncoder en maximoBytesClaveValidator acompaña esa regla en Angular. No se recortan claves ni se cambia algoritmo/costo 12, login, JWT o cookies. Los hashes históricos no permiten saber si hubo truncado: no se hicieron resets ni se modificaron credenciales reales. Fuente primaria: [bcrypt](https://github.com/kelektiv/node.bcrypt.js#security-issues-and-concerns).
+
+El DTO recorta nombre/apellido/nombreUsuario antes de IsNotEmpty: espacios obligatorios ahora dan 400 en vez de pasar a Mongoose y terminar en 500. Se reprodujeron tres casos HTTP antes del arreglo. La regla no convierte números/objetos a string. Otros criterios del formulario (p.ej. fecha futura) siguen siendo más estrictos que el DTO público; no se presenta como validación de identidad/edad.
+
+El interceptor ahora incluye /estadisticas: sus 401 invalidan estado y redirigen; 403 continúa preservando sesión. Tres regresiones fallaron antes y pasan después, junto con todas las anteriores. No se modifica el control de permisos definitivo de Nest.
+
+Pruebas reales sin escritura: API feed 200 y me/usuarios/estadística anónimos 401, CORS OPTIONS con localhost permitido/ajeno no permitido, ping Atlas y Cloudinary correctos. No hubo login/cookie/admin/upload reales ni inspección de valores secretos. Matriz completa y riesgos diferenciados en [11-AUDITORIA-FINAL.md](11-AUDITORIA-FINAL.md); no es certificado de seguridad de producción.
