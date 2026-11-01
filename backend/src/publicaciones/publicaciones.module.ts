@@ -38,5 +38,7 @@ import {
 
   // Un único servicio conserva creación, listado y baja lógica.
   providers: [PublicacionesService, AutenticacionOpcionalGuard],
+  // Comentarios consulta el mismo modelo registrado, sin copiar su schema ni sus reglas.
+  exports: [MongooseModule],
 })
 export class PublicacionesModule {}

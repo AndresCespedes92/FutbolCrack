@@ -177,3 +177,25 @@ La tarjeta real reemplaza la demo en feed y Mi Perfil; no cambian endpoints, mod
 Ejemplo del club: el entrenador (padre) entrega a la tarjeta la ficha de una jugada. La tarjeta avisa «quiero votar»; el contenedor coordina al servicio, espera la confirmación de Nest y consulta otra vez la cartelera. No se permite que cada tarjeta gestione una conexión propia.
 
 La salida de detalle está preparada y probada, pero detalleDisponible permanece false porque la pantalla/API de detalle y comentarios son de Sprint 3. No hay enlaces a rutas inexistentes ni comentarios inventados. Ver [03](03-PUBLICACIONES.md), [08](08-PRUEBAS-Y-DESPLIEGUE.md) y [guía Angular](guia-angular.md).
+
+## Sprint 3, Tarea 4A — Backend de comentarios
+
+| Archivo en backend/src/ | Clase / método y endpoint |
+| --- | --- |
+| comentarios/comentarios.module.ts | ComentariosModule: único módulo funcional nuevo; registra Comentario y reutiliza Seguridad/Usuarios/Publicaciones. |
+| comentarios/entities/comentario.entity.ts | Comentario, ComentarioSchema: publicacionId/autorId, texto, modificado, timestamps e índice compuesto. |
+| comentarios/comentarios.constants.ts | Máximo texto 1000; página 3, máximo técnico 100. |
+| comentarios/dto/crear-comentario.dto.ts | CrearComentarioDto: texto obligatorio, trim, string, máximo; propiedades ajenas rechazadas por pipe global. |
+| comentarios/dto/editar-comentario.dto.ts | EditarComentarioDto hereda las mismas validaciones; PUT exige texto. |
+| comentarios/dto/listar-comentarios.dto.ts | ListarComentariosDto: offset/limit estrictos. |
+| comentarios/comentarios.controller.ts | crear: POST /publicaciones/:publicacionId/comentarios; listar: GET misma ruta; editar: PUT /comentarios/:id. |
+| comentarios/comentarios.service.ts | crear/listar/editar; validarId, validarUsuario, exigirPublicacionActiva, validarTexto, presentar. Reglas de autoría, actividad, página/total y populate mínimo. |
+| common/validation/entero-query.ts | enteroDeQuery compartido por DTO de comentarios/publicaciones, sin cambiar reglas del listado existente. |
+| publicaciones/publicaciones.module.ts | Exporta MongooseModule para reutilizar el modelo Publicacion ya registrado. |
+| app.module.ts | Importa ComentariosModule. |
+| comentarios/comentarios.controller.http.spec.ts | HTTP con módulo real y conexión/modelos/usuarios simulados; guards/DTO/servicio reales, sin Atlas. |
+| comentarios/entities/comentario.entity.spec.ts | Cuatro casos de schema real en memoria: referencias/defaults, texto, fechas/índice. |
+
+El socio envía texto → DTO verifica forma → AuthGuard aporta identidad → servicio comprueba usuario/jugada/propiedad → modelo guarda referencias → presentar/populate devuelve nombre/foto mínimos. Listar es público y devuelve comentarios/total/offset/limit/hayMas, default 3. Editar exige autor real (admin no tiene excepción), marca modificado true y mantiene fecha original. No existe DELETE de comentarios ni integración Angular en 4A.
+
+Contrato, ejemplos, decisiones de límites y riesgos entre colecciones en [04](04-COMENTARIOS.md). La documentación de Sprint 2 se conserva; no cambian sus funcionalidades.

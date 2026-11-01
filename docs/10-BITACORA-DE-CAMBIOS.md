@@ -391,6 +391,74 @@ Listo para revisión local del alcance autorizado, con límites externos identif
 
 ---
 
+## 31/10/2026 — Sprint 3, Tarea 4A: backend de comentarios
+
+**Objetivo y ejemplo:** Lucía deja una nota en la jugada de Mateo, todos pueden leerla y solo Lucía puede corregirla. Un administrador no puede reescribir opiniones de otro socio. Se implementa únicamente backend; sin UI, eliminación ni cambio de sesión.
+
+**Git y base:** inicio limpio main 9224cad, merge de la interfaz 3C ya confirmado por el usuario. Se comprobaron ambas compilaciones, FE 60/60 y BE 95/95 (tras repetir por un cierre de worker). Sin cambios previos para respaldar, no se hizo commit vacío. Se creó feature/comentarios-backend; HEAD continúa en 9224cad. No hay commits nuevos, merge ni deploy.
+
+### Archivos creados/modificados
+
+- backend/src/app.module.ts
+- backend/src/comentarios/comentarios.constants.ts
+- backend/src/comentarios/comentarios.controller.http.spec.ts
+- backend/src/comentarios/comentarios.controller.ts
+- backend/src/comentarios/comentarios.module.ts
+- backend/src/comentarios/comentarios.service.ts
+- backend/src/comentarios/dto/crear-comentario.dto.ts
+- backend/src/comentarios/dto/editar-comentario.dto.ts
+- backend/src/comentarios/dto/listar-comentarios.dto.ts
+- backend/src/comentarios/entities/comentario.entity.spec.ts
+- backend/src/comentarios/entities/comentario.entity.ts
+- backend/src/common/validation/entero-query.ts
+- backend/src/publicaciones/dto/listar-publicaciones.dto.ts
+- backend/src/publicaciones/publicaciones.module.ts
+- docs/00-MAPA-DEL-PROYECTO.md
+- docs/01-ARQUITECTURA.md
+- docs/04-COMENTARIOS.md
+- docs/08-PRUEBAS-Y-DESPLIEGUE.md
+- docs/09-REQUISITOS-SPRINTS.md
+- docs/10-BITACORA-DE-CAMBIOS.md
+
+
+### Implementación y decisiones
+
+**Modelo:** Comentario guarda _id, publicacionId ref Publicacion, autorId ref Usuario, texto, modificado false y timestamps createdAt/updatedAt. Referencias inmutables; no se duplican nombre/foto ni credenciales. Índice declarado por publicacionId/createdAt/_id. Texto máximo 1000 unidades UTF-16 tras trim (decisión técnica local, no requisito oficial supuesto); página default 3, máximo técnico 100.
+
+**Módulo y reutilización:** ComentariosModule registra el único módulo funcional nuevo autorizado. Importa SeguridadModule/UsuariosModule/PublicacionesModule existentes. PublicacionesModule exporta MongooseModule para reutilizar el modelo, sin recrear schema ni lógica. AppModule registra ComentariosModule. enteroDeQuery se extrae literalmente del DTO de publicaciones a common/validation y se reutiliza desde ambos DTO; las reglas de conversión y validación de publicaciones no cambian.
+
+**Endpoints y recorrido:** POST /publicaciones/:publicacionId/comentarios toma texto del body y autor solo del JWT; devuelve 201 con mensaje/comentario. GET misma ruta es público, exige publicación activa, ordena por createdAt/_id descendentes y devuelve comentarios/total/offset/limit/hayMas. PUT /comentarios/:id exige autor original y devuelve 200 con mensaje/comentario modificado. Los tres verifican ObjectId y existencia/actividad; las escrituras verifican además usuario actual. DTO global rechaza propiedades ajenas, texto vacío/tipos incorrectos y longitud inválida. No hay DELETE.
+
+**Edición y permisos:** AuthGuard verifica identidad; servicio compara autorId persistido con sub, sin permiso especial de administrador. La actualización se condiciona por id/autor/publicación y solo cambia texto/modificado; Mongoose actualiza updatedAt y mantiene createdAt. Un PUT aceptado del mismo texto también marca modificado. Ausente/inactiva 404; ajeno 403; falta de sesión/sujeto/usuario 401; datos/ids/query malos 400.
+
+**Respuesta mínima:** presentar arma lista positiva de campos y populate resuelve autor con nombre/apellido/imagenPerfil e id. Ni correo, rol ni contraseña/hash se devuelven. Si el autor desapareció, autorId es null. Solo se pueblan los comentarios de la página; MongoDB conserva ObjectId, no la ficha copiada.
+
+**Paginación:** match de publicación antes de sort y facet; skip/limit en MongoDB y conteo sobre los mismos registros. Ocho comentarios se piden con offsets 0/3/6 y dan 3/3/2; Angular deberá anexar para mostrar 3/6/8. Fechas empatadas usan id descendente. Editar no altera orden por creación. Publicaciones antiguas sin activo siguen habilitadas usando activo distinto de false; no se migran documentos.
+
+**Conceptos pedagógicos:** módulo e inyección de dependencias, controller HTTP, DTO/herencia/Transform/validadores, schema/referencias, timestamps, diferencia entre autenticación/autorización, populate/proyección positiva, agregación/facet, índice compuesto y offset/limit. 04 explica cada método con ejemplo del club, cuerpos/respuestas y cómo probarlo; 00 muestra ubicaciones, 01 arquitectura y 09 estados verificados.
+
+### Comprobaciones
+
+Final: frontend build salida 0, 60/60 en 10 suites; backend build salida 0 y suite completa 157/157 en 8 suites con node node_modules/vitest/vitest.mjs run --no-file-parallelism. Se conservan las 95 pruebas anteriores y agregan 58 HTTP más 4 de schema. No se instalaron dependencias ni se modificaron timeouts/configuración del runner.
+
+La primera ejecución nueva encontró una prueba que construía dos peticiones Supertest antes de completar la primera: cerraba el puerto temporal y fallaba address null. Se corrigió a construcción/envío secuenciales sin alterar producción ni aserciones. También hubo cierres inesperados de workers (uno ya presente en la base); npm rechazó reenviar el flag de serialización con EUNKNOWNCONFIG, por lo que se usó el ejecutable local de Vitest directamente. Historial exacto y límites en 08. No se omitieron tests para lograr resultados positivos.
+
+Las pruebas HTTP importan el módulo funcional real; sustituyen conexión/modelos, usuarios y transporte de imágenes. Comprueban guards/DTO/servicio reales, inyección/exportación de Publicacion, altas, tipos/vacíos/límites (incluidos emojis), sesión, permisos de autor/admin, 3/3/2, empates, proyección mínima, 404/id inválido, modificado y ausencia de DELETE. Schema Mongoose se valida en memoria. Fechas/persistencia/aggregate/populate se modelan con dobles: no es ensayo real contra Atlas.
+
+### Riesgos, pendientes y entrega
+
+No se cambió la interfaz Angular, JWT/cookies, likes ni baja lógica. No se leyeron/modificaron .env ni secretos. Las consultas conservan publicaciones antiguas visibles y el contrato previo de publicaciones.
+
+La comprobación de actividad y operación de comentario son consultas de documentos diferentes sin transacción: una baja que ocurre después del chequeo puede competir con una creación/edición/lectura ya iniciada. Se documenta esa ventana y no se afirma atomicidad entre colecciones; coordinarla requeriría una tarea sobre ambas operaciones. El orden offset tampoco congela el conjunto entre solicitudes; nuevas inserciones pueden desplazar páginas.
+
+Pendiente: ensayo real de MongoDB/índice/timestamps/populate, middleware de origen/cookies/CORS y errores externos; integración Angular de formulario/listado de tres, Ver más con anexado, edición propia, etiqueta Editado, mensajes/carga/error, perfil y detalle. JWT continúa con 20 segundos de prueba. No se implementan eliminación, renovación de sesión ni otros módulos de sprints posteriores.
+
+Revisión final SHA-256: 9 archivos existentes modificados y 11 nuevos (20 en total), coincidentes con el inventario. Frontend completo, autenticación/JWT/cookies, usuarios, Cloudinary, lógica de likes/baja y dependencias conservan su huella de 9224cad. Se validan enlaces, bloques Markdown y 44 IDs únicos de trazabilidad, sin skip/todo/only. git diff --check no tiene errores; el aviso de normalización CRLF/LF del módulo principal responde a la configuración existente de Git.
+
+Listo para revisión del alcance backend local, con pruebas completas y límites externos documentados. Se detiene y espera aprobación; no se realiza commit, merge ni deploy automáticamente.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

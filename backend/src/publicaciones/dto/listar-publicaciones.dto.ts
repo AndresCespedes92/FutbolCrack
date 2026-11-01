@@ -5,12 +5,7 @@ import {
   MAXIMO_LIMITE_LISTADO,
 } from '../publicaciones.constants.js';
 
-// Solo convertimos enteros decimales escritos correctamente: vacío, fracciones y arrays se rechazan.
-function enteroDeQuery(valor: unknown): unknown {
-  return typeof valor === 'string' && /^(0|[1-9]\d*)$/.test(valor)
-    ? Number(valor)
-    : valor;
-}
+import { enteroDeQuery } from '../../common/validation/entero-query.js';
 
 export class ListarPublicacionesDto {
   @IsIn(['fecha', 'likes'], { message: 'El orden debe ser fecha o likes' })
