@@ -15,4 +15,14 @@ describe('TruncatePipe', () => {
     expect(pipe.transform(texto, 280, true)).toBe(texto);
     expect(texto.length).toBe(420);
   });
+  it('valores de ejecución inválidos no rompen la vista', () => {
+    expect(pipe.transform(123 as unknown as string)).toBe('');
+    expect(pipe.transform({} as string)).toBe('');
+    expect(pipe.transform('')).toBe('');
+  });
+  it('límites inválidos conservan texto; cero permite recorte vacío con elipsis', () => {
+    for (const limite of [-1, NaN, Infinity, 1.5])
+      expect(pipe.transform('Jugada', limite)).toBe('Jugada');
+    expect(pipe.transform('Jugada', 0)).toBe('…');
+  });
 });

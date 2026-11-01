@@ -5,7 +5,9 @@ import { Pipe, PipeTransform } from '@angular/core';
 @Pipe({ name: 'truncate', standalone: true })
 export class TruncatePipe implements PipeTransform {
   transform(texto: string | null | undefined, limite = 280, expandido = false): string {
-    const contenido = texto ?? '';
+    const contenido = typeof texto === 'string' ? texto : '';
+    // Un límite incorrecto conserva el texto; evita recortes sorprendentes por NaN/negativos.
+    if (!Number.isInteger(limite) || limite < 0) return contenido;
     return expandido || contenido.length <= limite ? contenido : contenido.slice(0, limite) + '…';
   }
 }

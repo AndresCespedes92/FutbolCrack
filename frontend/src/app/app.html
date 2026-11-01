@@ -6,7 +6,14 @@
   </section>
 } @else if (errorInicial()) {
   <section class="carga-sesion" role="alert">
+    <span class="eyebrow">TALENTO EN JUEGO</span>
+    <h1>FutbolCrack</h1>
     <p>{{ errorInicial() }}</p>
+    <!-- Shell offline: explica el límite sin montar pantallas que necesitan datos privados. -->
+    <p>
+      La interfaz está disponible. Para acceder a tus datos, publicar o comentar necesitás conexión.
+    </p>
+    <p>No se guardan acciones pendientes ni se muestran datos guardados sin conexión.</p>
     <button class="button" type="button" (click)="comprobarSesion()">Reintentar</button>
   </section>
 } @else {

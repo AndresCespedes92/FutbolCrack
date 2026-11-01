@@ -12,7 +12,12 @@
         loading="lazy"
       />
     } @else {
-      <span class="post-avatar avatar-fallback" aria-hidden="true">FC</span>
+      <span class="post-avatar avatar-fallback" aria-hidden="true">{{
+        (publicacion.autorId
+          ? publicacion.autorId.nombre + ' ' + publicacion.autorId.apellido
+          : null
+        ) | iniciales
+      }}</span>
     }
     <div class="post-author">
       <h3>
@@ -26,7 +31,9 @@
         <span>@{{ publicacion.autorId.nombreUsuario }}</span>
       }
     </div>
-    <time [attr.datetime]="publicacion.createdAt">{{ publicacion.createdAt.slice(0, 10) }}</time>
+    <time [attr.datetime]="publicacion.createdAt" [attr.title]="publicacion.createdAt">{{
+      publicacion.createdAt | fechaRelativa
+    }}</time>
   </header>
   <div class="post-body">
     <h2 [id]="'publicacion-' + publicacion._id">

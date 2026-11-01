@@ -304,3 +304,28 @@ El inventario completo de archivos modificados está en [10-BITACORA-DE-CAMBIOS.
 | `frontend/src/app/pages/publicaciones/publicaciones.html` | Aviso de acceso denegado también menciona estadísticas |
 
 No se agregan esquemas/modelos/módulos funcionales. DELETE /publicaciones/:id, darDeBaja, ConfirmacionBaja y AccionesPublicaciones se reutilizan sin cambios productivos. Inventario en 10; contratos, consultas y ejemplos en [06-ESTADISTICAS.md](06-ESTADISTICAS.md).
+
+## Incorporaciones 5C — PWA, tres pipes y tres directivas
+
+| Archivo/clase real | Responsabilidad y ubicación de uso |
+| --- | --- |
+| `frontend/ngsw-config.json` | Caché cerrada de estáticos; dataGroups vacío; fallback exacto raíz/login/registro, sin endpoints API |
+| `frontend/angular.json`, `src/app/app.config.ts` | Worker oficial de producción, registro con isDevMode/registerWhenStable/updateViaCache |
+| `frontend/public/manifest.webmanifest`, `src/index.html` | Identidad/instalación/enlaces/colores; start_url '/' |
+| `frontend/public/icons/` | Escudo propio FC, SVG y PNG 192/512/maskable |
+| `frontend/scripts/pwa.test.mjs` | Once pruebas Node sobre configuración y build real; npm run test:pwa después de build |
+| `frontend/package.json`, `package-lock.json` | Única dependencia añadida: @angular/service-worker 22.2.3; script test:pwa |
+| `frontend/src/app/pipes/truncate.pipe.ts` | TruncatePipe existente, defensa de entradas inválidas; tarjeta/comentarios con Ver más/menos |
+| `frontend/src/app/pipes/fecha-relativa.pipe.ts` | FechaRelativaPipe.transform: tiempo transcurrido, sin timers; tarjeta/comentarios |
+| `frontend/src/app/pipes/iniciales.pipe.ts` | InicialesPipe.transform: avatar sin foto en tarjeta/comentarios |
+| `frontend/src/app/directives/resaltar-autor.directive.ts` | ResaltarAutorDirective: clase comentario-propio; comentarios según identidad recibida |
+| `frontend/src/app/directives/auto-focus.directive.ts` | AutoFocusDirective: afterNextRender/focus al editar comentario |
+| `frontend/src/app/directives/permiso-rol.directive.ts` | PermisoRolDirective: input/effect, TemplateRef/ViewContainerRef, enlaces administrativos del Navbar |
+| `frontend/src/app/directives/directivas.spec.ts` | Host de pruebas de las tres directivas y cambios de sesión |
+| `frontend/src/app/pipes/*.spec.ts` | Pruebas de los tres pipes, entradas vacías/invalidas y límites |
+| `frontend/src/app/components/publicacion-card/` | Import/uso de tres pipes y verificación de time con datetime/title exactos |
+| `frontend/src/app/components/comentarios-publicacion/` | Pipes, resaltado, autofocus de edición y CSS comentado; pruebas integradas |
+| `frontend/src/app/components/navbar/` | Uso real de *appPermisoRol, conserva guards/rutas Nest |
+| `frontend/src/app/app.html`, `app.sesion.spec.ts` | Shell de reconexión sin datos/cola offline; autorización real preservada |
+
+Hay exactamente tres @Pipe y tres @Directive propios; NgClass/RouterLink/guards no suman al conteo. No se modifica backend. Inventario íntegro en 10; detalles de caché, limitaciones y estudio en [07](07-ANGULAR-PWA-PIPES-DIRECTIVAS.md).

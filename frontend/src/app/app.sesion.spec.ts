@@ -151,4 +151,18 @@ describe('App 4C: carga inicial, recuperación y modal', () => {
     expect(fixture.nativeElement.textContent).toContain('Pantalla solicitada');
     http.expectNone(`${API_URL}/auth/me`);
   });
+  it('sin red ofrece shell de reconexión, no monta datos privados y reintenta autorización real', async () => {
+    crear();
+    autorizacion().error(new ProgressEvent('error'));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('FutbolCrack');
+    expect(fixture.nativeElement.textContent).toContain('No se guardan acciones pendientes');
+    expect(fixture.nativeElement.querySelector('router-outlet')).toBeNull();
+    fixture.nativeElement.querySelector('button').click();
+    fixture.detectChanges();
+    const req = autorizacion();
+    expect(req.request.method).toBe('POST');
+    req.error(new ProgressEvent('error'));
+    fixture.detectChanges();
+  });
 });

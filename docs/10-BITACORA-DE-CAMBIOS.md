@@ -782,6 +782,92 @@ Pendientes navegador/móvil real, MongoDB/versiones, índices/planes, alto volum
 
 ---
 
+## 2026-11-01 — Sprint 4, Tarea 5C: PWA, pipes y directivas Angular
+
+### Base, rama y autorización
+
+Inicio en feature/estadisticas-admin, HEAD 92a58e5 con 26 archivos de 5B sin confirmar. Se revisaron status, matriz y guía; frontend compiló y pasó 181/181, backend compiló y pasó 265/265. Según autorización expresa del enunciado, se respaldó 5B en **be005ec — feat(estadisticas): agregar reportes y verificar moderacion**, y se creó **feature/pwa-pipes-directivas**. Los cambios de 5C quedan sin commit, merge ni deploy. No se modifica backend, secretos ni módulos funcionales.
+
+### Problema y ejemplo del club
+
+La recepción del club necesita abrir su cartel sin red y presentar mejor autores/fechas, pero no debe guardar el padrón ni operaciones privadas en caché. Se configura PWA oficial de Angular con estáticos exclusivamente. Se completan exactamente tres pipes y tres directivas, usados en tarjeta, comentarios y navegación. TS/HTML/CSS separados y comentarios españoles en las decisiones importantes.
+
+Se verificaron core 22.2.3 y CLI/build 22.2.4. Se justificó antes de instalar la única dependencia añadida: @angular/service-worker 22.2.3 exacto y compatible con core. Primer intento npm falló ENOTFOUND en red restringida; la repetición autorizada agregó un paquete. No se cambian versiones anteriores del lock ni se instala @angular/pwa u otras librerías.
+
+### Implementación y recorrido
+
+Manifest de FutbolCrack con descripción, es-AR, inicio/alcance '/', standalone y colores propios. Iconos originales FC/escudo/pelota: SVG, PNG 192/512 y maskable 512; PNG creados con System.Drawing disponible en Windows sin instalar librerías y revisados visualmente. Angular production genera worker/control desde ngsw-config; AppConfig registra solo fuera de desarrollo, cuando estable o al límite de 30 segundos, updateViaCache none.
+
+Shell precargado: index/JS/CSS/chunks/manifest/favicon/iconos. dataGroups vacío, sin URLs externas/dinámicas. Se excluyen auth/usuarios/publicaciones/comentarios/estadísticas; navegación offline solo raíz/login/registro. No fallback en publicaciones (ruta compartida con nombre de API), mi-perfil o dashboards. Tras fallo de autorización, App muestra marca, limitaciones y Reintentar sin montar pantallas privadas. No altera cookies/JWT/interceptor ni agrega colas/IndexedDB/localStorage para datos. Volver a conectar ejecuta autorización real.
+
+TruncatePipe se conserva con defensa ante valores/límites inválidos. FechaRelativaPipe transforma ISO/Date a minutos/horas/días, puro y sin timer; datetime/title guardan el ISO exacto. InicialesPipe usa primera/última palabra y fallback FC sin foto. Ambos se usan en PublicacionCard y ComentariosPublicacion, ya compartidos por feed/detalle/perfil.
+
+ResaltarAutorDirective recibe la comparación autor/usuario y agrega clase; CSS comentado dibuja borde musgo. AutoFocusDirective enfoca el textarea tras afterNextRender al editar, sin búsqueda global/timer. PermisoRolDirective usa input/effect y TemplateRef/ViewContainerRef para enlaces administrativos del Navbar, reaccionando a rol/activo/logout sin duplicar vistas. Es visual: Nest mantiene todos sus permisos y guards.
+
+Los datos siguen viajando Angular → HTTP/Nest → MongoDB como antes; pipes/directivas solo actúan sobre presentación y el worker solo sobre archivos estáticos. Offline no se presenta un éxito de publicación/comentario. Los ejemplos/recorridos de estudio se adaptan de CineBera sin patrones innecesarios ni rediseñar pantallas.
+
+### Archivos creados/modificados
+
+- `docs/00-MAPA-DEL-PROYECTO.md`
+- `docs/07-ANGULAR-PWA-PIPES-DIRECTIVAS.md`
+- `docs/08-PRUEBAS-Y-DESPLIEGUE.md`
+- `docs/09-REQUISITOS-SPRINTS.md`
+- `docs/10-BITACORA-DE-CAMBIOS.md`
+- `docs/guia-angular.md`
+- `frontend/angular.json`
+- `frontend/ngsw-config.json`
+- `frontend/package-lock.json`
+- `frontend/package.json`
+- `frontend/public/icons/futbolcrack.svg`
+- `frontend/public/icons/icon-192.png`
+- `frontend/public/icons/icon-512.png`
+- `frontend/public/icons/icon-maskable-512.png`
+- `frontend/public/manifest.webmanifest`
+- `frontend/scripts/pwa.test.mjs`
+- `frontend/src/app/app.config.ts`
+- `frontend/src/app/app.html`
+- `frontend/src/app/app.sesion.spec.ts`
+- `frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.css`
+- `frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.html`
+- `frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.spec.ts`
+- `frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.ts`
+- `frontend/src/app/components/navbar/navbar.html`
+- `frontend/src/app/components/navbar/navbar.ts`
+- `frontend/src/app/components/publicacion-card/publicacion-card.html`
+- `frontend/src/app/components/publicacion-card/publicacion-card.spec.ts`
+- `frontend/src/app/components/publicacion-card/publicacion-card.ts`
+- `frontend/src/app/directives/auto-focus.directive.ts`
+- `frontend/src/app/directives/directivas.spec.ts`
+- `frontend/src/app/directives/permiso-rol.directive.ts`
+- `frontend/src/app/directives/resaltar-autor.directive.ts`
+- `frontend/src/app/pipes/fecha-relativa.pipe.spec.ts`
+- `frontend/src/app/pipes/fecha-relativa.pipe.ts`
+- `frontend/src/app/pipes/iniciales.pipe.spec.ts`
+- `frontend/src/app/pipes/iniciales.pipe.ts`
+- `frontend/src/app/pipes/truncate.pipe.spec.ts`
+- `frontend/src/app/pipes/truncate.pipe.ts`
+- `frontend/src/index.html`
+
+### Pruebas y dificultades resueltas
+
+Resultado final: **Angular build exit 0; 230/230 en 26 archivos; PWA configuración/artefactos 11/11; backend build exit 0 y 265/265 en 13 archivos**. Comandos y detalle en 08. Sin pruebas eliminadas/omitidas. Se agregan 49 casos Angular y 11 Node; se conservan 181 anteriores.
+
+La primera regresión dio 180/181: la tarjeta esperaba fecha absoluta visible. Como 5C exige formato relativo, se actualizó a reloj fijo/'Ayer', conservando comprobación ISO exacta en datetime/title. No se debilitaron las verificaciones de fecha. Primera verificación PWA 10/11: navigationUrls con ^ era tratado como ruta relativa por el generador y rompía fallback de raíz. Se corrigieron patrones de configuración; el mismo caso verifica ahora las rutas ancladas generadas.
+
+Las pruebas Node usan manifest/iconos reales, hashes del build y generador oficial con archivos señuelo de API. Garantizan exclusión en la configuración, no ejecución runtime del Service Worker. Angular prueba valores inválidos, directivas/DOM, cambios de usuario, uso real y shell/reintento. Las suites de autenticación siguen pasando con HTTP simulado y worker desactivado, por lo que no se confunden con una prueba de cookies en navegador con worker activo.
+
+### Documentación, advertencias y cierre
+
+Actualizados mapa, PWA/pipes/directivas, pruebas, matriz, bitácora y guía. Queda explicada la diferencia entre transformar un valor, modificar un elemento y cachear recursos; se documentan archivos/clases/métodos y recorrido de instalación. Antecedentes en 07 separados del estado vigente.
+
+S4-09/10 implementados/verificados localmente; S4-08 configurado y verificado por artefactos, pendiente instalación/activación/offline/actualización y auth con worker real. No se declaran cerrados integralmente los cuatro sprints: faltan aceptación externa, navegador/móvil, Atlas/Cloudinary/HTTPS/CORS y contraste con enunciados completos. La caché puede ser desalojada; primera carga necesita red; enlaces directos excluidos no tienen fallback offline. Fechas relativas no son reloj en vivo. Worker/core deben actualizarse juntos.
+
+Revisión final SHA-256: 24 archivos existentes modificados y 15 nuevos (39 total), con inventario coincidente. Backend y secretos íntegros; sin cambios de configuración de tests. Lock: solo @angular/service-worker nuevo, ninguna versión previa alterada. Conteo de código: exactamente tres @Pipe y tres @Directive. Matriz con 44 IDs únicos, enlaces/bloques Markdown correctos y ningún skip/only/todo. git diff --check correcto; avisos LF/CRLF de la configuración existente.
+
+Sin ensayo de instalación ni runtime PWA en navegador, sin despliegue ni escrituras externas. Se detiene para revisión y aprobación; sin commit de 5C, merge o deploy.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

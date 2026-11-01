@@ -118,3 +118,9 @@ strong {
     padding: 16px;
   }
 }
+
+/* appResaltarAutor agrega esta clase: borde musgo, sin depender solo de una diferencia de color. */
+.comentario.comentario-propio {
+  border-left: 4px solid var(--color-success);
+  padding-left: 16px;
+}

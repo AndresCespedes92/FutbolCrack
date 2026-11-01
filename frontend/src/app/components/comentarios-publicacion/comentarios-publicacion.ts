@@ -1,3 +1,7 @@
+import { ResaltarAutorDirective } from '../../directives/resaltar-autor.directive';
+import { AutoFocusDirective } from '../../directives/auto-focus.directive';
+import { FechaRelativaPipe } from '../../pipes/fecha-relativa.pipe';
+import { InicialesPipe } from '../../pipes/iniciales.pipe';
 import {
   ChangeDetectorRef,
   Component,
@@ -23,7 +27,15 @@ import { TruncatePipe } from '../../pipes/truncate.pipe';
 @Component({
   selector: 'app-comentarios-publicacion',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TruncatePipe],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    TruncatePipe,
+    FechaRelativaPipe,
+    InicialesPipe,
+    ResaltarAutorDirective,
+    AutoFocusDirective,
+  ],
   templateUrl: './comentarios-publicacion.html',
   styleUrl: './comentarios-publicacion.css',
 })

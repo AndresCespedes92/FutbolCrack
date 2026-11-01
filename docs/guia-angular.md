@@ -257,3 +257,63 @@ SVG/porcentajes son geometría de presentación: segmento divide cantidades ya r
 - **¿Librería de gráficos?** No: barras CSS y línea/dona SVG nativas, con tablas equivalentes y estilos separados/comentados.
 - **¿Cómo se evita una respuesta vieja?** Cada reporte bloquea nuevos envíos/filtros durante carga; no se superponen sus consultas. Los demás son independientes.
 - **¿Qué demuestra la suite?** Reglas, consultas, fixtures, HTTP local y DOM/router. No acredita índices/rendimiento Atlas ni apariencia manual en teléfono.
+
+## Tarea 5C — Pipe, directiva y PWA para explicar en la defensa
+
+### Dónde mirar primero
+
+1. `pipes/truncate.pipe.ts`: presentación de texto largo; el componente conserva el booleano de expansión.
+2. `pipes/fecha-relativa.pipe.ts`: transform convierte Date/ISO en tiempo transcurrido; la fecha exacta queda en time.datetime/title.
+3. `pipes/iniciales.pipe.ts`: iniciales del primer/último nombre para avatar sin foto; fallback FC.
+4. `directives/resaltar-autor.directive.ts`: host binding agrega comentario-propio al booleano recibido.
+5. `directives/auto-focus.directive.ts`: afterNextRender enfoca el editor recién creado.
+6. `directives/permiso-rol.directive.ts`: TemplateRef/ViewContainerRef muestran una plantilla y effect observa el usuario actual.
+7. `ngsw-config.json`, `app.config.ts`, `angular.json`, `public/manifest.webmanifest`: qué se guarda, cómo se registra y cómo se presenta la PWA.
+
+Los imports standalone están en PublicacionCard, ComentariosPublicacion y Navbar. HTML conserva bindings; el CSS del comentario define borde/color de resaltado y explica dónde cambiarlo. No hay backend nuevo ni un módulo adicional.
+
+### Ejemplos del código real
+
+```html
+<ng-container *appPermisoRol="'administrador'">
+  <!-- Enlaces de administración -->
+</ng-container>
+```
+
+El asterisco es sintaxis estructural: Angular entrega una plantilla. La directiva inserta una vista si AuthService.usuarioActual indica rol permitido/activo, y la retira al cambiar rol/estado o cerrar sesión. No valida permisos en Nest ni llama HTTP. Es como ocultar la puerta de oficina del club en el cartel: la cerradura real sigue en el servidor.
+
+```ts
+@Directive({ selector: '[appResaltarAutor]', standalone: true,
+  host: { '[class.comentario-propio]': 'appResaltarAutor()' } })
+```
+
+La directiva de atributo cambia una clase del elemento existente, sin insertar otra plantilla. ComentariosPublicacion compara autorId con usuario.id. El borde musgo identifica notas propias; puedeEditar y Nest siguen decidiendo si se pueden editar. AutoFocus usa el elemento inyectado y afterNextRender para esperar el textarea; no busca el DOM global ni usa temporizadores.
+
+```html
+{{ comentario.createdAt | fechaRelativa }}
+```
+
+Un pipe transforma un valor; una directiva transforma presencia/comportamiento. FechaRelativaPipe es puro y no instala un reloj por comentario: al volver a crear la vista o cambiar fecha/ahora se recalcula. Ayer representa 24–48 horas transcurridas. InicialesPipe conserva acentos y usa primera/última palabra. TruncatePipe no modifica el texto de MongoDB ni hace HTTP.
+
+### Recorrido de usuario
+
+El jugador abre una jugada: la tarjeta muestra fecha relativa y, si no hay foto, iniciales. Comentarios propios reciben una clase por la directiva. Al pulsar Editar, @if monta el formulario y AutoFocus enfoca textarea después del render. Cancelar destruye el editor sin PUT. Si cambia el usuario, se actualiza resaltado y la lógica existente cancela una edición que ya no le corresponde. Al entrar un administrador, PermisoRol muestra los enlaces de Usuarios/Estadísticas; un GET manual sigue sujeto a guards de Nest.
+
+En una primera visita online, la PWA descarga estáticos y registra el worker de producción. Al volver al inicio sin conexión, puede mostrar FutbolCrack y explicación/Reintentar; no trae publicaciones ni una sesión del caché. Reintentar vuelve a consultar Nest. No hay promesa de que publicar offline guardó algo. El inicio '/' es el acceso offline previsto; enlaces directos a publicaciones/dashboard quedan fuera del fallback.
+
+### Qué es la PWA y cómo estudiarla
+
+Manifest es la ficha del acceso directo (nombre, iconos, colores, inicio, standalone). Service Worker es un intermediario del navegador, distinto de un servicio Angular inyectable. ngsw-config permite solo index/JS/CSS/manifest/iconos y dataGroups está vacío. Angular genera ngsw.json con hashes. Caché de la interfaz no significa caché de JSON privado ni guardar el JWT, que sigue en cookie HttpOnly.
+
+Instalación: servir build de producción por HTTPS o localhost y usar la opción del navegador cuando esté disponible. `ng serve` de desarrollo no registra este worker. Esperar activación y comprobar Application/Cache Storage, instalación, offline y autenticación con cuentas de prueba; este ensayo está pendiente. Pasos y fuentes oficiales en [07](07-ANGULAR-PWA-PIPES-DIRECTIVAS.md).
+
+### Preguntas del profesor y respuestas
+
+- **¿Son exactamente tres?** Sí: Truncate/FechaRelativa/Iniciales y ResaltarAutor/AutoFocus/PermisoRol. RouterLink/NgClass son de Angular y no cuentan.
+- **¿Pipe o directiva?** Formatear fecha: pipe. Enfocar un campo o insertar una plantilla por rol: directiva.
+- **¿Dónde se valida el rol de verdad?** En Nest, con JWT y ficha actual; la directiva solo ayuda a presentar opciones.
+- **¿Qué se puede hacer offline?** Abrir el shell ya instalado desde raíz y ver la reconexión. Consultar datos, autenticarse y escribir requieren red; no hay colas.
+- **¿Qué evita cachear usuarios/estadísticas?** No hay dataGroups ni patrones de URLs; solo archivos estáticos enumerados y fallback limitado. Tests verifican ngsw.json y señuelos privados.
+- **¿Cómo se prueban?** Pipes con entradas/límites; directivas con host/DOM y cambios de estado; uso real en componentes; PWA con generador/artefactos y después prueba manual de navegador.
+- **¿230 + 11 prueban instalación?** No. 230 son Angular/DOM con HTTP simulado y 11 configuración/build PWA. Instalar/usar worker activo en navegador todavía debe comprobarse.
+- **¿Qué reutilizamos de CineBera?** Separación TS/HTML/CSS, bindings y estado visual. Adaptamos comportamiento a autores, rol administrativo y jugadas; el servidor mantiene la autoridad.

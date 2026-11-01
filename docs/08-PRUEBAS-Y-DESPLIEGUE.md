@@ -402,3 +402,29 @@ Angular: HttpTestingController verifica GET/cookie/rangos, seis campos, validaci
 Incidencia resuelta: Model.populate tipaba el resultado agregado como Publicacion y no reconocía cantidad. Se explicitó la forma del grupo poblado, sin cambiar consulta. Primera suite Angular: 180/180; se añadió tratamiento de días vacíos y su caso (181/181 final). Backend completo 265/265; se repitieron 42 focalizadas tras reforzar la aserción de timezone. Sin configuración/dependencias modificadas.
 
 Pendiente: navegador/móvil real, MongoDB desplegado y versión/rendimiento de lookup/facet/dateToString, índices/rangos grandes y cookies HTTPS/CORS de producción. Sin escrituras externas, merge ni deploy. Avisos Git LF/CRLF son de configuración existente, no errores de compilación.
+
+## Verificación 5C — 2026-11-01
+
+Preparación: ambos builds exit 0, Angular 181/181 en 23 archivos, NestJS 265/265 en 13. Se respaldó 5B en be005ec y se creó feature/pwa-pipes-directivas. Se comprobó core 22.2.3/CLI-build 22.2.4 antes de añadir @angular/service-worker 22.2.3 exacto. Instalación inicial falló ENOTFOUND por red restringida; repetición autorizada completó un paquete, sin actualizar dependencias existentes.
+
+| Comprobación final | Resultado |
+| --- | --- |
+| Frontend: `npm run build` | exit 0; genera ngsw-worker.js/ngsw.json; sin advertencias de presupuesto |
+| Frontend: `node node_modules/@angular/cli/bin/ng.js test --watch=false` | **230/230**, 26 archivos, exit 0 |
+| Frontend, después de build: `npm run test:pwa` | **11/11** pruebas Node, exit 0 |
+| Backend: `npm run build` | exit 0; código sin modificar |
+| Backend: `node node_modules/vitest/vitest.mjs run --no-file-parallelism --pool=threads` | **265/265**, 13 archivos, exit 0 |
+
+Angular agrega 49 casos: FechaRelativaPipe 22, InicialesPipe 14, directivas 7, TruncatePipe 2, tarjeta 1, comentarios 2 y shell de reconexión 1. Los 181 casos anteriores se conservan, sin skip/only. Uno se actualiza porque el requisito cambia fecha absoluta por relativa: antes esperaba '2026-10-31' en texto; ahora fija el reloj, espera 'Ayer' y comprueba datetime/title con el ISO exacto. No se elimina la comprobación de la fecha.
+
+Directivas: DOM real de test para clase dinámica, foco al editar/reabrir y campo deshabilitado; sesión común/admin/logout/baja/rehabilitación y cambios de permiso sin vistas duplicadas. Uso real: avatar CG/FC, comentarios propios que dejan de resaltarse al cambiar usuario y autofocus del editor, cancelar sin PUT. App sin red muestra la recepción estática y reintenta un POST de autorización, sin montar router-outlet privado. Se mantienen suites de login/logout/renovación/interceptor/roles.
+
+Las once pruebas Node revisan manifest válido, identidad, PNG/dimensiones reales, enlaces, compatibilidad de versiones/registro, worker generado, precarga de chunks y hashes SHA-1 de estáticos. Verifican dataGroups vacío, ausencia de patrones dinámicos/externos, ninguna coincidencia API/fallback y navegación exacta permitida. El generador oficial se ejecuta además con archivos señuelo privados: una regla amplia de caché haría fallar la prueba.
+
+Incidencias resueltas: primera suite Angular tuvo 180/181 por la expectativa de fecha antigua. Primera prueba PWA tuvo 10/11: el prefijo ^ en navigationUrls era tratado como ruta relativa por el generador y rompía el fallback de '/'. Se corrigió la configuración a rutas exactas sin ese prefijo; ngsw.json generado demuestra los patrones anclados correctos y el mismo caso pasa. No se suavizaron aserciones para aceptar esos errores.
+
+### Alcance y pendientes reales
+
+Las once pruebas de PWA verifican configuración/artefactos, **no ejecutan ni instalan el worker en un navegador**. Las suites de auth son regresión con HTTP simulado y worker desactivado, no prueba integral de cookies con worker activo. Pendientes: instalación HTTPS/localhost, activación/actualización y Cache Storage real, offline tras primera carga, login/logout/autorizar/refrescar con worker activo, móvil/responsive y condiciones externas previas de Atlas/Cloudinary/CORS/HTTPS. Recorrido en 07.
+
+No se hizo merge/deploy ni se tocaron backend/secretos. Avisos Git LF/CRLF son de configuración existente. La dependencia exacta del worker debe mantenerse alineada con core en futuras actualizaciones; npm ci reproduce el lock. No se afirma completo el cierre de los cuatro sprints en producción solo por pasar suites locales.
