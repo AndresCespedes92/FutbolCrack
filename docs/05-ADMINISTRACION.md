@@ -103,3 +103,13 @@ Los datos de prueba y el modelo/servicio de persistencia se simulan. No se inspe
 PublicacionesService.darDeBaja comparte una sola operación para autor o administrador actual; reutiliza UsuariosService.findById sin modificar el registro público ni AuthGuard. DELETE /publicaciones/:id responde 403 a un tercero y 404 a una publicación ausente/ya retirada; aplica updateOne activo false, no borrado físico. La prueba permite un administrador actual aunque el claim de rol de su JWT sea viejo, y rechaza el caso inverso.
 
 Es como retirar de la cartelera del club un parte que el administrador puede gestionar, conservándolo en el archivo. El botón/modal y la vista administrativa siguen pendientes: no se agregó baja desde Angular en 3A.
+
+## Actualización 5B — Moderación y estadísticas (2026-11-01)
+
+Se conserva la política de usuarios de 5A, incluyendo protección de todas las cuentas administradoras. Se agrega /dashboard/estadisticas y tres GET administrativos definidos en [06-ESTADISTICAS.md](06-ESTADISTICAS.md), sin dependencias ni otro módulo funcional. El mismo guard protege ambos dashboards; Nest comprueba estado/rol actual.
+
+La revisión confirma que **DELETE /publicaciones/:id ya cumple**: autor o administrador actual, actualización activo false y documento conservado. Un usuario común no retira publicaciones ajenas. Feed/detalle exigen activo distinto de false y ComentariosService.exigirPublicacionActiva impide consultar comentarios de publicaciones retiradas. No se duplica endpoint ni lógica ni se agrega panel de reclutadores.
+
+Ejemplo: el secretario retira una jugada ajena desde el feed. ConfirmacionBaja identifica título; Cancelar no manda DELETE. Confirmar llama al endpoint existente, bloquea envíos repetidos y muestra éxito tras completar; ante error mantiene modal/mensaje. Jugada y notas siguen archivadas, pero detalle/comentarios públicos responden 404 y reportes dejan de contarlos. La prueba HTTP integrada y la nueva prueba Angular del admin verifican ese recorrido; los casos anteriores de 403/error siguen vigentes.
+
+No fueron necesarios cambios productivos al servicio de bajas, permisos o modal; solo enlace estadístico y aviso de acceso denegado, además de la pantalla nueva. Las métricas reflejan contenido visible actualmente, no cifras históricas inmutables. Fechas/política en 06 y evidencia en 08.

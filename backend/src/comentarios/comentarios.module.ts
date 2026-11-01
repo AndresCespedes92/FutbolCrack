@@ -1,3 +1,4 @@
+import { EstadisticasComentariosController } from './estadisticas-comentarios.controller.js';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SeguridadModule } from '../auth/seguridad.module.js';
@@ -17,7 +18,7 @@ import { ComentariosService } from './comentarios.service.js';
       { name: Comentario.name, schema: ComentarioSchema },
     ]),
   ],
-  controllers: [ComentariosController],
+  controllers: [ComentariosController, EstadisticasComentariosController],
   providers: [ComentariosService],
 })
 export class ComentariosModule {}

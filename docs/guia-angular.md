@@ -205,3 +205,55 @@ Cancelar cambia estado local. El modal no tiene servicio HTTP: se comunican hijo
 - **¿Por qué compartir hash y formulario?** Evita duplicar reglas y negocio. El backend sigue siendo autoridad aunque Angular valide primero.
 - **¿Cómo se demuestra cancelar?** Las pruebas abren el modal, cancelan y verifican que no se emitió DELETE. No se usa window.confirm ni alert.
 - **¿Qué está pendiente de comprobar?** Navegador/móvil real, Atlas e integración de cookies en producción; las suites locales usan HTTP y dobles controlados.
+
+## Tarea 5B — Estadísticas del club, paso a paso
+
+### Qué estudiar y dónde
+
+- `pages/dashboard-estadisticas/dashboard-estadisticas.ts`: DashboardEstadisticas, tres formularios, actualizar/cargar y geometría (anchoBarra, puntoDia, puntosLinea, segmento, desplazamiento).
+- Mismo nombre `.html`: filtros, @for de reportes, @if de estados, gráficos/tablas. `.css`: variables de color, radios, SVG y móvil; comentarios indican qué modificar.
+- `services/estadisticas.ts`: EstadisticasService y contratos. Cada método devuelve Observable de GET con desde/hasta y withCredentials; el contenedor se suscribe.
+- `app.routes.ts`: ruta lazy /dashboard/estadisticas con administradorGuard existente. Navbar muestra enlace al admin habilitado; Nest exige lo mismo sin depender de Angular.
+
+Como en CineBera, TS mantiene estado/validaciones, HTML usa bindings y CSS define presentación. @if/@for y ReactiveFormsModule son de Angular; no se crean pipes/directivas propios para gráficos.
+
+### Recorrido concreto
+
+1. El secretario pulsa Estadísticas. El router comprueba sesión/rol con el guard de 5A. Visitante va a login; jugador común vuelve al feed con aviso, conservando sesión.
+2. ngOnInit inicia tres consultas con formularios independientes, desde primer día del mes hasta hoy en UTC−03:00.
+3. Actualizar(0) llama cargar para publicaciones. Marca controles, rechaza calendario/rango inválido y bloquea nuevas consultas de ese reporte mientras espera.
+4. EstadisticasService envía el rango. Nest verifica JWT/ficha actual, valida query y convierte días a instantes UTC. El navegador no decide permisos ni cuenta documentos.
+5. MongoDB aplica match/group para publicaciones, o lookup/match/count/group para comentarios. Como ordenar planillas antes de sumar, primero se descarta lo ajeno al período y a la cartelera visible.
+6. La respuesta trae cantidades/rango aplicado. El componente finaliza carga y markForCheck actualiza HTML. Barras comparan jugadores, línea muestra días y dona distribuye comentarios; tablas conservan cifras exactas.
+7. Cambiar Hasta en comentarios totales y Actualizar solo reemplaza ese reporte; los otros mantienen datos/rango. Un error retira cifras anteriores, conserva controles y permite reintentar.
+8. Si el admin retira una publicación desde el feed con el modal existente, el documento permanece. Al actualizar reportes se excluyen esa jugada y sus comentarios. Las cifras de un mes pasado pueden bajar: reflejan visibilidad actual, no historia inmutable.
+
+### Ejemplos reales y conceptos
+
+```ts
+readonly publicaciones = crearReporte<PublicacionesPorUsuario>('Publicaciones por usuario');
+readonly total = crearReporte<ComentariosTotales>('Comentarios totales');
+```
+
+Cada llamada crea su propio FormGroup: compartir una función evita duplicar estructura, pero no comparte controles. validarRango es un ValidatorFn del grupo, como comparar contraseñas en CineBera. Bindings de clases muestran rojo/verde; [disabled] bloquea fieldset durante consulta. Nest repite validaciones porque un cliente puede omitir Angular.
+
+```ts
+{ $match: { activo: { $ne: false }, createdAt: { $gte: inicio, $lt: finExclusivo } } },
+{ $group: { _id: '$autorId', cantidad: { $sum: 1 } } },
+```
+
+Fragmento real de PublicacionesService: selecciona publicaciones visibles creadas en el intervalo y forma grupos por autor. `$count` da una cifra global; `$group` devuelve varias. `$lookup` de ComentariosService comprueba que la publicación sigue visible. No se envían textos/correos para graficar. Detalle en 06.
+
+SVG/porcentajes son geometría de presentación: segmento divide cantidades ya recibidas, no cuenta documentos. puntosLinea añade tramos a cero en días ausentes sin crear miles de elementos vacíos. El total viene de MongoDB. Las tablas permiten leer sin interpretar colores. takeUntilDestroyed termina suscripciones al destruir el componente; los formularios bloquean envíos simultáneos de un mismo reporte.
+
+### Preguntas de defensa
+
+- **¿Por qué calcular en backend?** Evita descargar todo; MongoDB filtra/agrupa con reglas comunes y Nest controla permisos.
+- **¿Contar o agrupar?** Contar devuelve total; agrupar por publicación devuelve una cantidad por jugada.
+- **¿Desde/Hasta son inclusivos?** Sí, días completos UTC−03:00. La consulta usa inicio incluido y comienzo del siguiente día excluido para no perder milisegundos.
+- **¿Qué fecha se filtra?** Creación de publicación en A; creación de comentario en B/C. Editar no cambia createdAt.
+- **¿Qué sucede con bajas?** Jugada inactiva y comentarios fuera aunque existan en MongoDB. Deshabilitar una cuenta no retira sus jugadas por sí mismo.
+- **¿Qué es $facet?** Produce varias salidas del mismo conjunto filtrado: aquí total y evolución diaria.
+- **¿Librería de gráficos?** No: barras CSS y línea/dona SVG nativas, con tablas equivalentes y estilos separados/comentados.
+- **¿Cómo se evita una respuesta vieja?** Cada reporte bloquea nuevos envíos/filtros durante carga; no se superponen sus consultas. Los demás son independientes.
+- **¿Qué demuestra la suite?** Reglas, consultas, fixtures, HTTP local y DOM/router. No acredita índices/rendimiento Atlas ni apariencia manual en teléfono.

@@ -251,4 +251,32 @@ describe('Feed 3C: interacción de usuario y backend simulado', () => {
     expect(fixture.nativeElement.textContent).toContain('Todavía no hay publicaciones');
     expect(fixture.nativeElement.querySelector('.pagination')).toBeNull();
   });
+  it('administrador cancela y luego confirma la baja de una jugada ajena; recarga feed y muestra éxito', () => {
+    fixture.destroy();
+    fixture = TestBed.createComponent(Publicaciones);
+    fixture.detectChanges();
+    http
+      .expectOne(`${API_PRUEBA}/auth/me`)
+      .flush({ ...jugadorPrueba, id: 'admin-ajeno', perfil: 'administrador' });
+    responder();
+    abrir();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('dialog').textContent).toContain('Jugada 1');
+    boton('Cancelar').click();
+    fixture.detectChanges();
+    http.expectNone((r) => r.method === 'DELETE');
+    abrir();
+    fixture.detectChanges();
+    boton('Confirmar').click();
+    fixture.detectChanges();
+    const req = http.expectOne(`${url}/${publicacionPrueba()._id}`);
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ mensaje: 'Publicación dada de baja correctamente' });
+    listado().flush(paginaPrueba([publicacionPrueba(2)], 1));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Publicación dada de baja correctamente');
+    expect(fixture.nativeElement.querySelector('.post-body h2').textContent).toContain('Jugada 2');
+  });
 });

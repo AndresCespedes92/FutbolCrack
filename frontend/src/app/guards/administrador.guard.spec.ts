@@ -59,4 +59,48 @@ describe('Ruta dashboard/usuarios y guard administrativo', () => {
     expect(TestBed.inject(Router).url).toBe('/login?returnUrl=%2Fdashboard%2Fusuarios');
     http.expectNone(`${API_URL}/usuarios`);
   });
+  it('admin entra al dashboard de estadísticas y solicita los tres reportes con fechas', async () => {
+    const harness = await RouterTestingHarness.create();
+    const navegacion = harness.navigateByUrl('/dashboard/estadisticas');
+    await vi.waitFor(() =>
+      http.expectOne(`${API_URL}/auth/autorizar`).flush(sesionPrueba(administradorPrueba)),
+    );
+    await navegacion;
+    const solicitudes = http.match((r) => r.url.includes('/estadisticas/'));
+    expect(solicitudes.length).toBe(3);
+    for (const req of solicitudes) {
+      expect(req.request.params.has('desde')).toBe(true);
+      expect(req.request.params.has('hasta')).toBe(true);
+      req.flush({
+        desde: req.request.params.get('desde'),
+        hasta: req.request.params.get('hasta'),
+        zonaHoraria: 'UTC-03:00',
+        datos: [],
+        total: 0,
+        dias: [],
+      });
+    }
+    harness.detectChanges();
+    expect(TestBed.inject(Router).url).toBe('/dashboard/estadisticas');
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Estadísticas');
+  });
+  it.each([false, true])(
+    'estadísticas rechaza acceso sin permisos; autenticado=%s',
+    async (autenticado) => {
+      const harness = await RouterTestingHarness.create();
+      const navegacion = harness.navigateByUrl('/dashboard/estadisticas');
+      await vi.waitFor(() => {
+        const req = http.expectOne(`${API_URL}/auth/autorizar`);
+        if (autenticado) req.flush(sesionPrueba(jugadorPrueba));
+        else req.flush({}, { status: 401, statusText: 'Unauthorized' });
+      });
+      await navegacion;
+      if (autenticado) {
+        http.expectOne((r) => r.url === `${API_URL}/publicaciones`).flush(paginaPrueba([]));
+        expect(TestBed.inject(Router).url).toBe('/publicaciones?acceso=sin-permiso');
+      } else
+        expect(TestBed.inject(Router).url).toBe('/login?returnUrl=%2Fdashboard%2Festadisticas');
+      http.expectNone((r) => r.url.includes('/estadisticas/'));
+    },
+  );
 });

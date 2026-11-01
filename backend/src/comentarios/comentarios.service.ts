@@ -1,3 +1,8 @@
+import type { PipelineStage } from 'mongoose';
+import {
+  construirRango,
+  RangoFechasDto,
+} from '../common/estadisticas/rango-fechas.dto.js';
 import {
   BadRequestException,
   ForbiddenException,
@@ -26,6 +31,93 @@ export class ComentariosService {
     private readonly publicacionModel: Model<Publicacion>,
     private readonly usuariosService: UsuariosService,
   ) {}
+
+  // Ambos reportes usan createdAt del COMENTARIO. La jugada puede haberse creado antes del rango.
+  private pipelineVisibles(inicio: Date, finExclusivo: Date): PipelineStage[] {
+    return [
+      { $match: { createdAt: { $gte: inicio, $lt: finExclusivo } } },
+      // Un comentario pertenece a la cartelera solo mientras su publicación existe y está activa.
+      // No hay baja independiente de comentarios en el modelo actual: no inventamos un nuevo estado.
+      {
+        $lookup: {
+          from: this.publicacionModel.collection.name,
+          localField: 'publicacionId',
+          foreignField: '_id',
+          as: 'publicacion',
+        },
+      },
+      { $unwind: '$publicacion' },
+      { $match: { 'publicacion.activo': { $ne: false } } },
+    ];
+  }
+  async totalEnRango(datos: RangoFechasDto) {
+    const { inicio, finExclusivo, metadatos } = construirRango(datos);
+    const [resultado] = await this.comentarioModel
+      .aggregate<{
+        conteo: { cantidad: number }[];
+        dias: { fecha: string; cantidad: number }[];
+      }>([
+        ...this.pipelineVisibles(inicio, finExclusivo),
+        // Un mismo conjunto filtrado alimenta el total y su evolución diaria, sin descargar textos.
+        {
+          $facet: {
+            conteo: [{ $count: 'cantidad' }],
+            dias: [
+              {
+                $group: {
+                  _id: {
+                    $dateToString: {
+                      date: '$createdAt',
+                      format: '%Y-%m-%d',
+                      timezone: '-03:00',
+                    },
+                  },
+                  cantidad: { $sum: 1 },
+                },
+              },
+              { $sort: { _id: 1 } },
+              { $project: { _id: 0, fecha: '$_id', cantidad: 1 } },
+            ],
+          },
+        },
+      ])
+      .exec();
+    return {
+      ...metadatos,
+      total: resultado?.conteo[0]?.cantidad ?? 0,
+      dias: resultado?.dias ?? [],
+    };
+  }
+
+  async porPublicacionEnRango(datos: RangoFechasDto) {
+    const { inicio, finExclusivo, metadatos } = construirRango(datos);
+    const grupos = await this.comentarioModel
+      .aggregate<{
+        publicacionId: Types.ObjectId;
+        titulo: string;
+        cantidad: number;
+      }>([
+        ...this.pipelineVisibles(inicio, finExclusivo),
+        {
+          $group: {
+            _id: '$publicacionId',
+            titulo: { $first: '$publicacion.titulo' },
+            cantidad: { $sum: 1 },
+          },
+        },
+        { $sort: { cantidad: -1, _id: 1 } },
+        {
+          $project: {
+            _id: 0,
+            publicacionId: '$_id',
+            titulo: { $ifNull: ['$titulo', 'Publicación anterior'] },
+            cantidad: 1,
+          },
+        },
+      ])
+      .exec();
+    return { ...metadatos, datos: grupos };
+  }
 
   async crear(
     publicacionId: string,

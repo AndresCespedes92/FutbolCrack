@@ -55,6 +55,15 @@ export const routes: Routes = [
       import('./pages/dashboard-usuarios/dashboard-usuarios').then((m) => m.DashboardUsuarios),
   },
   {
+    path: 'dashboard/estadisticas',
+    title: 'Estadísticas | FutbolCrack',
+    canActivate: [administradorGuard],
+    loadComponent: () =>
+      import('./pages/dashboard-estadisticas/dashboard-estadisticas').then(
+        (m) => m.DashboardEstadisticas,
+      ),
+  },
+  {
     path: '**',
     redirectTo: 'publicaciones',
   },

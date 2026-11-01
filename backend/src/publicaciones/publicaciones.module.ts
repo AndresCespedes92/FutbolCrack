@@ -1,3 +1,4 @@
+import { EstadisticasPublicacionesController } from './estadisticas-publicaciones.controller.js';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module.js';
@@ -34,7 +35,7 @@ import {
   ],
 
   // Reutilizamos los módulos existentes para imágenes, identidad y permisos.
-  controllers: [PublicacionesController],
+  controllers: [PublicacionesController, EstadisticasPublicacionesController],
 
   // Un único servicio conserva creación, listado y baja lógica.
   providers: [PublicacionesService, AutenticacionOpcionalGuard],

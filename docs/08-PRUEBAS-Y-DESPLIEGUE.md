@@ -381,3 +381,24 @@ Durante desarrollo: TypeScript detectó overrides de DTO sin declare y la inyecc
 ### Ensayos pendientes y límites
 
 No se conectó Atlas ni se modificaron usuarios externos. La persistencia HTTP usa dobles, y el esquema se valida con Mongoose sin conexión: no demuestra índices, latencia ni concurrencia real de MongoDB. No hubo ensayo visual manual en navegador/móvil ni verificación de cookies/HTTPS/CORS en producción. Probar el recorrido detallado en 05 con cuentas de prueba antes de integrar. No se hizo merge/deploy; las condiciones externas de 4C siguen pendientes.
+
+## Verificación 5B — 2026-11-01
+
+Se repitieron comprobaciones de 5A: frontend build exit 0, 162/162 en 22 archivos; backend build exit 0, 223/223 en 12 archivos. Se respaldó ese estado en 92a58e5 antes de crear feature/estadisticas-admin.
+
+| Comando (desde cada proyecto) | Resultado final 5B |
+| --- | --- |
+| Frontend: `npm run build` | exit 0; sin advertencias de presupuesto |
+| Frontend: `node node_modules/@angular/cli/bin/ng.js test --watch=false` | 181/181 en 23 archivos, exit 0 |
+| Backend: `npm run build` | exit 0 |
+| Backend: `node node_modules/vitest/vitest.mjs run --no-file-parallelism --pool=threads` | 265/265 en 13 archivos, exit 0 |
+
+Se agregan 42 casos backend y 19 frontend (15 dashboard, tres ruta administrativa, una moderación). Todos los anteriores se conservan, sin skip/only. Backend: los tres reportes con 401/403/200 y rol actual; fechas obligatorias/estrictas/inexistentes/invertidas/extra/repetidas; mismo día/bisiesto y límites UTC; cantidades/grupos/días; bajas/legado/huérfanos; proyección pública; fallo de consulta y moderación. El test integrado confirma conservación de documentos, retiro de feed/detalle/comentarios y reducción del reporte.
+
+Los pipelines reales se ejecutan sobre fixtures mediante intérprete limitado exclusivo de tests (agregacion-prueba.ts). No es MongoDB ni acredita índices/planes/semántica completa del servidor; se comprueban etapas, filtros, zona y proyecciones. Los módulos Nest reales prueban inyección/guards; JWT real usa clave exclusiva de tests. Sin Atlas ni instalación de dependencias.
+
+Angular: HttpTestingController verifica GET/cookie/rangos, seis campos, validación roja/verde, independencia, gráficos/tablas, actualizaciones, carga/vacío, 400/401/403/500/red y reintento. RouterTestingHarness verifica admin, común y visitante. Modal productivo con doble de API dialog del DOM: cancelar no solicita; confirmar recarga y muestra éxito. Un caso comprueba línea a cero entre jornadas con actividad. No se descarga feed para contar.
+
+Incidencia resuelta: Model.populate tipaba el resultado agregado como Publicacion y no reconocía cantidad. Se explicitó la forma del grupo poblado, sin cambiar consulta. Primera suite Angular: 180/180; se añadió tratamiento de días vacíos y su caso (181/181 final). Backend completo 265/265; se repitieron 42 focalizadas tras reforzar la aserción de timezone. Sin configuración/dependencias modificadas.
+
+Pendiente: navegador/móvil real, MongoDB desplegado y versión/rendimiento de lookup/facet/dateToString, índices/rangos grandes y cookies HTTPS/CORS de producción. Sin escrituras externas, merge ni deploy. Avisos Git LF/CRLF son de configuración existente, no errores de compilación.

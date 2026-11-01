@@ -1,0 +1,150 @@
+/* Paleta y bordes globales: modificar estas superficies no cambia el resto de pantallas. */
+:host {
+  display: block;
+}
+h1 {
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+}
+.panel {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+h2 {
+  font-size: 1.4rem;
+}
+fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: end;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+.field {
+  margin: 0;
+  min-width: 160px;
+  flex: 1;
+}
+.input-invalido {
+  border-color: var(--color-error);
+}
+.input-valido {
+  border-color: var(--color-success);
+}
+button {
+  padding: 12px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-secondary);
+  color: var(--color-text);
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.error {
+  color: var(--color-error);
+}
+.rango-aplicado,
+figcaption {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+.total {
+  font-size: 3rem;
+  color: var(--color-success);
+}
+.total span {
+  font-size: 1rem;
+  color: var(--color-text);
+}
+/* Barras proporcionales al máximo de este reporte: la tabla conserva cantidades exactas. */
+.fila-barra {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) 3fr 40px;
+  gap: 12px;
+  align-items: center;
+  margin: 18px 0;
+  overflow-wrap: anywhere;
+}
+.pista {
+  background: var(--color-background);
+  border-radius: var(--radius-control);
+}
+.barra {
+  height: 18px;
+  background: #7fa65a;
+  border-radius: var(--radius-control);
+}
+/* SVG escala con su viewBox. Línea y dona son gráficos nativos, sin librerías externas. */
+figure {
+  margin: 24px 0;
+}
+svg {
+  width: 100%;
+  max-height: 280px;
+}
+.ejes {
+  stroke: var(--color-text-secondary);
+  fill: none;
+}
+.linea {
+  stroke: #7fa65a;
+  stroke-width: 3;
+  fill: none;
+}
+.punto {
+  fill: #b7cf94;
+}
+.dona {
+  max-width: 230px;
+  display: block;
+  margin: 12px auto;
+  transform: rotate(-90deg);
+}
+.marca {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+/* Scroll limitado a tablas: evita que un título largo ensanche toda la página móvil. */
+.tabla-scroll {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+caption {
+  text-align: left;
+  margin: 16px 0;
+}
+th,
+td {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 650px) {
+  .panel {
+    padding: 16px;
+  }
+  fieldset {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .field {
+    min-width: 0;
+  }
+  .fila-barra {
+    grid-template-columns: 90px 1fr 30px;
+  }
+}

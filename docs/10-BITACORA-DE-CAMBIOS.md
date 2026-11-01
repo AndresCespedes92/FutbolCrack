@@ -717,6 +717,71 @@ Sprint 4 restante: estadísticas con Desde/Hasta y MongoDB, gráficos, PWA, dos 
 
 ---
 
+## 2026-11-01 — Sprint 4, Tarea 5B: Estadísticas y moderación administrativa
+
+### Base y preservación
+
+Rama inicial feature/administracion-usuarios, HEAD 238c440, con 45 cambios de 5A pendientes. Se revisaron status, matriz, administración y arquitectura; ambos builds exit 0, frontend 162/162 y backend 223/223. Por autorización expresa de 5B se respaldó 5A en **92a58e5 — feat(usuarios): administrar cuentas y verificar habilitacion** y después se creó **feature/estadisticas-admin**. 5B sin commit; sin merge/deploy. Sin cambios de .env, dependencias, configuración de tests ni datos externos.
+
+### Problema y solución
+
+La comisión del club necesitaba comparar publicaciones por jugador y comentarios en un período. Tres GET administrativos en controllers de módulos existentes y consultas de PublicacionesService/ComentariosService: match por creación/estado, group/sum, lookup de publicación, facet para total/días, count/sort/project y populate público de autores. No se descargan documentos para contar en Angular ni se crea otro módulo funcional.
+
+Rango obligatorio YYYY-MM-DD, calendario real y Desde <= Hasta. Días completos en offset fijo UTC−03:00, inicio incluido y siguiente día de Hasta excluido; sin reglas históricas de horario de verano. A usa createdAt de publicación; B/C del comentario, aunque la publicación sea anterior. Bajas/huérfanos fuera; publicaciones antiguas sin activo visibles. Comentario no tiene baja independiente: no se añade estado ficticio. Una baja puede reducir cifras pasadas porque los reportes miden visibilidad actual.
+
+Dashboard /dashboard/estadisticas: tres formularios/rangos propios, validación, carga/vacío/error/reintento, tablas y barras CSS/línea SVG/dona SVG. Sin dependencias nuevas. Geometría/fechas comentadas y TS/HTML/CSS separados. Angular calcula dimensiones/proporciones, no cantidades de documentos. La línea lleva a cero días sin actividad sin generar un elemento por día vacío.
+
+Flujo: administradorGuard → DashboardEstadisticas → EstadisticasService GET con rango → controller AuthGuard/AdministradorGuard → servicio/agregación → MongoDB → cantidades → gráfico/tabla. Nest controla ficha habilitada/rol actual; sin credenciales/textos privados. Formularios reutilizan conceptos de validación cruzada de CineBera.
+
+### Moderación reutilizada
+
+DELETE /publicaciones/:id ya cumple autor/admin y baja lógica. Sin cambios productivos de moderación ni nuevo endpoint. El test integrado verifica baja admin ajena, conservación de documentos, retiro del feed, 404 detalle/comentarios y exclusión estadística. El caso Angular abre modal productivo como admin, cancela sin HTTP y confirma con recarga/mensaje. Se conservan casos 403/error. Aviso de ruta denegada ampliado para mencionar estadísticas.
+
+### Archivos creados/modificados
+
+- `backend/src/comentarios/comentarios.module.ts`
+- `backend/src/comentarios/comentarios.service.ts`
+- `backend/src/comentarios/estadisticas-comentarios.controller.ts`
+- `backend/src/comentarios/estadisticas.http.spec.ts`
+- `backend/src/common/estadisticas/rango-fechas.dto.ts`
+- `backend/src/publicaciones/estadisticas-publicaciones.controller.ts`
+- `backend/src/publicaciones/publicaciones.module.ts`
+- `backend/src/publicaciones/publicaciones.service.ts`
+- `backend/src/testing/agregacion-prueba.ts`
+- `docs/00-MAPA-DEL-PROYECTO.md`
+- `docs/05-ADMINISTRACION.md`
+- `docs/06-ESTADISTICAS.md`
+- `docs/08-PRUEBAS-Y-DESPLIEGUE.md`
+- `docs/09-REQUISITOS-SPRINTS.md`
+- `docs/10-BITACORA-DE-CAMBIOS.md`
+- `docs/guia-angular.md`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/components/navbar/navbar.html`
+- `frontend/src/app/guards/administrador.guard.spec.ts`
+- `frontend/src/app/pages/dashboard-estadisticas/dashboard-estadisticas.css`
+- `frontend/src/app/pages/dashboard-estadisticas/dashboard-estadisticas.html`
+- `frontend/src/app/pages/dashboard-estadisticas/dashboard-estadisticas.spec.ts`
+- `frontend/src/app/pages/dashboard-estadisticas/dashboard-estadisticas.ts`
+- `frontend/src/app/pages/publicaciones/publicaciones-interacciones.spec.ts`
+- `frontend/src/app/pages/publicaciones/publicaciones.html`
+- `frontend/src/app/services/estadisticas.ts`
+
+### Pruebas y dificultades
+
+Antes: 162/162 Angular y 223/223 Nest, builds correctos. Después: **181/181 Angular (23 archivos), 265/265 Nest (13 archivos)** y ambos builds exit 0. Comandos en 08. Se agregan 42 casos backend y 19 frontend (15 dashboard, tres router, una baja admin). Se conservan anteriores, sin skip/only. Persistencia simulada/pipelines comprobados; sin Atlas ni llamadas externas.
+
+Primer build backend detectó tipo de Model.populate incompatible con cantidad agregada: se explicitó forma de autor público/cantidad sin cambiar consulta. Primera suite Angular 180/180; se añadió línea a cero y su prueba (181/181 final). Backend completo 265/265; 42 focalizadas repetidas tras reforzar timezone. Sin fallos pendientes de las comprobaciones ejecutadas.
+
+### Documentación y pendientes
+
+Actualizados mapa, administración, estadísticas, pruebas, matriz, bitácora y guía con archivos/métodos/endpoints, ejemplos, flujo/permisos. Propuestas de auditoría en 06 separadas de estado actual. S4-06/07 y G-11/12 implementados localmente; S4-01 refuerza evidencia. Restan PWA, dos pipes y tres directivas adicionales.
+
+Revisión final SHA-256: 16 archivos existentes modificados y 10 nuevos (26 total), con inventario coincidente. Métodos anteriores de PublicacionesService/ComentariosService conservados íntegramente; sin cambios en auth/usuarios/modelos/Cloudinary/dependencias/configuración. Matriz con 44 IDs únicos; enlaces/bloques Markdown correctos; sin skip/only/todo. git diff --check correcto; avisos LF/CRLF de configuración existente.
+
+Pendientes navegador/móvil real, MongoDB/versiones, índices/planes, alto volumen y rangos largos: grupos sin paginar y duración sin límite agregado. El intérprete de tests no equivale a MongoDB. Pendientes cookies/HTTPS/CORS de producción de tareas previas. Sin escrituras externas/deploy. Se detiene para revisión y aprobación, sin commit de 5B ni merge.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

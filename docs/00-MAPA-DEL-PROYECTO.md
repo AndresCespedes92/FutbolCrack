@@ -281,3 +281,26 @@ Limitación de modelo: no existe habilitado/activo en Usuario; solo se puede com
 | `frontend/src/app/testing/usuarios-fixture.ts` | Datos exclusivos de pruebas administrativas |
 
 El inventario completo de archivos modificados está en [10-BITACORA-DE-CAMBIOS.md](10-BITACORA-DE-CAMBIOS.md). No se agrega módulo funcional; se reutilizan UsuariosModule, AuthService y crearFormularioRegistro. La política vigente y los contratos están en [05-ADMINISTRACION.md](05-ADMINISTRACION.md).
+
+## Incorporaciones 5B — Estadísticas y moderación
+
+| Archivo real | Responsabilidad/clases/métodos |
+| --- | --- |
+| `backend/src/common/estadisticas/rango-fechas.dto.ts` | RangoFechasDto, construirRango y ZONA_REPORTES: calendario y límites UTC−03:00 |
+| `backend/src/publicaciones/estadisticas-publicaciones.controller.ts` | EstadisticasPublicacionesController.porUsuario, GET /estadisticas/publicaciones-por-usuario; AuthGuard/AdministradorGuard |
+| `backend/src/publicaciones/publicaciones.service.ts` | publicacionesPorUsuario: match/group/sort/project y populate público |
+| `backend/src/publicaciones/publicaciones.module.ts` | Controller de reportes en módulo existente |
+| `backend/src/comentarios/estadisticas-comentarios.controller.ts` | EstadisticasComentariosController.total y porPublicacion; GET /estadisticas/comentarios-totales y /estadisticas/comentarios-por-publicacion |
+| `backend/src/comentarios/comentarios.service.ts` | pipelineVisibles, totalEnRango, porPublicacionEnRango: lookup/facet/count/group |
+| `backend/src/comentarios/comentarios.module.ts` | Controller de reportes, reutiliza modelo Publicacion |
+| `backend/src/comentarios/estadisticas.http.spec.ts` | 42 casos HTTP de fechas, cantidades, permisos y moderación integrada |
+| `backend/src/testing/agregacion-prueba.ts` | Intérprete limitado de pipelines exclusivo de tests, sin conexión externa |
+| `frontend/src/app/services/estadisticas.ts` | EstadisticasService y contratos tipados de los tres GET |
+| `frontend/src/app/pages/dashboard-estadisticas/` | TS: formularios/cargas/geometría; HTML: gráficos/tablas; CSS: responsive comentado; spec: pruebas |
+| `frontend/src/app/app.routes.ts` | /dashboard/estadisticas lazy con administradorGuard existente |
+| `frontend/src/app/components/navbar/navbar.html` | Enlace Estadísticas para administrador habilitado |
+| `frontend/src/app/guards/administrador.guard.spec.ts` | Casos de ruta estadística con Router real |
+| `frontend/src/app/pages/publicaciones/publicaciones-interacciones.spec.ts` | Confirmación/cancelación de baja administrativa ajena |
+| `frontend/src/app/pages/publicaciones/publicaciones.html` | Aviso de acceso denegado también menciona estadísticas |
+
+No se agregan esquemas/modelos/módulos funcionales. DELETE /publicaciones/:id, darDeBaja, ConfirmacionBaja y AccionesPublicaciones se reutilizan sin cambios productivos. Inventario en 10; contratos, consultas y ejemplos en [06-ESTADISTICAS.md](06-ESTADISTICAS.md).
