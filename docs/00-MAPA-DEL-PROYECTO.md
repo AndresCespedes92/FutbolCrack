@@ -345,3 +345,11 @@ Hay exactamente tres @Pipe y tres @Directive propios; NgClass/RouterLink/guards 
 - `frontend/src/app/app.html`: footer de entrega Red de futbolistas, sin etiqueta Sprint 1/Vista de desarrollo.
 
 Inventario completo en 10. Base main 7f327ec, rama test/auditoria-final; 5C ya respaldada en 1ca14cb por el usuario. No se duplicó commit, ni se hizo merge/deploy.
+
+## Validación integrada 5E
+
+- `backend/scripts/integracion-qa.mjs`: ensayo opt-in HTTP real contra AppModule compilado, Atlas `futbolcrack_qa` y Cloudinary con namespace exclusivo; reserva nombres, registra cuentas ficticias, verifica permisos/paginación/reportes y limpia solo datos propios. No se ejecuta con el arranque normal.
+- `docs/13-VALIDACION-INTEGRADA.md`: matriz M01–M18, cinco requisitos pendientes, evidencia y limitaciones.
+- `docs/evidencias-5e/http-real.json`: ejecución original saneada y limpieza; conserva un fallo del ensayo.
+- `docs/evidencias-5e/observaciones-reales.json`: repetición real corregida de M09 y observaciones del navegador; dos PNG muestran reportes y shell sin servidores.
+- No se modificaron endpoints, métodos productivos, modelos, componentes ni dependencias en 5E.

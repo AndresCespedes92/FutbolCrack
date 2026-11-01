@@ -448,3 +448,13 @@ Antes de arreglar: dos casos rechazando clave truncable fallaron, tres 401 estad
 Integración real de solo lectura: API raíz/feed 200, me/usuarios/reportes 401 anónimos; preflight localhost con origen exacto y credenciales, ajeno sin allow-origin; Atlas ping y Cloudinary ping ok. Sin subir/borrar imágenes, crear cuentas, comentar, votar ni modificar datos/índices. No se imprimieron valores de configuración secretos ni respuestas con datos reales.
 
 El navegador no accedió al servidor local (timeout aun con puerto escuchando); no se verificaron móvil/PWA runtime ni las operaciones autenticadas externas. Un ping no verifica upload y los pipelines simulados no certifican agregaciones reales. Matriz de aceptación manual M01–M18 y dictamen por sprint en 11. Guía docente en 12. No merge/deploy.
+
+## Validación integrada 5E — 2026-11-01
+
+Preparación repitió frontend build exit 0, Angular 236/236 (26 archivos), PWA 11/11, backend build exit 0 y Nest 275/275 (14 archivos). Se respaldó 5D en 725c03e y se creó test/integracion-final. No cambió código productivo ni suites/dependencias.
+
+Ensayo externo opt-in `backend/scripts/integracion-qa.mjs`, sin mocks: primer intento 12/14; segundo 13/14 por consulta de ensayo string/ObjectId; repetición suplementaria real de M09 aprobada con filtro ObjectId. No se declara una tercera suite completa 14/14. La cuenta QA demasiado larga también se corrigió en el ensayo, sin relajar DTO. Explicación, comandos, matriz y evidencias en [13](13-VALIDACION-INTEGRADA.md). `node --check` del script corregido exit 0.
+
+Navegador localhost: registro/login, creación multipart, like, perfil, comentarios acumulados 3/6/8 y Editado; suspensión/rehabilitación con modal, reportes/rangos, logout y worker real NORMAL. Servidores apagados: shell de reconexión sin datos privados. No confundir esto con instalación/update o caché inspeccionado: pendientes explícitos en 13. Lectura de viewport observada 375px; otros tamaños pedidos no quedaron certificados.
+
+Se retiraron solo los recursos propios autorizados: primer ensayo 4 cuentas/23 publicaciones/8 comentarios/1 imagen; segundo 6/25/24/2, 0 cuentas propias restantes. Credenciales temporales eliminadas. No producción, merge ni deploy. Advertencia real Mongoose sobre opción `new` deprecada, sin fallo funcional; no se refactorizó por ello.

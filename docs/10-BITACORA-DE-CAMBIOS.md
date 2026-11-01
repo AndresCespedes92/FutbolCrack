@@ -962,3 +962,11 @@ Preparado para revisión/local y ensayo con cuentas de prueba, **no cerrado para
 - **Problemas y pendientes:** sin esconder fallos ni marcar como probado lo que no se ejecutó.
 - **Criterio de cierre:** compila, respeta sprint, valida, informa, no rompe lo existente y tiene evidencia/documentación.
 - **Entrega y aprobación:** resumen revisable; no hacer merge/deploy sin autorización.
+
+## Tarea 5E — 2026-11-01 — Integración real y cierre documentado
+
+Rama test/integracion-final desde respaldo autorizado 725c03e de 5D. Preservadas fuentes, pruebas y configuración originales por comparación SHA-256. Builds correctos; Angular 236/236, Nest 275/275, PWA 11/11. Sin dependencias, commit 5E, merge ni deploy.
+
+Agregado `backend/scripts/integracion-qa.mjs`: herramienta aislada opt-in, Nest/Atlas/Cloudinary reales, cuentas sintéticas y limpieza limitada. Dos fallos de fixtures/consulta resueltos sin cambiar producto: nombre mayor de 20 caracteres y filtro ObjectId. Segunda pasada 13/14; M09 repetido realmente y aprobado. No se eliminó ni debilitó ninguna prueba existente. Mejorada reserva de nombres de la herramienta: ante colisión inicial no puede limpiar cuentas previas. Syntax check correcto; no se reejecutaron escrituras externas solo por formateo/documentación.
+
+Creado docs/13 y evidencias saneadas (JSON original, observaciones suplementarias y capturas); actualizados 00/08/09/10/11/12. S2-02 pasa a Cumple con upload real API/navegador y lectura 200: matriz 40 Cumple, 3 Parcial, 1 No verificado. El resto no cambia de estado. Flujos locales integrados y permisos comprobados; aún faltan instalación/update/cache PWA, cookies cross-site, reloj JWT natural, responsive de otros anchos y decisión S4-04. Limpieza autorizada de ambos namespaces terminada y credenciales eliminadas. Detalle de datos, pruebas y riesgos en 13. No listo para aceptación integral; detenerse y esperar aprobación.

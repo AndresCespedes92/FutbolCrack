@@ -105,3 +105,9 @@ Decir la diferencia: un pipe cambia un valor mostrado; una directiva cambia comp
 ## Cierre ante el docente
 
 Mostrar `docs/11-AUDITORIA-FINAL.md`, los 44 IDs con evidencia y los resultados reales. Explicar los tres arreglos funcionales de 5D (bytes de clave, 400 de espacios, 401 estadísticas) y la limpieza de demos. Reconocer límites: 39 Cumple localmente, cuatro Parcial y un No verificado histórico; PWA e integración autenticada aún requieren matriz manual. No presentar el proyecto como validado integralmente en producción sin completar esas verificaciones.
+
+## Preparación posterior a 5E
+
+Consultar [13-VALIDACION-INTEGRADA.md](13-VALIDACION-INTEGRADA.md) antes de exponer qué está realmente probado. Los ensayos autenticados usaron Atlas y Cloudinary reales separados del padrón del club; esas cuentas/contenido ya se limpiaron. Para repetir, crear nuevos jugadores ficticios en QA con autorización, nunca usar registros reales para probar bajas. La foto viaja del formulario a Nest y Cloudinary y su URL queda en MongoDB; los comentarios se acumularon efectivamente 3/6/8. Capturas en evidencias-5e permiten mostrar ese recorrido sin revelar credenciales.
+
+El profesor puede preguntar si pasar once tests PWA demuestra instalación: no; verifican artefactos. En 5E se observó worker NORMAL y shell al apagar servidores, pero falta instalar/actualizar, revisar Cache Storage y probar HTTPS entre sitios. Tampoco exp−iat=900 sustituye esperar 15 minutos: probar el modal al minuto 10 y vencimiento natural antes de cerrar aceptación. El emulador solo certificó ancho observado de 375px; completar teléfono/otros anchos.

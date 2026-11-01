@@ -196,3 +196,7 @@ Riesgos operativos adicionales: subida a Cloudinary ocurre antes del guardado Mo
 | 4 | Administración/reportes/pipes/directivas locales; baja de admins restringida por política 5A. PWA configurada por artefactos, sin instalación/worker real ni gráficos/móvil reales comprobados |
 
 Antes de entregar: completar la matriz manual con versión de frontend/backend identificada, resolver aceptación docente de S4-04 y del alcance offline limitado, confirmar origen/frontend/HTTPS y disponibilidad de admin de ensayo, conservar documentación y adjuntar resultados sin secretos. Usar [12-GUIA-DE-DEMOSTRACION.md](12-GUIA-DE-DEMOSTRACION.md). No hace falta agregar funcionalidades fuera del TP para cerrar esos ensayos. No se hizo merge ni deploy y los cambios 5D esperan revisión.
+
+## Seguimiento 5E — conservar el dictamen histórico
+
+El cuerpo anterior conserva resultados y pendientes tal como estaban al cerrar 5D (39/4/0/1). La validación posterior [13-VALIDACION-INTEGRADA.md](13-VALIDACION-INTEGRADA.md) aporta integración real autorizada en localhost/Atlas QA/Cloudinary QA: S2-02 pasa a Cumple y la matriz vigente 09 queda 40 Cumple / 3 Parcial / 0 No cumple / 1 No verificado. Worker NORMAL y shell sin servidores comprobados, pero instalación/actualización/caché y cookies cross-site aún pendientes. No interpretar las filas históricas M01–M18 anteriores como resultado actual: ver su ejecución 5E en 13. No se certifica entrega integral ni se hizo merge/deploy.
