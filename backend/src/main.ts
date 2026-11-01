@@ -1,7 +1,7 @@
-
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module.js';
+import { origenesPermitidos } from './common/origenes-permitidos.js';
 
 /**
  * Configuración CORS de FutbolCrack.
@@ -11,12 +11,7 @@ import { AppModule } from './app.module.js';
  * como variable de entorno en Vercel.
  */
 const corsOptions = {
-  origin: [
-    'http://localhost:4200',
-    ...(process.env.FRONTEND_URL
-      ? [process.env.FRONTEND_URL]
-      : []),
-  ],
+  origin: origenesPermitidos(),
   credentials: true,
 };
 

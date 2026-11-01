@@ -259,3 +259,7 @@ Ver comandos/resultados en 08. Se prueban servicios HTTP, ruta directa y navegac
 Las pruebas Angular interceptan HTTP y no conectan con Vercel/Atlas/Cloudinary. Sigue pendiente ensayo integrado con cookies/CORS/JWT reales, navegador/dispositivos y datos persistidos. Las ventanas entre publicación/comentarios de 4A y el desplazamiento entre páginas offset por nuevas notas externas no desaparecen: se deduplica lo recibido, pero no se promete una instantánea entre páginas ni incorporar automáticamente toda nota externa nueva. Para incorporarlas, volver al detalle/recargar; tras una creación local se reinicia explícitamente.
 
 No se implementan renovación de sesión, interceptor global de 401, autorizar/refrescar, aviso/modal temporal ni cambio de TTL; son de 4C. El JWT sigue con los 20 segundos existentes. No se implementa eliminación de comentarios.
+
+## Cambio transversal de sesión — 4C
+
+JWT pasa a quince minutos con autorización inicial y renovación voluntaria; ver 02. El interceptor conserva sesión y borradores ante 403/red/500. Ante 401 protegido o vencimiento real redirige al login y destruye la vista: el borrador local no persiste entre pantallas. Se ajusta el mensaje de error 401 de ComentariosPublicacion para no prometer esa persistencia. No cambia el contrato, modelo, validaciones, autoría ni paginación de comentarios.

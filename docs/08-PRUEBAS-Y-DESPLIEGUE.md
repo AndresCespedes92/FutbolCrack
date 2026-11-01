@@ -1,6 +1,47 @@
 # 08 — Pruebas y despliegue
 
-## Estado actual — Sprint 3, Tarea 4B (01/11/2026)
+## Estado actual — Sprint 3, Tarea 4C (01/11/2026)
+
+Inicio limpio en main 0d94da5 (merge de 4B ya confirmado por el usuario). Antes de modificar: ambas compilaciones salida 0, frontend 97/97 (13 suites) y backend 162/162 (8 suites, en serie). No había cambios para respaldo y no se hizo un commit vacío. Se creó feature/renovacion-sesion desde esa base. Sin commits nuevos, merge ni deploy.
+
+| Comando | Resultado final |
+| --- | --- |
+| frontend: npm run build | Salida 0, sin advertencias CSS. |
+| frontend: node node_modules/@angular/cli/bin/ng.js test --watch=false | 138/138 aprobadas, 18 suites. Conserva 97 y agrega 41. |
+| backend: npm run build | Salida 0. |
+| backend: node node_modules/vitest/vitest.mjs run --no-file-parallelism --pool=threads | 187/187 aprobadas, 10 suites. Conserva 162 y agrega 25. |
+
+No se instalan dependencias, cambian timeouts/scripts/presupuestos ni se omiten tests. La ejecución backend en serie con forks pasó 187/187 al principio; una repetición terminó con cierre inesperado de worker (177/187 contabilizados, sin aserción fallida). La suite completa se repitió aislada con pool threads y pasó 187/187 sin errores no controlados. Se conserva el historial de limitaciones del entorno, no se presenta el cierre del worker como una prueba aprobada.
+
+### Cobertura backend nueva: 25 casos
+
+18 HTTP con AuthController/AuthService/AuthGuard, firma y verificación JWT, bcrypt, cookie y middleware de origen reales; se simulan UsuariosService y Cloudinary para no abrir Atlas. Comprueban login JWT de 900 segundos, cookie alineada al exp, autorizar sin renovar, rol actual desde MongoDB, ausencia de cookie/Bearer no sustituto, JWT vencido/inválido, usuario eliminado, renovación voluntaria válida y rechazo durante/tras vencimiento, cookie antigua de 20 segundos, HttpOnly/Secure/None de producción y logout, credenciales incorrectas/GET me, origen ajeno/null/ausente y Referer permitido.
+
+Siete casos adicionales del middleware: GET/HEAD/OPTIONS, cookies sin origen rechazadas, Bearer sin cookie compatible, null/Referer mal formado rechazados y FRONTEND_URL exacto.
+
+Se usan relojes simulados de Date en HTTP (sin detener sockets/timers del servidor), no esperas de quince minutos. **Usuario deshabilitado no está probado ni implementado:** el modelo no tiene un campo de habilitación. Hay una comprobación explícita de esa limitación, sin fingir que usuario inexistente cubre deshabilitado. No se agrega un estado de Sprint 4.
+
+### Cobertura frontend nueva: 41 casos
+
+- 16 de AuthService con reloj simulado: recuperación/cache/sin token almacenado, solicitud compartida, aviso a diez minutos, recarga con plazo remanente, Ahora no, renovación/reinicio de timers, no renovar vencido, error transitorio/401, suspensión/focus, desfase servidor, logout correcto/fallido, limpieza al destruir y descarte de respuesta vieja.
+- 12 del interceptor: 401 protegido en me/refrescar/usuarios/escrituras, 403/500 sin cerrar sesión, login/autorizar excluidos y otra API/URL relativa no interceptadas.
+- Ocho de App: spinner, continuidad de ruta, login por inválida, login/registro públicos, error/reintento, modal/renovación/error, Ahora no y una sola autorización compartida raíz/guard.
+- Dos de ExtenderSesion: Outputs, tiempo/estado visible y Escape/bloqueo.
+- Tres de Login: recuperación desde metadatos, vuelta al detalle interno, destino externo rechazado y credenciales incorrectas sin borrar formulario (tres casos: retorno, externo y error).
+
+Se conserva la suite de navegación anterior y se adapta el guard a POST autorizar/caché sin GET me duplicado. La expectativa de redirección incorpora el returnUrl nuevo. La primera regresión pasó 96/97: fallaba solamente esperar /login en lugar de /login?returnUrl=%2Fmi-perfil. Se corrigió la expectativa al contrato nuevo, conservando la comprobación exacta de destino.
+
+Un primer build backend detectó una llave sobrante durante la edición de AuthController; se corrigió antes de ejecutar la suite ampliada. Los builds finales completos pasan. No se relajaron comprobaciones de autenticación, permisos o seguridad para aprobar.
+
+### Límites y ensayo pendiente
+
+Las pruebas HTTP no montan el AppModule con conexión productiva ni prueban Vercel/Atlas/Cloudinary. Sí montan el middleware de origen nuevo en las pruebas de sesión. Angular usa HttpTestingController y rutas/componentes reales o pantallas de prueba para aislar arranque; no toca la API externa. El dialog de JSDOM usa el doble existente: no valida capa modal/foco inicial nativos ni aspecto en dispositivos.
+
+Antes de validación final: desplegar conjuntamente endpoints/metadatos/interceptor, verificar FRONTEND_URL exacto, HTTPS, Set-Cookie/credenciales y restricciones de cookies de terceros en navegador. Recargar una URL de detalle con sesión válida e inválida, esperar/simular aviso a diez minutos, probar Ahora no, renovar vigente, rechazar vencido, restaurar pestaña suspendida, logout y 403 de una baja ajena sin perder sesión. Un cliente HTTP manual de sesión debe enviar Origin/Referer permitido; sin él obtiene 403 por CSRF antes de autenticación.
+
+Pendiente del modelo: habilitación de usuarios y su prueba real. Pendiente externo: navegador/cookies/CORS/BD/modal/suspensión reales. No hay revocación persistente ni refresh tokens: logout borra cookie, no invalida una copia de JWT aún vigente. El reloj de UI es orientativo; el backend impone exp. Estos límites impiden declarar validación productiva o cierre total del TP a partir de las suites locales.
+
+## Historial — Sprint 3, Tarea 4B (01/11/2026)
 
 Base: feature/comentarios-backend con los 20 archivos de 4A pendientes esperados, HEAD 9224cad. Antes de guardar se repitieron ambas compilaciones (salida 0), FE 60/60 en 10 suites y BE 157/157 en 8 suites con archivos en serie. Se creó el respaldo autorizado **70622bb**, «feat(comentarios): agregar backend con paginacion y edicion propia», y luego feature/comentarios-interfaz. No hay commit de 4B, merge ni deploy.
 

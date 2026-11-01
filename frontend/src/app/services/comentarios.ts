@@ -1,3 +1,4 @@
+import { API_URL } from './api.config';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -34,7 +35,7 @@ export interface RespuestaComentario {
 @Injectable({ providedIn: 'root' })
 export class ComentariosService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'https://futbol-crackbackend.vercel.app';
+  private readonly apiUrl = API_URL;
   listar(publicacionId: string, offset = 0): Observable<ListadoComentarios> {
     const params = new HttpParams().set('offset', offset).set('limit', 3);
     return this.http.get<ListadoComentarios>(

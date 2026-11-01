@@ -1,3 +1,4 @@
+import { sesionPrueba } from './testing/sesion-fixture';
 import { responderComentariosVacios } from './testing/comentarios-fixture';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -100,17 +101,14 @@ describe('Navegación de FutbolCrack', () => {
     const navegacion = harness.navigateByUrl('/mi-perfil');
     // La navegación espera al guard real. Respondemos su HTTP antes de esperar el resultado.
     await vi.waitFor(() => {
-      const autorizacion = http.expectOne(`${API}/auth/me`);
-      expect(autorizacion.request.method).toBe('GET');
+      const autorizacion = http.expectOne(`${API}/auth/autorizar`);
+      expect(autorizacion.request.method).toBe('POST');
       expect(autorizacion.request.withCredentials).toBe(true);
-      autorizacion.flush(usuario);
+      autorizacion.flush(sesionPrueba(usuario));
     });
     await navegacion;
-    // MiPerfil vuelve a consultar sus datos en ngOnInit; es otra petición real del código actual.
-    const perfil = http.expectOne(`${API}/auth/me`);
-    expect(perfil.request.method).toBe('GET');
-    expect(perfil.request.withCredentials).toBe(true);
-    perfil.flush(usuario);
+    // La autorización alimenta el estado central: MiPerfil no repite GET me.
+    http.expectNone(`${API}/auth/me`);
     const propias = http.expectOne((req) => req.url === `${API}/publicaciones`);
     expect(propias.request.params.get('usuarioId')).toBe(usuario.id);
     expect(propias.request.params.get('limit')).toBe('3');
@@ -130,6 +128,8 @@ describe('Navegación de FutbolCrack', () => {
 
   it('muestra los cuatro enlaces de navegación', async () => {
     const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    http.expectOne(`${API}/auth/autorizar`).flush(sesionPrueba(usuario));
     await fixture.whenStable();
     const links = fixture.nativeElement.querySelectorAll('nav a') as NodeListOf<HTMLAnchorElement>;
     expect(links.length).toBe(4);
@@ -227,12 +227,12 @@ describe('Navegación de FutbolCrack', () => {
     const harness = await RouterTestingHarness.create();
     const navegacion = harness.navigateByUrl('/mi-perfil');
     await vi.waitFor(() => {
-      const solicitud = http.expectOne(`${API}/auth/me`);
+      const solicitud = http.expectOne(`${API}/auth/autorizar`);
       expect(solicitud.request.withCredentials).toBe(true);
       solicitud.flush({ message: 'Sesión vencida' }, { status: 401, statusText: 'Unauthorized' });
     });
     await navegacion;
-    expect(TestBed.inject(Router).url).toBe('/login');
+    expect(TestBed.inject(Router).url).toBe('/login?returnUrl=%2Fmi-perfil');
     expect(harness.routeNativeElement?.querySelector('#titulo-formulario')?.textContent).toContain(
       'Volvé al juego',
     );

@@ -1,5 +1,146 @@
 # 02 — Autenticación y seguridad
 
+## Estado vigente — Sprint 3, Tarea 4C (01/11/2026)
+
+Se implementan JWT de 15 minutos, autorización inicial, renovación voluntaria de JWT vigente, aviso/modal a los diez minutos, expiración/redirección y manejo central de 401. Se reutilizan AuthModule, AuthService, AuthController y el guard existente, sin refresh tokens persistentes ni módulos nuevos. Las descripciones históricas de 20 segundos al final registran estados anteriores y quedan reemplazadas por esta sección.
+
+**Limitación conocida antes de implementar:** Usuario no tiene habilitado/activo ni una operación de deshabilitación. Se valida existencia y se consulta la ficha/rol actual, pero no se puede distinguir un usuario deshabilitado con este modelo. No se inventa un campo ni gestión de usuarios de Sprint 4. El caso real de usuario deshabilitado queda pendiente hasta definir ese modelo; no se presenta como probado por comprobar solamente un usuario eliminado.
+
+## Carnet, firma y sobre: JWT frente a cookie
+
+Como en un club, JWT es el carnet firmado con identidad y vencimiento; la cookie es el sobre que el navegador guarda y envía. HttpOnly impide leerla desde JavaScript, no significa que el navegador deje de enviarla con HTTP. La firma no cifra el contenido y no concede permisos administrativos por sí sola: las operaciones con rol siguen consultando la ficha actual en MongoDB.
+
+DURACION_SESION_SEGUNDOS en backend/src/auth/sesion.constants.ts vale 900. SeguridadModule lo usa en JwtModule y AuthService.emitirSesion al firmar. El controller pasa el token a guardarCookieSesion, que calcula maxAge según expiraEn real menos Date.now, sin agregar otros quince minutos al terminar la solicitud. JWT tiene resolución de segundos; por tiempo de procesamiento/red el Max-Age puede ser ligeramente menor que 900 segundos.
+
+| Cookie token | Desarrollo | NODE_ENV production |
+| --- | --- | --- |
+| HttpOnly | true | true |
+| Secure | false | true |
+| SameSite | lax | none |
+| Path | / | / |
+| MaxAge | Hasta exp del JWT | Hasta exp del JWT |
+
+Se conservan los atributos de la arquitectura Vercel; no se cambia SameSite ni se agrega Domain. Inicio y renovación comparten guardarCookieSesion/opcionesCookieSesion; logout borra con las mismas opciones. Para peticiones entre orígenes Angular conserva withCredentials. HttpOnly y envío de credenciales tienen responsabilidades distintas, y SameSite=None requiere Secure: [MDN Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie).
+
+El token interno de AuthService nunca se devuelve en JSON. Angular solo guarda usuario/fechas en memoria; no lee document.cookie, no decodifica JWT ni guarda tokens en localStorage/sessionStorage.
+
+## Endpoints y contrato real
+
+### POST /auth/login
+
+Conserva LoginDto, búsqueda de usuario y bcrypt.compare. Firma sub/perfil de la ficha real y emite cookie. Devuelve mensaje y los mismos metadatos que autorizar/renovar; no autoautoriza un registro ni habilita roles libres.
+
+### POST /auth/autorizar
+
+Usa el AuthGuard existente marcado SOLO_COOKIE_SESION: toma la cookie token y verifica firma/expiración, no utiliza Bearer como sustituto de cookie en este endpoint. El mismo guard conserva cookie/Bearer en los endpoints que ya los soportaban; no hay una segunda estrategia.
+
+AuthService.autorizar comprueba exp vigente, consulta UsuariosService.findById y vuelve a comprobar vigencia después de la consulta. Devuelve datos públicos del usuario actual y fechas ISO. No cambia cookie ni emite otro JWT.
+
+### POST /auth/refrescar
+
+Usa el mismo guard y política de cookie. Solo acepta un JWT vigente y usuario existente. Recomprueba vencimiento antes y después de emitir para no renovar si caduca durante la consulta o firma. Emite otro JWT por 900 segundos desde la renovación con el rol actual, actualiza cookie y devuelve fechas/usuario. Un body que diga administrador no concede ese rol. No se acepta un token vencido para recuperar sesión.
+
+Respuesta 200 de ambos endpoints (datos ilustrativos, sin token):
+
+```json
+{
+  "usuario": {
+    "id": "000000000000000000000001",
+    "nombre": "Lucía", "apellido": "Torres", "correo": "lucia@club.test",
+    "nombreUsuario": "lucia.8", "fechaNacimiento": "2004-01-01T00:00:00.000Z",
+    "descripcion": "Mediocampista", "imagenPerfil": "/foto.png", "perfil": "usuario"
+  },
+  "emitidaEn": "2026-11-01T12:00:00.000Z",
+  "expiraEn": "2026-11-01T12:15:00.000Z",
+  "horaServidor": "2026-11-01T12:00:00.000Z"
+}
+```
+
+Login agrega `mensaje: "Inicio de sesión correcto"`. El servicio selecciona estos campos con datosPublicos; no devuelve passwordHash, password ni JWT. GET /auth/me conserva su respuesta de usuario para consumidores anteriores y ahora responde 401 si la ficha de la sesión desapareció. POST /auth/logout conserva borrado de cookie; Angular limpia su estado solo después de éxito, manteniéndolo ante error transitorio.
+
+Errores: 401 para cookie ausente/inválida/vencida, identidad/fechas inválidas o usuario eliminado; 403 si falla origen CSRF o permiso de una operación. Sin Origin/Referer en una operación de sesión el middleware puede responder 403 antes del guard: los casos de autenticación 401 presuponen una solicitud de origen permitido.
+
+## Inicio de Angular y recarga
+
+1. App.ngOnInit llama a comprobarSesion y muestra pantalla de carga en lugar del RouterOutlet.
+2. AuthService.autorizar envía POST con cookies. Si el guard de una ruta protegida también lo necesita, shareReplay comparte el único pedido pendiente.
+3. Una sesión válida llena usuarioActual/expiraEn y programa tiempos; la app continúa en la URL solicitada, incluido el detalle de una jugada. No vuelve siempre al feed.
+4. Sesión inválida lleva a login con returnUrl interno. Login/registro siguen accesibles y no generan redirecciones a sí mismos.
+5. Error de red/500 muestra Reintentar; no equivale a vencimiento ni desencadena un bucle.
+6. Tras login se recupera estado directamente de su respuesta y se vuelve al destino interno o publicaciones. Se descartan retornos externos y destinos login/registro.
+
+Las rutas y GET públicos de feed/detalle se conservan: el arranque comprueba y redirige al login si no hay sesión; navegar después a una lectura pública no convierte el GET en una operación privada. Mi Perfil sigue usando authGuard. La autorización real de escrituras y datos privados permanece en Nest.
+
+obtenerMiPerfil reutiliza usuarioActual después del arranque y evita GET me duplicados desde perfil/feed/detalle. El método conserva un GET me de compatibilidad para consumidores aislados que todavía no autorizaron. comprobarAcceso consulta estado vigente o comparte autorizar. No se renueva un token desde un guard ni desde el interceptor.
+
+## Aviso, renovación y vencimiento
+
+AuthService calcula la diferencia aproximada entre horaServidor y el reloj del navegador, y programa desde expiraEn, no desde el instante de montar Angular. A exp menos cinco minutos se abre ExtenderSesion; para un token nuevo de quince minutos ocurre al minuto diez.
+
+Ejemplo del club: carnet emitido 12:00, vence 12:15, aviso 12:10. Aceptar a las 12:10 llama refrescar y el carnet nuevo vence 12:25. Ahora no cierra el modal y conserva sesión hasta 12:15, sin refresco automático. Un aviso descartado no se reabre por un focus de esa misma sesión en memoria. Al recargar se vuelve a comprobar la cookie y reconstruir los tiempos; si quedan menos de cinco minutos aparece el aviso con minutos aproximados reales restantes.
+
+ExtenderSesion es un modal propio con dialog nativo, Ahora no/Extender sesión y estado de espera/error. Solo el Output extender dispara refrescar desde App. Durante la solicitud se deshabilitan repeticiones; error transitorio mantiene el modal/sesión y permite reintentar antes de exp. Éxito cierra, reemplaza expiración y limpia/recrea los dos timers. No hay alert/window.confirm.
+
+El servicio tiene un timer de aviso y otro de vencimiento; limpiarTemporizadores se ejecuta al recuperar otra sesión, vencer, cerrar sesión o destruir el servicio. Al volver por focus/visibilitychange compara nuevamente la expiración, porque un navegador suspendido puede haber retrasado callbacks. Los listeners también se eliminan al destruir el servicio. versionSesion descarta respuestas viejas después de logout/vencimiento para no recuperar estado obsoleto.
+
+La hora calculada en Angular es una ayuda de UI (incluye una estimación de desfase y puede tener latencia); la decisión definitiva es la firma/exp en Nest. Si el navegador llega tarde, el backend rechaza y el interceptor redirige.
+
+## Interceptor: 401 no es 403
+
+sesionInterceptor se registra con provideHttpClient(withInterceptors(...)) en app.config.ts. Solo actúa sobre el origen exacto API_URL y endpoints protegidos: me/refrescar/usuarios y escrituras de publicaciones/comentarios. URL relativas se resuelven según document.baseURI y no se atribuyen artificialmente a la API externa.
+
+Un 401 protegido invalida estado y timers y navega a login con un mensaje; el guard/root manejan el 401 esperado de autorizar y login maneja credenciales erróneas, sin bucles. Un 403, error de red o 500 se propaga al componente y mantiene la sesión. Así, un rechazo de permiso al retirar una jugada no cierra el carnet del socio.
+
+Los errores transitorios conservan formularios/borradores existentes. Un vencimiento real/401 que navega a login destruye la vista y su borrador local; no se promete persistencia de texto entre login y pantalla anterior. Se corrigió el mensaje anterior de comentarios para no afirmar lo contrario. No se almacena texto sensible o contraseñas para simular esa continuidad.
+
+## CSRF y CORS: control aplicado
+
+CORS limita qué páginas pueden leer respuestas; no basta como defensa CSRF. ValidarOrigenMiddleware conserva lecturas/preflight y refuerza escrituras:
+
+- Origin presente debe coincidir exactamente con localhost:4200 o FRONTEND_URL. `null`, subdominios parecidos y orígenes ajenos se rechazan.
+- Si Origin falta, extrae el origen de Referer con URL y compara la misma lista. Un Referer mal formado se rechaza; uno permitido no anula un Origin ajeno presente.
+- Si ambos faltan, rechaza operaciones de sesión (login/logout/autorizar/refrescar) y escrituras con cookies. No se confía en Host/X-Forwarded-Host para construir el permiso.
+- Clientes Bearer sin cookies conservan su uso fuera de las operaciones de sesión; un token en cabecera requiere una decisión explícita del cliente y no se envía como cookie ambiental.
+
+La lista origenesPermitidos es compartida entre middleware y main.ts, manteniendo la configuración CORS previa con credentials true. No se leen ni modifican valores de .env en esta tarea. La validación de encabezados y rechazo ante ausencia siguen el criterio de verificación de origen de [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#using-standard-headers-to-verify-origin); no se presenta CORS o SameSite=None como protección suficiente.
+
+Impacto para pruebas manuales/Postman/curl: las operaciones de sesión y escrituras con cookie deben enviar un Origin o Referer permitido. No se incorpora una excepción insegura para facilitar las pruebas. La lista exacta de FRONTEND_URL en Vercel y el comportamiento de cookies de terceros se deben verificar en navegador real.
+
+## Compatibilidad, límites y pendientes
+
+Las cookies antiguas no cambian de duración por configurar 900 segundos: el JWT ya emitido sigue con su exp original. Autorizar no lo extiende; si está vencido exige login y si está vigente puede renovarse solo por decisión del usuario. Cambiar la duración no rota secretos ni invalida todos los JWT anteriores.
+
+No hay revocación de JWT: logout borra cookie, pero una copia previa seguiría siendo válida hasta exp. No hay refresh token persistente ni revocación entre pestañas. Los timers son por pestaña; recargar resincroniza con la cookie. Cerrar una suscripción no revierte un Set-Cookie que el servidor ya haya emitido. XSS/origen permitido comprometido y políticas del navegador siguen siendo riesgos que esta tarea no pretende eliminar.
+
+**Pendientes para aceptación final:** política de habilitación de cuentas cuando exista un campo/operación aprobados; ensayo con MongoDB real, despliegue coordinado de metadatos/endpoints/interceptor, cookie/CORS/FRONTEND_URL/Origin reales y modal/foco/suspensión en navegador/dispositivos. No se da por validada producción ni por implementado Sprint 4.
+
+## Dónde estudiar
+
+| Archivo | Clase / método |
+| --- | --- |
+| backend/src/auth/sesion.constants.ts | DURACION_SESION_SEGUNDOS y SOLO_COOKIE_SESION. |
+| backend/src/auth/sesion-cookie.ts | opcionesCookieSesion y guardarCookieSesion; login/refresco/logout coherentes. |
+| backend/src/auth/auth.service.ts | autorizar, refrescar, exigirVigencia, exigirUsuarioDeSesion, emitirSesion, metadatos, datosPublicos. |
+| backend/src/auth/auth.controller.ts | POST autorizar/refrescar, login y cookie; GET me compatible. |
+| backend/src/auth/guards/auth.guard.ts | AuthGuard: misma verificación de firma/exp, metadata para cookie obligatoria y claims mínimos válidos. |
+| backend/src/common/middlewares/validar-origen.middleware.ts | Origin/Referer y rechazo ante ausencia donde corresponde. |
+| backend/src/common/origenes-permitidos.ts | Lista compartida con CORS de main.ts. |
+| frontend/src/app/services/auth.ts | Estado central, autorizar/comprobarAcceso/recuperarSesion, refrescar/ahoraNo, comprobarTiempo/finalizarSesion/limpiarTemporizadores. |
+| frontend/src/app/services/api.config.ts | API_URL compartida por auth/publicaciones/comentarios/interceptor. |
+| frontend/src/app/app.ts/html/css | Comprobar inicio, carga/error/reintento y modal. |
+| frontend/src/app/components/extender-sesion/ | Modal presentacional, Outputs y foco/teclado. |
+| frontend/src/app/interceptors/sesion.interceptor.ts | 401 acotado sin confundir 403. |
+| frontend/src/app/guards/auth.guard.ts | Estado compartido y retorno a login con destino. |
+| frontend/src/app/pages/login/ | Recupera datos del login y vuelve a returnUrl interno. |
+
+Pruebas y comandos exactos en [08](08-PRUEBAS-Y-DESPLIEGUE.md); guía de defensa y recorrido en [guia-angular.md](guia-angular.md).
+
+---
+
+## Historial previo a 4C — auditoría y tareas anteriores
+
+Las secciones siguientes se conservan como registro. Sus pendientes de duración/renovación describen el estado anterior y no el contrato vigente de esta primera parte.
+
 ## Estado y archivos
 
 La identidad del jugador es como su carnet de socio: Angular puede decidir qué pantalla abrir, pero la oficina Nest debe revisar el carnet en cada operación privada. El guard del navegador no reemplaza al del servidor.

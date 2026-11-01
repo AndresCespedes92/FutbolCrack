@@ -1,3 +1,4 @@
+import { API_URL } from './api.config';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -73,7 +74,7 @@ export class PublicacionesService {
   private readonly http = inject(HttpClient);
 
   // Backend local de FutbolCrack.
-  private readonly apiUrl = 'https://futbol-crackbackend.vercel.app/publicaciones';
+  private readonly apiUrl = `${API_URL}/publicaciones`;
 
   /**
    * GET /publicaciones

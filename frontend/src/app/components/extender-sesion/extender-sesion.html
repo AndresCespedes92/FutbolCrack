@@ -1,0 +1,22 @@
+<dialog
+  #modal
+  aria-labelledby="titulo-sesion"
+  aria-describedby="ayuda-sesion"
+  [attr.aria-busy]="renovando"
+  (cancel)="cancelar($event)"
+>
+  <span class="eyebrow">TU CARNET DEL CLUB</span>
+  <h2 id="titulo-sesion">Tu sesión está por vencer</h2>
+  <p id="ayuda-sesion">
+    Quedan aproximadamente {{ minutosRestantes }} minuto(s) de sesión. ¿Querés continuar?
+  </p>
+  @if (error) {
+    <p class="error" role="alert">{{ error }}</p>
+  }
+  <div class="acciones">
+    <button autofocus type="button" [disabled]="renovando" (click)="cancelar()">Ahora no</button
+    ><button type="button" [disabled]="renovando" (click)="confirmar()">
+      {{ renovando ? 'Extendiendo…' : 'Extender sesión' }}
+    </button>
+  </div>
+</dialog>

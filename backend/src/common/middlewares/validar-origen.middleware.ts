@@ -1,55 +1,40 @@
+import { Injectable, NestMiddleware, ForbiddenException } from '@nestjs/common';
+import type { Request, Response, NextFunction } from 'express';
+import { origenesPermitidos } from '../origenes-permitidos.js';
 
-import {
-  Injectable,
-  NestMiddleware,
-  ForbiddenException,
-} from '@nestjs/common';
-
-import type {
-  Request,
-  Response,
-  NextFunction,
-} from 'express';
-
-/**
- * Middleware para verificar el origen de las solicitudes.
- *
- * Protege las operaciones que modifican datos
- * frente a solicitudes provenientes de otros sitios.
- */
 @Injectable()
 export class ValidarOrigenMiddleware implements NestMiddleware {
-
-  use(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): void {
-
-    // Las consultas de lectura no modifican información.
-    const metodosSeguros = ['GET', 'HEAD', 'OPTIONS'];
-
-    if (metodosSeguros.includes(req.method)) {
+  use(req: Request, _res: Response, next: NextFunction): void {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       next();
       return;
     }
-
-    // Orígenes permitidos para FutbolCrack.
-    const origenesPermitidos = [
-      'http://localhost:4200',
-      process.env.FRONTEND_URL,
-    ].filter((origen): origen is string => Boolean(origen));
-
-    const origen = req.headers.origin;
-
-    // Si hay un Origin y no está autorizado, rechazamos.
-    if (origen && !origenesPermitidos.includes(origen)) {
-      throw new ForbiddenException(
-        'El origen de la solicitud no está autorizado.',
-      );
+    const permitidos = origenesPermitidos();
+    let origen = req.headers.origin;
+    if (!origen && req.headers.referer) {
+      try {
+        origen = new URL(req.headers.referer).origin;
+      } catch {
+        throw new ForbiddenException('El origen de la solicitud no es válido');
+      }
     }
-
-    // Permitimos continuar con la operación.
+    // CSRF: Origin/Referer son del navegador, no un permiso basado en CORS o rol del cliente.
+    if (origen && !permitidos.includes(origen))
+      throw new ForbiddenException(
+        'El origen de la solicitud no está autorizado',
+      );
+    const ruta = req.originalUrl.split('?')[0].replace(/\/$/, '');
+    const operacionSesion = [
+      '/auth/login',
+      '/auth/logout',
+      '/auth/autorizar',
+      '/auth/refrescar',
+    ].includes(ruta);
+    // Fail closed para cookies y operaciones de sesión. Clientes Bearer sin cookie conservan su uso.
+    if (!origen && (req.headers.cookie || operacionSesion))
+      throw new ForbiddenException(
+        'Se requiere un Origin o Referer permitido para esta operación',
+      );
     next();
   }
 }

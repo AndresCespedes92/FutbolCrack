@@ -1,8 +1,8 @@
-
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 
 import { AuthGuard } from './guards/auth.guard.js';
+import { DURACION_SESION_SEGUNDOS } from './sesion.constants.js';
 
 /**
  * Módulo compartido de seguridad.
@@ -15,7 +15,7 @@ import { AuthGuard } from './guards/auth.guard.js';
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '20s' },
+      signOptions: { expiresIn: DURACION_SESION_SEGUNDOS },
     }),
   ],
 

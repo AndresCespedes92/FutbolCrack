@@ -543,6 +543,102 @@ Listo para revisión local del alcance 4B, con límites externos documentados. S
 
 ---
 
+## 01/11/2026 — Sprint 3, Tarea 4C: autorización y renovación voluntaria
+
+**Objetivo y ejemplo:** el carnet del club dura quince minutos. La recepción Angular consulta si sigue vigente al abrir/recargar, avisa cuando quedan cinco y solo tramita otro si el socio acepta antes de vencer. Un rechazo de permiso no significa que se perdió el carnet.
+
+**Git:** inicio limpio main 0d94da5, merge de 4B ya guardado por el usuario. Base comprobada: builds frontend/backend salida 0, FE 97/97, BE 162/162. No había cambios que respaldar: sin commit vacío. Se creó feature/renovacion-sesion. HEAD permanece en 0d94da5; sin commits nuevos, merge ni deploy.
+
+**Inspección/limitación previa:** revisados registro/login, JWT/cookie, AuthGuard Nest/Angular, GET me/logout, CORS/middleware de origen, ausencia de interceptor y recuperación inicial. Se informó antes de implementar que Usuario no tiene habilitado/activo: se valida existencia/ficha actual, pero no se inventa un estado ni gestión de usuarios de Sprint 4. El rechazo específico de usuario deshabilitado y su prueba real quedan pendientes del modelo.
+
+### Inventario completo
+
+- backend/src/auth/auth.controller.ts
+- backend/src/auth/auth.service.ts
+- backend/src/auth/auth.sesion.http.spec.ts
+- backend/src/auth/guards/auth.guard.ts
+- backend/src/auth/seguridad.module.ts
+- backend/src/auth/sesion-cookie.ts
+- backend/src/auth/sesion.constants.ts
+- backend/src/common/middlewares/validar-origen.middleware.spec.ts
+- backend/src/common/middlewares/validar-origen.middleware.ts
+- backend/src/common/origenes-permitidos.ts
+- backend/src/main.ts
+- docs/00-MAPA-DEL-PROYECTO.md
+- docs/01-ARQUITECTURA.md
+- docs/02-AUTENTICACION-Y-SEGURIDAD.md
+- docs/04-COMENTARIOS.md
+- docs/08-PRUEBAS-Y-DESPLIEGUE.md
+- docs/09-REQUISITOS-SPRINTS.md
+- docs/10-BITACORA-DE-CAMBIOS.md
+- docs/guia-angular.md
+- frontend/src/app/app.config.ts
+- frontend/src/app/app.css
+- frontend/src/app/app.html
+- frontend/src/app/app.sesion.spec.ts
+- frontend/src/app/app.spec.ts
+- frontend/src/app/app.ts
+- frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.ts
+- frontend/src/app/components/extender-sesion/extender-sesion.css
+- frontend/src/app/components/extender-sesion/extender-sesion.html
+- frontend/src/app/components/extender-sesion/extender-sesion.spec.ts
+- frontend/src/app/components/extender-sesion/extender-sesion.ts
+- frontend/src/app/guards/auth.guard.ts
+- frontend/src/app/interceptors/sesion.interceptor.spec.ts
+- frontend/src/app/interceptors/sesion.interceptor.ts
+- frontend/src/app/pages/login/login.html
+- frontend/src/app/pages/login/login.sesion.spec.ts
+- frontend/src/app/pages/login/login.ts
+- frontend/src/app/services/api.config.ts
+- frontend/src/app/services/auth.spec.ts
+- frontend/src/app/services/auth.ts
+- frontend/src/app/services/comentarios.ts
+- frontend/src/app/services/publicaciones.ts
+- frontend/src/app/testing/sesion-fixture.ts
+
+### Implementación y decisiones
+
+- **JWT/cookie:** DURACION_SESION_SEGUNDOS centraliza 900 segundos en SeguridadModule y emisión. guardarCookieSesion/opcionesCookieSesion comparten HttpOnly, Secure y None en producción, Lax en desarrollo, path / y maxAge calculado hasta exp real. Logout usa las mismas opciones. Datos públicos se proyectan en un método compartido por registro/login/me/sesión; nunca se devuelve token/hash en JSON.
+- **Autorizar:** POST /auth/autorizar con AuthGuard existente y metadata de cookie obligatoria. Valida firma/exp/claims, usuario actual y vigencia tras consulta; devuelve usuario/emitidaEn/expiraEn/horaServidor sin renovar. Bearer se conserva en rutas anteriores, no sustituye cookie en los nuevos endpoints.
+- **Refrescar:** POST /auth/refrescar acepta solo JWT vigente, comprueba usuario/exp antes y después de consultas/emisión, firma por quince minutos desde ahora y emite cookie. Toma rol de MongoDB, nunca de Angular. No hay refresh token persistente ni aceptación de vencidos.
+- **CSRF/CORS:** origenesPermitidos comparte localhost:4200/FRONTEND_URL exactos con main.ts y ValidarOrigenMiddleware. Origin ajeno/null se rechaza; Referer permitido sirve solo si Origin falta. Sin ambos se rechazan sesión y escrituras con cookies. Lecturas/preflight y clientes Bearer sin cookie fuera de sesión conservan uso. No se confía en CORS/SameSite por sí solos, Host ni prefijos de dominios parecidos.
+- **Arranque/caché:** App muestra carga mientras POST autorizar; raíz/guard comparten la petición mediante shareReplay. Recupera usuario/fechas, continúa URL solicitada o redirige a login con returnUrl interno. Login/registro no entran en bucle. Red/500 muestran Reintentar. ObtenerMiPerfil usa estado ya autorizado sin GET duplicado, manteniendo GET me como compatibilidad. API_URL centraliza el mismo destino previo en los tres servicios.
+- **Aviso/renovación:** AuthService guarda solo usuario/fechas en señales, estima desfase con horaServidor y programa aviso a exp menos cinco minutos y expiración. ExtenderSesion es hijo presentacional con Outputs; Ahora no no solicita ni vuelve a abrir el aviso en esa misma sesión en memoria. Extender llama refrescar una vez, muestra espera/error y reinicia timers al confirmar.
+- **Vencimiento/limpieza:** compara exp al foco/visibility para suspensión, limpia timers/listeners al cerrar/vencer/destruir y cancela flujos al destruir el servicio. versionSesion descarta respuestas antiguas después de logout/vencimiento. No hay tokens en almacenamiento web ni lectura de cookie por Angular.
+- **401/403:** interceptor acotado al origen exacto/API protegida, excluye login y autorización inicial. 401 limpia estado y navega a login; 403/red/500 mantienen sesión y formularios. La redirección por vencimiento destruye la vista/borrador local; se ajusta el mensaje de comentarios para no prometer persistencia entre pantallas.
+
+Los componentes/servicios existentes de publicaciones/comentarios mantienen sus contratos y reglas. No se agrega un módulo funcional ni se implementa habilitación, administración, reportes, PWA u otra funcionalidad de Sprint 4. La paleta/radios existentes se reutilizan para spinner/dialog con comentarios CSS y movimiento reducido.
+
+### Datos, pedagogía y recorrido
+
+Como en el club: cookie es el sobre del navegador, JWT es el carnet firmado y Nest es quien revisa firma/vencimiento/ficha. App pregunta autorizar al abrir; el guard comparte esa comprobación; las pantallas reciben usuario de la memoria; el hijo modal emite la decisión al padre; refrescar solo ocurre por esa decisión y devuelve fechas nuevas, no el token. Si un permiso falla (403), el carnet no se destruye.
+
+02 documenta cuerpos/respuestas, seguridad, cookies antiguas, CSRF y límites. 00 mapa, 01 arquitectura, 08 evidencia, 09 matriz y guia-angular.md desarrollan archivos/clases/métodos, señales/Observable/shareReplay/finalize/DestroyRef, timers, interceptores y preguntas de defensa. 04 aclara los efectos del 401 sobre borradores. JWT de quince minutos no altera retroactivamente un token antiguo de veinte segundos: conserva su exp y, vencido, exige login.
+
+### Pruebas y ajustes
+
+Final: frontend build salida 0 sin avisos CSS; FE 138/138 en 18 suites (97 anteriores + 41). Backend build salida 0; BE 187/187 en 10 suites (162 anteriores + 25), ejecución completa con node node_modules/vitest/vitest.mjs run --no-file-parallelism --pool=threads. Sin tests omitidos, cambios de timeout/scripts/configuración o dependencias instaladas.
+
+Backend añade 18 HTTP (JWT/bcrypt/cookies/guard/servicio/middleware reales con ficha/transporte simulados) y siete de CSRF. Incluye 900 segundos, autorizar/renovar válidos e inválidos, cookie ausente/Bearer no sustituto, expirado/inexistente, vigencia durante consulta, cookies antiguas, producción/logout, no token/hash en JSON y orígenes. La ausencia de habilitación se documenta y prueba como limitación del schema, no como deshabilitado rechazado.
+
+Frontend añade 16 de AuthService con reloj simulado, 12 del interceptor, ocho de App, dos del modal y tres de login: inicio, caché/solicitud única, recarga/plazo restante, diez minutos, renovar/Ahora no, expiración/suspensión/limpieza, 401/403, rutas y retorno seguro. Los 97 casos previos se conservan; el guard ahora espera POST autorizar y el perfil usa caché. Se ajustó la expectativa exacta /login al nuevo /login?returnUrl=%2Fmi-perfil (primera regresión 96/97). No se debilita autenticación ni se omite el caso.
+
+Un primer build encontró una llave sobrante al editar AuthController, corregida antes de suites ampliadas. Backend en serie/forks pasó 187/187; una repetición terminó con cierre inesperado de worker, 177 contabilizados y sin aserción fallida. La repetición aislada con pool threads pasó toda la suite sin errores no controlados. Se documenta la incidencia del entorno y el comando final, sin cambiar la configuración del proyecto.
+
+### Riesgos, pendientes y cierre
+
+Sin .env/secretos modificados ni mostrados. La protección de origen se basa en comparación exacta y rechazo ante ausencia para cookie/sesión; se contrastó con OWASP, y atributos de cookies con MDN (enlaces en 02). Debe probarse FRONTEND_URL/HTTPS/Set-Cookie/credenciales y políticas de terceros en Vercel/navegador real; aquí no se hicieron llamadas/escrituras externas ni ensayo visual manual del modal.
+
+Pendiente importante de modelo: habilitado/activo y rechazo de una cuenta deshabilitada cuando exista esa funcionalidad aprobada. Sin revocación stateless: logout borra cookie pero una copia de JWT podría seguir válida hasta exp; no hay refresh tokens persistentes. Los timers son por pestaña, la estimación horaria es aproximada y el backend es autoridad. Cancelar un flujo no revierte un Set-Cookie ya emitido.
+
+API/frontend deben integrarse juntos: el arranque necesita autorizar y metadatos nuevos. Clientes manuales de sesión requieren Origin/Referer permitido; no se introducen excepciones inseguras para facilitar tests. Cookies antiguas vencidas requieren login, no renovación tardía. No se declara comprobado un bloqueo de cuentas que el modelo no representa.
+
+Revisión SHA-256 final: 26 archivos existentes modificados y 16 nuevos (42 en total), coincidentes con el inventario. Modelos/servicios de usuarios, publicaciones, comentarios, Cloudinary, dependencias y configuración de tests conservados respecto de 0d94da5. Se validaron enlaces/bloques Markdown y 44 IDs únicos; sin skip/todo/only. git diff --check termina sin errores; los avisos LF/CRLF responden a configuración existente, no a fallos de compilación.
+
+El flujo local de sesión está listo para validación integrada del Sprint 3, sin considerarlo cerrado en producción: faltan navegador/base/Vercel/cookies/CORS y la decisión explícita de habilitación. Se detiene y espera aprobación. Sin commit, merge ni deploy automáticos.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

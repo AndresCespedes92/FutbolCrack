@@ -1,9 +1,31 @@
-<a class="skip-link" href="#contenido">Saltar al contenido</a>
-<app-navbar />
-<main id="contenido" tabindex="-1">
-  <!-- Como en CineBera, Angular coloca aquí el componente de la ruta activa. -->
-  <router-outlet />
-</main>
-<footer class="site-footer">
-  <span>FUTBOLCRACK / TALENTO EN JUEGO</span><span>Sprint 1 · Vista de desarrollo</span>
-</footer>
+@if (cargandoSesion()) {
+  <section class="carga-sesion" role="status" aria-live="polite">
+    <span class="spinner" aria-hidden="true"></span>
+    <h1>Comprobando tu sesión</h1>
+    <p>Preparando tu lugar en la cancha…</p>
+  </section>
+} @else if (errorInicial()) {
+  <section class="carga-sesion" role="alert">
+    <p>{{ errorInicial() }}</p>
+    <button class="button" type="button" (click)="comprobarSesion()">Reintentar</button>
+  </section>
+} @else {
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+  <app-navbar />
+  <main id="contenido" tabindex="-1">
+    <!-- Como en CineBera, Angular coloca aquí el componente de la ruta activa. -->
+    <router-outlet />
+  </main>
+  <footer class="site-footer">
+    <span>FUTBOLCRACK / TALENTO EN JUEGO</span><span>Sprint 1 · Vista de desarrollo</span>
+  </footer>
+}
+@if (auth.mostrarAviso()) {
+  <app-extender-sesion
+    [renovando]="auth.renovando()"
+    [minutosRestantes]="auth.minutosRestantes()"
+    [error]="auth.errorRenovacion()"
+    (extender)="extenderSesion()"
+    (ahoraNo)="auth.ahoraNo()"
+  />
+}

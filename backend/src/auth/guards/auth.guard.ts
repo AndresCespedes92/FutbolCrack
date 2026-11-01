@@ -1,4 +1,3 @@
-
 import {
   CanActivate,
   ExecutionContext,
@@ -7,10 +6,12 @@ import {
 } from '@nestjs/common';
 
 import { JwtService } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
+import { SOLO_COOKIE_SESION } from '../sesion.constants.js';
 import type { Request } from 'express';
 
 // Información que guardamos en el JWT al iniciar sesión.
-interface JwtPayload {
+export interface JwtPayload {
   sub: string;
   perfil: string;
   iat?: number;
@@ -26,6 +27,7 @@ interface RequestAutenticada extends Request {
 export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
+    private readonly reflector: Reflector,
   ) {}
 
   /**
@@ -33,21 +35,19 @@ export class AuthGuard implements CanActivate {
    *
    * Permite acceder solamente si recibe un JWT válido.
    */
-  async canActivate(
-    context: ExecutionContext,
-  ): Promise<boolean> {
-    const request = context
-      .switchToHttp()
-      .getRequest<RequestAutenticada>();
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<RequestAutenticada>();
 
     // Opción 1: buscar el JWT en Authorization: Bearer ...
-    const tokenBearer = this.extraerTokenBearer(request);
+    const soloCookie = this.reflector.get<boolean>(
+      SOLO_COOKIE_SESION,
+      context.getHandler(),
+    );
+    const tokenBearer = soloCookie ? null : this.extraerTokenBearer(request);
 
     // Opción 2: buscar el JWT en la cookie "token".
     // Solo utilizamos la cookie cuando no hay Bearer.
-    const tokenCookie = tokenBearer
-      ? null
-      : this.extraerTokenCookie(request);
+    const tokenCookie = tokenBearer ? null : this.extraerTokenCookie(request);
 
     const token = tokenBearer ?? tokenCookie;
 
@@ -59,17 +59,26 @@ export class AuthGuard implements CanActivate {
 
     try {
       // Verifica la firma y la expiración del JWT.
-      const payload =
-        await this.jwtService.verifyAsync<JwtPayload>(token);
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
 
+      if (
+        typeof payload.sub !== 'string' ||
+        !payload.sub ||
+        typeof payload.exp !== 'number' ||
+        !Number.isFinite(payload.exp) ||
+        typeof payload.iat !== 'number' ||
+        !Number.isFinite(payload.iat)
+      ) {
+        throw new UnauthorizedException(
+          'La sesión no contiene identidad y vencimiento válidos',
+        );
+      }
       // Dejamos la identidad disponible para el Controller.
       request.user = payload;
 
       return true;
     } catch {
-      throw new UnauthorizedException(
-        'La sesión es inválida o ha vencido',
-      );
+      throw new UnauthorizedException('La sesión es inválida o ha vencido');
     }
   }
 

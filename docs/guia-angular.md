@@ -97,4 +97,60 @@ Ejemplo real: el encargado entrega a cada cuaderno el id de su jugada. «Cargar 
 | ¿Por qué vuelve a tres después de crear? | La nueva nota desplaza los offsets de páginas anteriores; reiniciar mantiene una secuencia coherente. |
 | ¿Un admin puede editar otra opinión? | No. La UI compara autor y Nest lo exige sin excepción de admin. |
 | ¿TruncatePipe ahora cuenta dos veces? | No; se reutiliza el mismo pipe en publicaciones y comentarios. |
-| ¿Se renovó la sesión? | No; el 401 conserva el borrador y explica que debe ingresar. Renovación y TTL quedan para 4C. |
+| ¿Se renovó la sesión? | Desde 4C se puede extender voluntariamente antes de exp; un 401 protegido redirige a login. Red/403/500 mantienen la sesión y el borrador actual. |
+
+## Gestión de sesión — Tarea 4C
+
+Las referencias anteriores a sesión pendiente corresponden a 3C/4B. Ahora App.ngOnInit llama a comprobarSesion, muestra la pantalla de carga y recién después permite renderizar el outlet. El POST autorizar recupera usuario/emitidaEn/expiraEn/horaServidor, sin JWT. Al recargar no se inventan quince minutos nuevos: se usan las fechas reales del servidor.
+
+### Qué hace cada parte
+
+| Archivo Angular | Responsabilidad |
+| --- | --- |
+| services/auth.ts | Estado en señales, autorizar compartido/caché, refrescar, aviso/expiración y limpieza de timers/listeners. |
+| services/api.config.ts | API_URL que ya usaba el proyecto, compartida por los servicios y el interceptor. |
+| app.ts/html/css | Pantalla inicial, error/reintento, continuidad de ruta y modal. |
+| components/extender-sesion/ | Presenta minutos restantes y emite extender/ahoraNo; no hace HTTP. |
+| interceptors/sesion.interceptor.ts | Trata 401 protegido sin confundirlo con 403 u error de red. |
+| guards/auth.guard.ts | Usa comprobarAcceso y preserva returnUrl de la ruta protegida. |
+| pages/login/login.ts/html | Guarda estado desde la respuesta del login, muestra mensaje de vencimiento y vuelve a destino interno. |
+
+### Recorrido del carnet del club
+
+1. La recepción (App) pregunta a la oficina (Nest) si el carnet de la cookie sigue vigente. Mientras espera muestra carga.
+2. Autorizar verifica firma/exp y ficha actual. Si no hay sesión, App va a login, manteniendo la dirección interna solicitada. Login y registro no se redirigen a sí mismos.
+3. Si el carnet es válido, AuthService guarda usuario y fechas en memoria. Las pantallas reutilizan usuario sin otro GET me. Raíz y guard comparten el mismo POST pendiente usando shareReplay.
+4. El timer de aviso apunta a exp menos cinco minutos. Carnet emitido 12:00 y válido hasta 12:15: aviso a 12:10. Si se recarga a 12:08, avisa en dos minutos.
+5. El modal hijo emite extender solo cuando el usuario pulsa. App llama refrescar; Nest exige que el carnet siga vigente y devuelve otro hasta quince minutos desde ahora. No se manda un rol para pedir permisos.
+6. Ahora no cierra el aviso sin solicitar HTTP y mantiene el vencimiento original. No hay renovación automática.
+7. Al vencer, AuthService limpia usuario/timers y navega al login con mensaje. Al volver de suspensión compara Date.now ajustado con horaServidor; no depende de que cada callback haya corrido puntualmente.
+8. Logout pide al servidor borrar cookie y solo en éxito limpia el estado. Si falla por red, se conserva la sesión para reintentar.
+
+### Señales, Observables y timers
+
+`usuarioActual`, `expiraEn`, `mostrarAviso`, `renovando` y los mensajes son señales: la plantilla lee `auth.mostrarAviso()` y Angular actualiza esa parte. El hijo recibe `[renovando]` y emite `(extender)`/`(ahoraNo)`, como las tarjetas de CineBera y FutbolCrack.
+
+shareReplay permite que dos consumidores esperen una sola autorización/renovación pendiente. finalize limpia la referencia a la solicitud al terminar. takeUntilDestroyed y los callbacks de DestroyRef cancelan lecturas y limpian listeners/timers cuando corresponde. versionSesion evita que una respuesta antigua de autorización restaure un usuario después de logout.
+
+Se mantiene un setTimeout de aviso y otro de expiración. Antes de programar una sesión nueva se limpian ambos. El exp de Nest es la autoridad; el cálculo de UI corrige aproximadamente el desfase de reloj y no reemplaza validación del servidor. No se usa localStorage/sessionStorage ni document.cookie para leer el token.
+
+### Interceptor y errores
+
+El interceptor está registrado en app.config.ts con withInterceptors. Observa respuestas de nuestra API y endpoints protegidos. Un 401 significa sesión no válida y lleva a login; un 403 significa que la solicitud no tiene permiso y no cierra la sesión. Errores de red/500 se muestran en el componente, preservando formularios.
+
+El 401 de credenciales de login y el de autorizar sin sesión son esperables y tienen sus manejadores propios; por eso se excluyen del cierre global. Un 401 real que destruye la pantalla al redirigir no conserva el borrador entre pantallas: la memoria del formulario no es almacenamiento permanente.
+
+### Preguntas para defender
+
+| Pregunta | Respuesta implementada |
+| --- | --- |
+| ¿JWT y cookie son lo mismo? | No: el JWT es el carnet firmado; la cookie HttpOnly es el medio que el navegador guarda/envía. Angular no lee el token. |
+| ¿Por qué autorizar no renueva? | Comprueba el carnet actual y devuelve su exp; emitir otro exige la acción voluntaria de refrescar. |
+| ¿Puede renovar un token vencido? | No. AuthGuard y el servicio comprueban exp, incluso después de consultas que puedan tardar. |
+| ¿Cómo evitás dos pedidos al iniciar? | Raíz y guard comparten el Observable pendiente; luego usan el estado válido en memoria. |
+| ¿Por qué no contás diez minutos desde abrir Angular? | El JWT pudo emitirse antes; se calcula exp menos cinco con metadatos del backend. |
+| ¿Qué ocurre con 403 al dar de baja una jugada? | Se informa el rechazo y mantiene sesión; Nest decide permisos actuales. |
+| ¿CORS impide CSRF por sí solo? | No. El middleware valida Origin/Referer y rechaza su ausencia en sesión/escrituras con cookies. |
+| ¿Se puede comprobar un usuario deshabilitado? | Todavía no: el modelo no tiene habilitación. Se valida existencia, sin inventar campos/administración de Sprint 4. |
+
+CSS del spinner en app.css y del dialog en extender-sesion.css: mismos colores/radios globales, contorno de teclado y preferencia de movimiento reducido. Pruebas con reloj simulado y límites reales en 08; contratos, cookies/CSRF y riesgos en 02.

@@ -225,3 +225,31 @@ Esta sección actualiza los pendientes de UI de 4A. Se conserva Angular standalo
 Se amplían también los tests de PublicacionCard, PublicacionesService y MiPerfil, conservando las suites existentes. El mapa de relaciones backend sigue en 04 y el recorrido educativo completo en [guia-angular.md](guia-angular.md).
 
 Ejemplo del club: cada ficha de jugada tiene debajo su propio cuaderno de comentarios, identificado por publicacionId. No comparte array con la otra jugada. «Cargar más» pide solo tres hojas siguientes y las anexa. Tras escribir una nota nueva se vuelve a la primera página para no continuar con offsets viejos.
+
+## Sprint 3, Tarea 4C — Sesión inicial y renovación voluntaria
+
+| Archivo | Funcionalidad actual |
+| --- | --- |
+| backend/src/auth/sesion.constants.ts y seguridad.module.ts | Plazo compartido 900 segundos para JWT. |
+| backend/src/auth/sesion-cookie.ts | Opciones HttpOnly/Secure/SameSite y maxAge según exp real; limpieza coherente. |
+| backend/src/auth/auth.controller.ts | POST /auth/autorizar y /auth/refrescar (200/401), login con metadatos, me compatible y logout. |
+| backend/src/auth/auth.service.ts | Consulta usuario actual, vigencia antes/después, emisión y proyección pública sin JWT en JSON. |
+| backend/src/auth/guards/auth.guard.ts | Guard único, cookie obligatoria en nuevos endpoints, claims y firma/exp válidos. |
+| backend/src/common/origenes-permitidos.ts | Orígenes exactos compartidos por CORS y CSRF. |
+| backend/src/common/middlewares/validar-origen.middleware.ts y main.ts | Origin/Referer/rechazo ante ausencia para cookies/sesión; CORS conserva credentials. |
+| frontend/src/app/services/auth.ts | Estado/fechas en memoria, autorizar compartido, renovación, aviso/expiración, timers/listeners y limpieza. |
+| frontend/src/app/services/api.config.ts | Origen API compartido con servicios e interceptor. |
+| frontend/src/app/interceptors/sesion.interceptor.ts y app.config.ts | 401 de endpoints protegidos; 403/red/500 no cierran sesión. |
+| frontend/src/app/app.ts/html/css | Carga inicial/reintento, continuidad de ruta y modal de sesión. |
+| frontend/src/app/components/extender-sesion/ | Dialog propio con Extender sesión/Ahora no y estados de espera/error. |
+| frontend/src/app/guards/auth.guard.ts y pages/login/ | Reutiliza sesión/autorización pendiente y returnUrl interno. |
+| backend/src/auth/auth.sesion.http.spec.ts | 18 casos HTTP con JWT/bcrypt/cookie/middleware reales y usuarios simulados. |
+| backend/src/common/middlewares/validar-origen.middleware.spec.ts | Siete casos de política CSRF y compatibilidad de Bearer/lecturas. |
+| frontend/src/app/services/auth.spec.ts | 16 casos con reloj simulado: autorización, caché, aviso, renovación, vencimiento, suspensión y limpieza. |
+| frontend/src/app/interceptors/sesion.interceptor.spec.ts | 12 casos de 401/403/500, excepciones y origen exacto. |
+| frontend/src/app/app.sesion.spec.ts | Ocho casos de pantalla inicial, rutas, errores, modal y solicitud compartida raíz/guard. |
+| frontend/src/app/components/extender-sesion/extender-sesion.spec.ts | Dos casos de Outputs/teclado/bloqueo del modal. |
+| frontend/src/app/pages/login/login.sesion.spec.ts | Tres casos de destino seguro/credenciales y recuperación del estado. |
+| frontend/src/app/testing/sesion-fixture.ts | Metadatos exclusivos de pruebas, sin tokens. |
+
+Limitación de modelo: no existe habilitado/activo en Usuario; solo se puede comprobar existencia/ficha actual. No se implementa bloqueo de cuentas de Sprint 4 ni se declara comprobado un usuario deshabilitado. Explicación, endpoints, decisiones CSRF y límites en [02](02-AUTENTICACION-Y-SEGURIDAD.md).
