@@ -1,0 +1,202 @@
+<header>
+  <span class="eyebrow">ADMINISTRACIÓN DEL CLUB</span>
+  <h1>Estadísticas</h1>
+  <p>
+    Actividad de contenido visible. Días completos en UTC−03:00; se excluyen publicaciones dadas de
+    baja y sus comentarios.
+  </p>
+</header>
+@for (reporte of reportes; track $index; let indice = $index) {
+  <section class="panel" [attr.aria-labelledby]="'titulo-' + indice">
+    <h2 [id]="'titulo-' + indice">{{ reporte.titulo }}</h2>
+    <form [formGroup]="reporte.formulario" (ngSubmit)="actualizar(indice)" novalidate>
+      <fieldset [disabled]="reporte.cargando">
+        <legend>Rango de fechas</legend>
+        @for (campo of ['desde', 'hasta']; track campo) {
+          <div class="field">
+            <label [for]="campo + indice">{{ campo === 'desde' ? 'Desde' : 'Hasta' }}</label>
+            <input
+              type="date"
+              [id]="campo + indice"
+              [formControlName]="campo"
+              required
+              [class.input-invalido]="reporte.formulario.touched && reporte.formulario.invalid"
+              [class.input-valido]="reporte.formulario.dirty && reporte.formulario.valid"
+              [attr.aria-invalid]="reporte.formulario.touched && reporte.formulario.invalid"
+              [attr.aria-describedby]="'validacion-' + indice"
+            />
+          </div>
+        }
+        <button type="submit" [disabled]="reporte.cargando">
+          {{ reporte.cargando ? 'Consultando…' : 'Actualizar' }}
+        </button>
+      </fieldset>
+      <p [id]="'validacion-' + indice" class="error" role="status">
+        @if (reporte.formulario.touched && reporte.formulario.invalid) {
+          Ingresá dos fechas válidas; Desde no puede ser posterior a Hasta.
+        }
+      </p>
+    </form>
+    @if (reporte.cargando) {
+      <p role="status">Cargando reporte…</p>
+    }
+    @if (reporte.error) {
+      <p class="error" role="alert">{{ reporte.error }}</p>
+    }
+    @if (reporte.resultado; as resultado) {
+      <p class="rango-aplicado">
+        Rango aplicado: {{ resultado.desde }} al {{ resultado.hasta }} · {{ resultado.zonaHoraria }}
+      </p>
+      @if (indice === 0) {
+        @if (publicaciones.resultado!.datos.length) {
+          <div
+            class="barras"
+            role="img"
+            aria-label="Barras horizontales de publicaciones por usuario; valores en tabla"
+          >
+            @for (dato of publicaciones.resultado!.datos; track $index) {
+              <div class="fila-barra">
+                <span>{{ dato.nombreUsuario || dato.nombre }}</span>
+                <div class="pista">
+                  <div class="barra" [style.width.%]="anchoBarra(dato.cantidad)"></div>
+                </div>
+                <strong>{{ dato.cantidad }}</strong>
+              </div>
+            }
+          </div>
+          <div class="tabla-scroll">
+            <table>
+              <caption>
+                Publicaciones por usuario
+              </caption>
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Publicaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (dato of publicaciones.resultado!.datos; track $index) {
+                  <tr>
+                    <td>
+                      {{ dato.nombre }} {{ dato.nombreUsuario ? '@' + dato.nombreUsuario : '' }}
+                    </td>
+                    <td>{{ dato.cantidad }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="sin-datos">No hay publicaciones en este rango.</p>
+        }
+      }
+      @if (indice === 1) {
+        <p class="total">{{ total.resultado!.total }} <span>comentarios</span></p>
+        @if (total.resultado!.total > 0) {
+          <figure>
+            <figcaption>Comentarios diarios: puntos en días con actividad</figcaption>
+            <svg
+              viewBox="0 0 600 190"
+              role="img"
+              aria-label="Evolución diaria de comentarios; cantidades y fechas en tabla"
+            >
+              <path d="M25 15 V165 H575" class="ejes" />
+              <polyline [attr.points]="puntosLinea()" class="linea" />
+              @for (dia of total.resultado!.dias; track dia.fecha; let i = $index) {
+                <circle [attr.cx]="puntoDia(i).x" [attr.cy]="puntoDia(i).y" r="4" class="punto">
+                  <title>{{ dia.fecha }}: {{ dia.cantidad }}</title>
+                </circle>
+              }
+            </svg>
+          </figure>
+          <div class="tabla-scroll">
+            <table>
+              <caption>
+                Detalle diario (días ausentes: cero)
+              </caption>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Comentarios</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (dia of total.resultado!.dias; track dia.fecha) {
+                  <tr>
+                    <td>{{ dia.fecha }}</td>
+                    <td>{{ dia.cantidad }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="sin-datos">No hay comentarios en este rango.</p>
+        }
+      }
+      @if (indice === 2) {
+        @if (comentarios.resultado!.datos.length) {
+          <figure class="distribucion">
+            <figcaption>Distribución de comentarios por publicación</figcaption>
+            <svg
+              viewBox="0 0 120 120"
+              class="dona"
+              role="img"
+              aria-label="Gráfico de dona; cantidades por publicación en tabla"
+            >
+              @for (
+                dato of comentarios.resultado!.datos;
+                track dato.publicacionId;
+                let i = $index
+              ) {
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="45"
+                  fill="none"
+                  stroke-width="18"
+                  pathLength="100"
+                  [attr.stroke]="color(i)"
+                  [attr.stroke-dasharray]="segmento(i) + ' ' + (100 - segmento(i))"
+                  [attr.stroke-dashoffset]="desplazamiento(i)"
+                >
+                  <title>{{ dato.titulo }}: {{ dato.cantidad }}</title>
+                </circle>
+              }
+            </svg>
+          </figure>
+          <div class="tabla-scroll">
+            <table>
+              <caption>
+                Comentarios por publicación
+              </caption>
+              <thead>
+                <tr>
+                  <th>Publicación</th>
+                  <th>Comentarios</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (
+                  dato of comentarios.resultado!.datos;
+                  track dato.publicacionId;
+                  let i = $index
+                ) {
+                  <tr>
+                    <td>
+                      <span class="marca" [style.background]="color(i)"></span>{{ dato.titulo }}
+                    </td>
+                    <td>{{ dato.cantidad }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="sin-datos">No hay publicaciones con comentarios en este rango.</p>
+        }
+      }
+    }
+  </section>
+}

@@ -9,14 +9,17 @@ describe('UsuariosService: proyección del padrón', () => {
     const listado = [{ nombre: 'Mateo', nombreUsuario: 'mateo.10' }];
     const consulta = {
       select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue(listado),
     };
     const modelo = { find: vi.fn().mockReturnValue(consulta) };
     const servicio = new UsuariosService(modelo as unknown as Model<Usuario>);
-    await expect(servicio.findAll()).resolves.toBe(listado);
+    await expect(servicio.findAll()).resolves.toEqual([
+      { ...listado[0], activo: true },
+    ]);
     expect(modelo.find).toHaveBeenCalledWith();
     expect(consulta.select).toHaveBeenCalledWith(
-      'nombre apellido correo nombreUsuario fechaNacimiento descripcion imagenPerfil perfil createdAt updatedAt',
+      'nombre apellido correo nombreUsuario fechaNacimiento descripcion imagenPerfil perfil activo createdAt updatedAt',
     );
     const campos = consulta.select.mock.calls[0][0].split(' ');
     expect(campos).not.toContain('password');

@@ -29,11 +29,11 @@ export class AdministradorGuard implements CanActivate {
     }
     // Consultamos el rol actual: un JWT anterior no conserva permisos si fueron retirados en MongoDB.
     const usuario = await this.usuariosService.findById(usuarioId);
-    if (!usuario)
+    if (!usuario || usuario.activo === false)
       throw new UnauthorizedException('El usuario autenticado no existe');
     if (usuario.perfil !== 'administrador') {
       throw new ForbiddenException(
-        'Solo un administrador puede consultar el listado de usuarios',
+        'Solo un administrador puede administrar usuarios',
       );
     }
     return true;

@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "appData": {
+    "descripcion": "Solo interfaz estática de FutbolCrack; sin datos ni acciones offline"
+  },
+  "assetGroups": [
+    {
+      "name": "interfaz-estatica",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/index.html",
+          "/*.css$",
+          "/*.js$",
+          "/manifest.webmanifest",
+          "/favicon.svg",
+          "/icons/**"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [],
+  "navigationUrls": ["/", "/login", "/registro"],
+  "navigationRequestStrategy": "performance"
+}

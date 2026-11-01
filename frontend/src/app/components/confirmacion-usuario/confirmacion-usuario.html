@@ -1,0 +1,24 @@
+<dialog
+  #modal
+  aria-labelledby="titulo-baja-usuario"
+  aria-describedby="explicacion-baja-usuario"
+  [attr.aria-busy]="procesando"
+  (cancel)="cancelarBaja($event)"
+>
+  <span class="eyebrow">ADMINISTRACIÓN DEL CLUB</span>
+  <h2 id="titulo-baja-usuario">¿Deshabilitar a {{ usuario.nombre }} {{ usuario.apellido }}?</h2>
+  <p id="explicacion-baja-usuario">
+    La cuenta @{{ usuario.nombreUsuario }} no podrá iniciar sesión ni continuar usando una sesión
+    existente. Sus datos se conservarán y podrás rehabilitarla.
+  </p>
+  @if (error) {
+    <p class="error" role="alert">{{ error }}</p>
+  }
+  <div class="acciones">
+    <button autofocus type="button" [disabled]="procesando" (click)="cancelarBaja()">
+      Cancelar</button
+    ><button type="button" [disabled]="procesando" (click)="confirmarBaja()">
+      {{ procesando ? 'Deshabilitando…' : 'Confirmar' }}
+    </button>
+  </div>
+</dialog>

@@ -97,4 +97,223 @@ Ejemplo real: el encargado entrega a cada cuaderno el id de su jugada. «Cargar 
 | ¿Por qué vuelve a tres después de crear? | La nueva nota desplaza los offsets de páginas anteriores; reiniciar mantiene una secuencia coherente. |
 | ¿Un admin puede editar otra opinión? | No. La UI compara autor y Nest lo exige sin excepción de admin. |
 | ¿TruncatePipe ahora cuenta dos veces? | No; se reutiliza el mismo pipe en publicaciones y comentarios. |
-| ¿Se renovó la sesión? | No; el 401 conserva el borrador y explica que debe ingresar. Renovación y TTL quedan para 4C. |
+| ¿Se renovó la sesión? | Desde 4C se puede extender voluntariamente antes de exp; un 401 protegido redirige a login. Red/403/500 mantienen la sesión y el borrador actual. |
+
+## Gestión de sesión — Tarea 4C
+
+Las referencias anteriores a sesión pendiente corresponden a 3C/4B. Ahora App.ngOnInit llama a comprobarSesion, muestra la pantalla de carga y recién después permite renderizar el outlet. El POST autorizar recupera usuario/emitidaEn/expiraEn/horaServidor, sin JWT. Al recargar no se inventan quince minutos nuevos: se usan las fechas reales del servidor.
+
+### Qué hace cada parte
+
+| Archivo Angular | Responsabilidad |
+| --- | --- |
+| services/auth.ts | Estado en señales, autorizar compartido/caché, refrescar, aviso/expiración y limpieza de timers/listeners. |
+| services/api.config.ts | API_URL que ya usaba el proyecto, compartida por los servicios y el interceptor. |
+| app.ts/html/css | Pantalla inicial, error/reintento, continuidad de ruta y modal. |
+| components/extender-sesion/ | Presenta minutos restantes y emite extender/ahoraNo; no hace HTTP. |
+| interceptors/sesion.interceptor.ts | Trata 401 protegido sin confundirlo con 403 u error de red. |
+| guards/auth.guard.ts | Usa comprobarAcceso y preserva returnUrl de la ruta protegida. |
+| pages/login/login.ts/html | Guarda estado desde la respuesta del login, muestra mensaje de vencimiento y vuelve a destino interno. |
+
+### Recorrido del carnet del club
+
+1. La recepción (App) pregunta a la oficina (Nest) si el carnet de la cookie sigue vigente. Mientras espera muestra carga.
+2. Autorizar verifica firma/exp y ficha actual. Si no hay sesión, App va a login, manteniendo la dirección interna solicitada. Login y registro no se redirigen a sí mismos.
+3. Si el carnet es válido, AuthService guarda usuario y fechas en memoria. Las pantallas reutilizan usuario sin otro GET me. Raíz y guard comparten el mismo POST pendiente usando shareReplay.
+4. El timer de aviso apunta a exp menos cinco minutos. Carnet emitido 12:00 y válido hasta 12:15: aviso a 12:10. Si se recarga a 12:08, avisa en dos minutos.
+5. El modal hijo emite extender solo cuando el usuario pulsa. App llama refrescar; Nest exige que el carnet siga vigente y devuelve otro hasta quince minutos desde ahora. No se manda un rol para pedir permisos.
+6. Ahora no cierra el aviso sin solicitar HTTP y mantiene el vencimiento original. No hay renovación automática.
+7. Al vencer, AuthService limpia usuario/timers y navega al login con mensaje. Al volver de suspensión compara Date.now ajustado con horaServidor; no depende de que cada callback haya corrido puntualmente.
+8. Logout pide al servidor borrar cookie y solo en éxito limpia el estado. Si falla por red, se conserva la sesión para reintentar.
+
+### Señales, Observables y timers
+
+`usuarioActual`, `expiraEn`, `mostrarAviso`, `renovando` y los mensajes son señales: la plantilla lee `auth.mostrarAviso()` y Angular actualiza esa parte. El hijo recibe `[renovando]` y emite `(extender)`/`(ahoraNo)`, como las tarjetas de CineBera y FutbolCrack.
+
+shareReplay permite que dos consumidores esperen una sola autorización/renovación pendiente. finalize limpia la referencia a la solicitud al terminar. takeUntilDestroyed y los callbacks de DestroyRef cancelan lecturas y limpian listeners/timers cuando corresponde. versionSesion evita que una respuesta antigua de autorización restaure un usuario después de logout.
+
+Se mantiene un setTimeout de aviso y otro de expiración. Antes de programar una sesión nueva se limpian ambos. El exp de Nest es la autoridad; el cálculo de UI corrige aproximadamente el desfase de reloj y no reemplaza validación del servidor. No se usa localStorage/sessionStorage ni document.cookie para leer el token.
+
+### Interceptor y errores
+
+El interceptor está registrado en app.config.ts con withInterceptors. Observa respuestas de nuestra API y endpoints protegidos. Un 401 significa sesión no válida y lleva a login; un 403 significa que la solicitud no tiene permiso y no cierra la sesión. Errores de red/500 se muestran en el componente, preservando formularios.
+
+El 401 de credenciales de login y el de autorizar sin sesión son esperables y tienen sus manejadores propios; por eso se excluyen del cierre global. Un 401 real que destruye la pantalla al redirigir no conserva el borrador entre pantallas: la memoria del formulario no es almacenamiento permanente.
+
+### Preguntas para defender
+
+| Pregunta | Respuesta implementada |
+| --- | --- |
+| ¿JWT y cookie son lo mismo? | No: el JWT es el carnet firmado; la cookie HttpOnly es el medio que el navegador guarda/envía. Angular no lee el token. |
+| ¿Por qué autorizar no renueva? | Comprueba el carnet actual y devuelve su exp; emitir otro exige la acción voluntaria de refrescar. |
+| ¿Puede renovar un token vencido? | No. AuthGuard y el servicio comprueban exp, incluso después de consultas que puedan tardar. |
+| ¿Cómo evitás dos pedidos al iniciar? | Raíz y guard comparten el Observable pendiente; luego usan el estado válido en memoria. |
+| ¿Por qué no contás diez minutos desde abrir Angular? | El JWT pudo emitirse antes; se calcula exp menos cinco con metadatos del backend. |
+| ¿Qué ocurre con 403 al dar de baja una jugada? | Se informa el rechazo y mantiene sesión; Nest decide permisos actuales. |
+| ¿CORS impide CSRF por sí solo? | No. El middleware valida Origin/Referer y rechaza su ausencia en sesión/escrituras con cookies. |
+| ¿Se puede comprobar un usuario deshabilitado? | Todavía no: el modelo no tiene habilitación. Se valida existencia, sin inventar campos/administración de Sprint 4. |
+
+CSS del spinner en app.css y del dialog en extender-sesion.css: mismos colores/radios globales, contorno de teclado y preferencia de movimiento reducido. Pruebas con reloj simulado y límites reales en 08; contratos, cookies/CSRF y riesgos en 02.
+
+## Tarea 5A — Cómo estudiar la administración de usuarios
+
+### Archivos y responsabilidades
+
+`pages/dashboard-usuarios/dashboard-usuarios.ts` coordina listado, formulario y operaciones. Su HTML muestra tabla, radios y mensajes; su CSS comenta grilla de dos columnas, cambio móvil, colores y bordes redondeados. Para cambiar espaciado se modifica .panel; para el ancho móvil, @media (max-width:700px); la tabla tiene scroll local. Se conservan variables globales de negro/musgo/gris.
+
+`services/usuarios.ts` concentra HTTP y contratos. `guards/administrador.guard.ts` controla navegación. `components/confirmacion-usuario/` separa TS, HTML y CSS del modal. `app.routes.ts` carga la pantalla al navegar a /dashboard/usuarios; navbar muestra el enlace según el usuario de AuthService. El backend vuelve a verificar todo: esconder un botón no impide llamadas manuales.
+
+### Recorrido paso a paso
+
+1. El secretario inicia sesión. AuthService conserva la ficha y metadatos de 4C, sin exponer JWT al componente.
+2. Pulsa Administrar usuarios. administradorGuard llama comprobarAcceso. Sin sesión redirige al login con returnUrl; con sesión común vuelve al feed con acceso=sin-permiso y aviso, sin cerrar sesión; un admin continúa.
+3. DashboardUsuarios.ngOnInit llama cargarUsuarios. UsuariosService.listar envía GET con cookie. Nest verifica JWT, ficha activa y rol actual, consulta MongoDB y responde sin hash. Angular reemplaza usuarios y termina el estado de carga.
+4. El formulario usa crearFormularioRegistro: reutiliza reglas y estilos rojo/verde de CineBera, con controles nuevos para esta pantalla. Perfil es un FormControl separado y se elige con radio buttons. CrearUsuario mapea nombres del formulario a DTO y nunca envía hash ni activo.
+5. Nest valida DTO, compara contraseñas, genera hash y guarda mediante el mismo método privado usado por el registro. Tras 201 se limpia el formulario, vuelve el rol usuario y se recarga el padrón. Ante error se conserva el borrador.
+6. Deshabilitar solo selecciona una cuenta y abre ConfirmacionUsuario. Input usuario le indica a quién; procesando/error muestran estado. Output cancelar llama cancelarBaja sin HTTP; confirmar llama confirmarBaja en el padre y recién ahí ejecuta DELETE.
+7. Si Nest confirma, se cierra el modal y se recarga el listado con mensaje. Si falla, el modal permanece con error. Habilitar llama su endpoint y espera confirmación de éxito del servidor.
+8. El jugador suspendido recibe 401 incluso con JWT anterior: la ficha tiene activo false. No se eliminan sus publicaciones ni comentarios. Las cuentas antiguas sin campo continúan activas.
+
+### Fragmentos reales y conceptos
+
+```ts
+readonly formulario = crearFormularioRegistro();
+readonly perfil = new FormControl<PerfilUsuario>('usuario', { nonNullable: true });
+```
+
+La factoría comparte validadores, no instancias de controles: escribir aquí no cambia el registro. Los bindings [formControl] y [class.input-invalido]/[class.input-valido] conectan estado y presentación; @if decide qué mensaje renderizar y @for recorre el padrón. No son directivas propias. takeUntilDestroyed evita mantener suscripciones de un componente destruido. markForCheck notifica los cambios de llamadas asíncronas a la vista.
+
+```ts
+cancelarBaja(): void {
+  if (!this.procesandoId) {
+    this.seleccionado = null;
+    this.errorOperacion = '';
+  }
+}
+```
+
+Cancelar cambia estado local. El modal no tiene servicio HTTP: se comunican hijo y padre mediante Input/Output. La comparación de claves, formulario reactivo y feedback visual retoman CineBera; se adaptan al perfil de jugador y al rol administrativo, sin crear un panel de reclutadores.
+
+### Preguntas de defensa
+
+- **¿Rol y activo son lo mismo?** No: rol define permisos; activo permite o bloquea usar la cuenta. Un admin inactivo también queda bloqueado.
+- **¿Por qué no alcanza un guard Angular?** El cliente puede evitarlo y llamar al endpoint; Nest consulta identidad, estado y rol.
+- **¿Cómo se invalida un JWT anterior?** Su firma puede seguir válida, pero AuthGuard consulta activo en MongoDB y responde 401. No se cambia la duración de 15 minutos.
+- **¿Qué es una baja lógica?** Cambiar activo false conservando el documento y sus relaciones, como suspender un carnet del club sin destruir la ficha.
+- **¿Cómo se protege el último admin?** Esta implementación no permite deshabilitar ninguna cuenta administradora. Evita contar y luego actualizar con una carrera; es una política explícitamente más restrictiva.
+- **¿Qué pasa con un usuario antiguo?** activo !== false considera activa la ausencia; no se migró la base.
+- **¿Por qué compartir hash y formulario?** Evita duplicar reglas y negocio. El backend sigue siendo autoridad aunque Angular valide primero.
+- **¿Cómo se demuestra cancelar?** Las pruebas abren el modal, cancelan y verifican que no se emitió DELETE. No se usa window.confirm ni alert.
+- **¿Qué está pendiente de comprobar?** Navegador/móvil real, Atlas e integración de cookies en producción; las suites locales usan HTTP y dobles controlados.
+
+## Tarea 5B — Estadísticas del club, paso a paso
+
+### Qué estudiar y dónde
+
+- `pages/dashboard-estadisticas/dashboard-estadisticas.ts`: DashboardEstadisticas, tres formularios, actualizar/cargar y geometría (anchoBarra, puntoDia, puntosLinea, segmento, desplazamiento).
+- Mismo nombre `.html`: filtros, @for de reportes, @if de estados, gráficos/tablas. `.css`: variables de color, radios, SVG y móvil; comentarios indican qué modificar.
+- `services/estadisticas.ts`: EstadisticasService y contratos. Cada método devuelve Observable de GET con desde/hasta y withCredentials; el contenedor se suscribe.
+- `app.routes.ts`: ruta lazy /dashboard/estadisticas con administradorGuard existente. Navbar muestra enlace al admin habilitado; Nest exige lo mismo sin depender de Angular.
+
+Como en CineBera, TS mantiene estado/validaciones, HTML usa bindings y CSS define presentación. @if/@for y ReactiveFormsModule son de Angular; no se crean pipes/directivas propios para gráficos.
+
+### Recorrido concreto
+
+1. El secretario pulsa Estadísticas. El router comprueba sesión/rol con el guard de 5A. Visitante va a login; jugador común vuelve al feed con aviso, conservando sesión.
+2. ngOnInit inicia tres consultas con formularios independientes, desde primer día del mes hasta hoy en UTC−03:00.
+3. Actualizar(0) llama cargar para publicaciones. Marca controles, rechaza calendario/rango inválido y bloquea nuevas consultas de ese reporte mientras espera.
+4. EstadisticasService envía el rango. Nest verifica JWT/ficha actual, valida query y convierte días a instantes UTC. El navegador no decide permisos ni cuenta documentos.
+5. MongoDB aplica match/group para publicaciones, o lookup/match/count/group para comentarios. Como ordenar planillas antes de sumar, primero se descarta lo ajeno al período y a la cartelera visible.
+6. La respuesta trae cantidades/rango aplicado. El componente finaliza carga y markForCheck actualiza HTML. Barras comparan jugadores, línea muestra días y dona distribuye comentarios; tablas conservan cifras exactas.
+7. Cambiar Hasta en comentarios totales y Actualizar solo reemplaza ese reporte; los otros mantienen datos/rango. Un error retira cifras anteriores, conserva controles y permite reintentar.
+8. Si el admin retira una publicación desde el feed con el modal existente, el documento permanece. Al actualizar reportes se excluyen esa jugada y sus comentarios. Las cifras de un mes pasado pueden bajar: reflejan visibilidad actual, no historia inmutable.
+
+### Ejemplos reales y conceptos
+
+```ts
+readonly publicaciones = crearReporte<PublicacionesPorUsuario>('Publicaciones por usuario');
+readonly total = crearReporte<ComentariosTotales>('Comentarios totales');
+```
+
+Cada llamada crea su propio FormGroup: compartir una función evita duplicar estructura, pero no comparte controles. validarRango es un ValidatorFn del grupo, como comparar contraseñas en CineBera. Bindings de clases muestran rojo/verde; [disabled] bloquea fieldset durante consulta. Nest repite validaciones porque un cliente puede omitir Angular.
+
+```ts
+{ $match: { activo: { $ne: false }, createdAt: { $gte: inicio, $lt: finExclusivo } } },
+{ $group: { _id: '$autorId', cantidad: { $sum: 1 } } },
+```
+
+Fragmento real de PublicacionesService: selecciona publicaciones visibles creadas en el intervalo y forma grupos por autor. `$count` da una cifra global; `$group` devuelve varias. `$lookup` de ComentariosService comprueba que la publicación sigue visible. No se envían textos/correos para graficar. Detalle en 06.
+
+SVG/porcentajes son geometría de presentación: segmento divide cantidades ya recibidas, no cuenta documentos. puntosLinea añade tramos a cero en días ausentes sin crear miles de elementos vacíos. El total viene de MongoDB. Las tablas permiten leer sin interpretar colores. takeUntilDestroyed termina suscripciones al destruir el componente; los formularios bloquean envíos simultáneos de un mismo reporte.
+
+### Preguntas de defensa
+
+- **¿Por qué calcular en backend?** Evita descargar todo; MongoDB filtra/agrupa con reglas comunes y Nest controla permisos.
+- **¿Contar o agrupar?** Contar devuelve total; agrupar por publicación devuelve una cantidad por jugada.
+- **¿Desde/Hasta son inclusivos?** Sí, días completos UTC−03:00. La consulta usa inicio incluido y comienzo del siguiente día excluido para no perder milisegundos.
+- **¿Qué fecha se filtra?** Creación de publicación en A; creación de comentario en B/C. Editar no cambia createdAt.
+- **¿Qué sucede con bajas?** Jugada inactiva y comentarios fuera aunque existan en MongoDB. Deshabilitar una cuenta no retira sus jugadas por sí mismo.
+- **¿Qué es $facet?** Produce varias salidas del mismo conjunto filtrado: aquí total y evolución diaria.
+- **¿Librería de gráficos?** No: barras CSS y línea/dona SVG nativas, con tablas equivalentes y estilos separados/comentados.
+- **¿Cómo se evita una respuesta vieja?** Cada reporte bloquea nuevos envíos/filtros durante carga; no se superponen sus consultas. Los demás son independientes.
+- **¿Qué demuestra la suite?** Reglas, consultas, fixtures, HTTP local y DOM/router. No acredita índices/rendimiento Atlas ni apariencia manual en teléfono.
+
+## Tarea 5C — Pipe, directiva y PWA para explicar en la defensa
+
+### Dónde mirar primero
+
+1. `pipes/truncate.pipe.ts`: presentación de texto largo; el componente conserva el booleano de expansión.
+2. `pipes/fecha-relativa.pipe.ts`: transform convierte Date/ISO en tiempo transcurrido; la fecha exacta queda en time.datetime/title.
+3. `pipes/iniciales.pipe.ts`: iniciales del primer/último nombre para avatar sin foto; fallback FC.
+4. `directives/resaltar-autor.directive.ts`: host binding agrega comentario-propio al booleano recibido.
+5. `directives/auto-focus.directive.ts`: afterNextRender enfoca el editor recién creado.
+6. `directives/permiso-rol.directive.ts`: TemplateRef/ViewContainerRef muestran una plantilla y effect observa el usuario actual.
+7. `ngsw-config.json`, `app.config.ts`, `angular.json`, `public/manifest.webmanifest`: qué se guarda, cómo se registra y cómo se presenta la PWA.
+
+Los imports standalone están en PublicacionCard, ComentariosPublicacion y Navbar. HTML conserva bindings; el CSS del comentario define borde/color de resaltado y explica dónde cambiarlo. No hay backend nuevo ni un módulo adicional.
+
+### Ejemplos del código real
+
+```html
+<ng-container *appPermisoRol="'administrador'">
+  <!-- Enlaces de administración -->
+</ng-container>
+```
+
+El asterisco es sintaxis estructural: Angular entrega una plantilla. La directiva inserta una vista si AuthService.usuarioActual indica rol permitido/activo, y la retira al cambiar rol/estado o cerrar sesión. No valida permisos en Nest ni llama HTTP. Es como ocultar la puerta de oficina del club en el cartel: la cerradura real sigue en el servidor.
+
+```ts
+@Directive({ selector: '[appResaltarAutor]', standalone: true,
+  host: { '[class.comentario-propio]': 'appResaltarAutor()' } })
+```
+
+La directiva de atributo cambia una clase del elemento existente, sin insertar otra plantilla. ComentariosPublicacion compara autorId con usuario.id. El borde musgo identifica notas propias; puedeEditar y Nest siguen decidiendo si se pueden editar. AutoFocus usa el elemento inyectado y afterNextRender para esperar el textarea; no busca el DOM global ni usa temporizadores.
+
+```html
+{{ comentario.createdAt | fechaRelativa }}
+```
+
+Un pipe transforma un valor; una directiva transforma presencia/comportamiento. FechaRelativaPipe es puro y no instala un reloj por comentario: al volver a crear la vista o cambiar fecha/ahora se recalcula. Ayer representa 24–48 horas transcurridas. InicialesPipe conserva acentos y usa primera/última palabra. TruncatePipe no modifica el texto de MongoDB ni hace HTTP.
+
+### Recorrido de usuario
+
+El jugador abre una jugada: la tarjeta muestra fecha relativa y, si no hay foto, iniciales. Comentarios propios reciben una clase por la directiva. Al pulsar Editar, @if monta el formulario y AutoFocus enfoca textarea después del render. Cancelar destruye el editor sin PUT. Si cambia el usuario, se actualiza resaltado y la lógica existente cancela una edición que ya no le corresponde. Al entrar un administrador, PermisoRol muestra los enlaces de Usuarios/Estadísticas; un GET manual sigue sujeto a guards de Nest.
+
+En una primera visita online, la PWA descarga estáticos y registra el worker de producción. Al volver al inicio sin conexión, puede mostrar FutbolCrack y explicación/Reintentar; no trae publicaciones ni una sesión del caché. Reintentar vuelve a consultar Nest. No hay promesa de que publicar offline guardó algo. El inicio '/' es el acceso offline previsto; enlaces directos a publicaciones/dashboard quedan fuera del fallback.
+
+### Qué es la PWA y cómo estudiarla
+
+Manifest es la ficha del acceso directo (nombre, iconos, colores, inicio, standalone). Service Worker es un intermediario del navegador, distinto de un servicio Angular inyectable. ngsw-config permite solo index/JS/CSS/manifest/iconos y dataGroups está vacío. Angular genera ngsw.json con hashes. Caché de la interfaz no significa caché de JSON privado ni guardar el JWT, que sigue en cookie HttpOnly.
+
+Instalación: servir build de producción por HTTPS o localhost y usar la opción del navegador cuando esté disponible. `ng serve` de desarrollo no registra este worker. Esperar activación y comprobar Application/Cache Storage, instalación, offline y autenticación con cuentas de prueba; este ensayo está pendiente. Pasos y fuentes oficiales en [07](07-ANGULAR-PWA-PIPES-DIRECTIVAS.md).
+
+### Preguntas del profesor y respuestas
+
+- **¿Son exactamente tres?** Sí: Truncate/FechaRelativa/Iniciales y ResaltarAutor/AutoFocus/PermisoRol. RouterLink/NgClass son de Angular y no cuentan.
+- **¿Pipe o directiva?** Formatear fecha: pipe. Enfocar un campo o insertar una plantilla por rol: directiva.
+- **¿Dónde se valida el rol de verdad?** En Nest, con JWT y ficha actual; la directiva solo ayuda a presentar opciones.
+- **¿Qué se puede hacer offline?** Abrir el shell ya instalado desde raíz y ver la reconexión. Consultar datos, autenticarse y escribir requieren red; no hay colas.
+- **¿Qué evita cachear usuarios/estadísticas?** No hay dataGroups ni patrones de URLs; solo archivos estáticos enumerados y fallback limitado. Tests verifican ngsw.json y señuelos privados.
+- **¿Cómo se prueban?** Pipes con entradas/límites; directivas con host/DOM y cambios de estado; uso real en componentes; PWA con generador/artefactos y después prueba manual de navegador.
+- **¿230 + 11 prueban instalación?** No. 230 son Angular/DOM con HTTP simulado y 11 configuración/build PWA. Instalar/usar worker activo en navegador todavía debe comprobarse.
+- **¿Qué reutilizamos de CineBera?** Separación TS/HTML/CSS, bindings y estado visual. Adaptamos comportamiento a autores, rol administrativo y jugadas; el servidor mantiene la autoridad.

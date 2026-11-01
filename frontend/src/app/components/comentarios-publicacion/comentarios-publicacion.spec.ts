@@ -308,4 +308,25 @@ describe('ComentariosPublicacion: flujo compartido de detalle y perfil', () => {
       texto.slice(0, 280) + '…',
     );
   });
+  it('resalta comentarios propios y actualiza resaltado al cambiar usuario o cerrar sesión', () => {
+    expect(fixture.nativeElement.querySelectorAll('.comentario-propio').length).toBe(3);
+    fixture.componentRef.setInput('usuario', { ...jugadorPrueba, id: 'otro-usuario' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.comentario-propio').length).toBe(0);
+    fixture.componentRef.setInput('usuario', null);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.comentario-propio').length).toBe(0);
+  });
+  it('al pulsar Editar enfoca textarea con la directiva y cancelar no envía PUT', async () => {
+    fixture.nativeElement.querySelector('.editar').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(
+      fixture.nativeElement.querySelector('.editar-comentario textarea'),
+    );
+    fixture.componentInstance.cancelarEdicion();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.editar-comentario')).toBeNull();
+    http.expectNone((req) => req.method === 'PUT');
+  });
 });

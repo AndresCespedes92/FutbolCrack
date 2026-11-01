@@ -1,3 +1,5 @@
+import { FechaRelativaPipe } from '../../pipes/fecha-relativa.pipe';
+import { InicialesPipe } from '../../pipes/iniciales.pipe';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Publicacion } from '../../services/publicaciones';
 import { TruncatePipe } from '../../pipes/truncate.pipe';
@@ -7,7 +9,7 @@ import { TruncatePipe } from '../../pipes/truncate.pipe';
 @Component({
   selector: 'app-publicacion-card',
   standalone: true,
-  imports: [TruncatePipe],
+  imports: [TruncatePipe, FechaRelativaPipe, InicialesPipe],
   templateUrl: './publicacion-card.html',
   styleUrl: './publicacion-card.css',
 })

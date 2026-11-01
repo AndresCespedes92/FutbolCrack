@@ -1,3 +1,7 @@
+import { ResaltarAutorDirective } from '../../directives/resaltar-autor.directive';
+import { AutoFocusDirective } from '../../directives/auto-focus.directive';
+import { FechaRelativaPipe } from '../../pipes/fecha-relativa.pipe';
+import { InicialesPipe } from '../../pipes/iniciales.pipe';
 import {
   ChangeDetectorRef,
   Component,
@@ -23,7 +27,15 @@ import { TruncatePipe } from '../../pipes/truncate.pipe';
 @Component({
   selector: 'app-comentarios-publicacion',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TruncatePipe],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    TruncatePipe,
+    FechaRelativaPipe,
+    InicialesPipe,
+    ResaltarAutorDirective,
+    AutoFocusDirective,
+  ],
   templateUrl: './comentarios-publicacion.html',
   styleUrl: './comentarios-publicacion.css',
 })
@@ -212,8 +224,7 @@ export class ComentariosPublicacion implements OnChanges {
     this.publicacionNoDisponible.emit();
   }
   private explicarError(error: HttpErrorResponse): string {
-    if (error.status === 401)
-      return 'Tu sesión venció. Iniciá sesión nuevamente; conservamos tu texto.';
+    if (error.status === 401) return 'Tu sesión venció. Iniciá sesión nuevamente para continuar.';
     if (error.status === 403) return 'Solo el autor puede editar este comentario.';
     if (error.status === 404) return 'El comentario o la publicación ya no está disponible.';
     if (error.status === 400)

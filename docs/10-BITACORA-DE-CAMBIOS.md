@@ -543,6 +543,331 @@ Listo para revisión local del alcance 4B, con límites externos documentados. S
 
 ---
 
+## 01/11/2026 — Sprint 3, Tarea 4C: autorización y renovación voluntaria
+
+**Objetivo y ejemplo:** el carnet del club dura quince minutos. La recepción Angular consulta si sigue vigente al abrir/recargar, avisa cuando quedan cinco y solo tramita otro si el socio acepta antes de vencer. Un rechazo de permiso no significa que se perdió el carnet.
+
+**Git:** inicio limpio main 0d94da5, merge de 4B ya guardado por el usuario. Base comprobada: builds frontend/backend salida 0, FE 97/97, BE 162/162. No había cambios que respaldar: sin commit vacío. Se creó feature/renovacion-sesion. HEAD permanece en 0d94da5; sin commits nuevos, merge ni deploy.
+
+**Inspección/limitación previa:** revisados registro/login, JWT/cookie, AuthGuard Nest/Angular, GET me/logout, CORS/middleware de origen, ausencia de interceptor y recuperación inicial. Se informó antes de implementar que Usuario no tiene habilitado/activo: se valida existencia/ficha actual, pero no se inventa un estado ni gestión de usuarios de Sprint 4. El rechazo específico de usuario deshabilitado y su prueba real quedan pendientes del modelo.
+
+### Inventario completo
+
+- backend/src/auth/auth.controller.ts
+- backend/src/auth/auth.service.ts
+- backend/src/auth/auth.sesion.http.spec.ts
+- backend/src/auth/guards/auth.guard.ts
+- backend/src/auth/seguridad.module.ts
+- backend/src/auth/sesion-cookie.ts
+- backend/src/auth/sesion.constants.ts
+- backend/src/common/middlewares/validar-origen.middleware.spec.ts
+- backend/src/common/middlewares/validar-origen.middleware.ts
+- backend/src/common/origenes-permitidos.ts
+- backend/src/main.ts
+- docs/00-MAPA-DEL-PROYECTO.md
+- docs/01-ARQUITECTURA.md
+- docs/02-AUTENTICACION-Y-SEGURIDAD.md
+- docs/04-COMENTARIOS.md
+- docs/08-PRUEBAS-Y-DESPLIEGUE.md
+- docs/09-REQUISITOS-SPRINTS.md
+- docs/10-BITACORA-DE-CAMBIOS.md
+- docs/guia-angular.md
+- frontend/src/app/app.config.ts
+- frontend/src/app/app.css
+- frontend/src/app/app.html
+- frontend/src/app/app.sesion.spec.ts
+- frontend/src/app/app.spec.ts
+- frontend/src/app/app.ts
+- frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.ts
+- frontend/src/app/components/extender-sesion/extender-sesion.css
+- frontend/src/app/components/extender-sesion/extender-sesion.html
+- frontend/src/app/components/extender-sesion/extender-sesion.spec.ts
+- frontend/src/app/components/extender-sesion/extender-sesion.ts
+- frontend/src/app/guards/auth.guard.ts
+- frontend/src/app/interceptors/sesion.interceptor.spec.ts
+- frontend/src/app/interceptors/sesion.interceptor.ts
+- frontend/src/app/pages/login/login.html
+- frontend/src/app/pages/login/login.sesion.spec.ts
+- frontend/src/app/pages/login/login.ts
+- frontend/src/app/services/api.config.ts
+- frontend/src/app/services/auth.spec.ts
+- frontend/src/app/services/auth.ts
+- frontend/src/app/services/comentarios.ts
+- frontend/src/app/services/publicaciones.ts
+- frontend/src/app/testing/sesion-fixture.ts
+
+### Implementación y decisiones
+
+- **JWT/cookie:** DURACION_SESION_SEGUNDOS centraliza 900 segundos en SeguridadModule y emisión. guardarCookieSesion/opcionesCookieSesion comparten HttpOnly, Secure y None en producción, Lax en desarrollo, path / y maxAge calculado hasta exp real. Logout usa las mismas opciones. Datos públicos se proyectan en un método compartido por registro/login/me/sesión; nunca se devuelve token/hash en JSON.
+- **Autorizar:** POST /auth/autorizar con AuthGuard existente y metadata de cookie obligatoria. Valida firma/exp/claims, usuario actual y vigencia tras consulta; devuelve usuario/emitidaEn/expiraEn/horaServidor sin renovar. Bearer se conserva en rutas anteriores, no sustituye cookie en los nuevos endpoints.
+- **Refrescar:** POST /auth/refrescar acepta solo JWT vigente, comprueba usuario/exp antes y después de consultas/emisión, firma por quince minutos desde ahora y emite cookie. Toma rol de MongoDB, nunca de Angular. No hay refresh token persistente ni aceptación de vencidos.
+- **CSRF/CORS:** origenesPermitidos comparte localhost:4200/FRONTEND_URL exactos con main.ts y ValidarOrigenMiddleware. Origin ajeno/null se rechaza; Referer permitido sirve solo si Origin falta. Sin ambos se rechazan sesión y escrituras con cookies. Lecturas/preflight y clientes Bearer sin cookie fuera de sesión conservan uso. No se confía en CORS/SameSite por sí solos, Host ni prefijos de dominios parecidos.
+- **Arranque/caché:** App muestra carga mientras POST autorizar; raíz/guard comparten la petición mediante shareReplay. Recupera usuario/fechas, continúa URL solicitada o redirige a login con returnUrl interno. Login/registro no entran en bucle. Red/500 muestran Reintentar. ObtenerMiPerfil usa estado ya autorizado sin GET duplicado, manteniendo GET me como compatibilidad. API_URL centraliza el mismo destino previo en los tres servicios.
+- **Aviso/renovación:** AuthService guarda solo usuario/fechas en señales, estima desfase con horaServidor y programa aviso a exp menos cinco minutos y expiración. ExtenderSesion es hijo presentacional con Outputs; Ahora no no solicita ni vuelve a abrir el aviso en esa misma sesión en memoria. Extender llama refrescar una vez, muestra espera/error y reinicia timers al confirmar.
+- **Vencimiento/limpieza:** compara exp al foco/visibility para suspensión, limpia timers/listeners al cerrar/vencer/destruir y cancela flujos al destruir el servicio. versionSesion descarta respuestas antiguas después de logout/vencimiento. No hay tokens en almacenamiento web ni lectura de cookie por Angular.
+- **401/403:** interceptor acotado al origen exacto/API protegida, excluye login y autorización inicial. 401 limpia estado y navega a login; 403/red/500 mantienen sesión y formularios. La redirección por vencimiento destruye la vista/borrador local; se ajusta el mensaje de comentarios para no prometer persistencia entre pantallas.
+
+Los componentes/servicios existentes de publicaciones/comentarios mantienen sus contratos y reglas. No se agrega un módulo funcional ni se implementa habilitación, administración, reportes, PWA u otra funcionalidad de Sprint 4. La paleta/radios existentes se reutilizan para spinner/dialog con comentarios CSS y movimiento reducido.
+
+### Datos, pedagogía y recorrido
+
+Como en el club: cookie es el sobre del navegador, JWT es el carnet firmado y Nest es quien revisa firma/vencimiento/ficha. App pregunta autorizar al abrir; el guard comparte esa comprobación; las pantallas reciben usuario de la memoria; el hijo modal emite la decisión al padre; refrescar solo ocurre por esa decisión y devuelve fechas nuevas, no el token. Si un permiso falla (403), el carnet no se destruye.
+
+02 documenta cuerpos/respuestas, seguridad, cookies antiguas, CSRF y límites. 00 mapa, 01 arquitectura, 08 evidencia, 09 matriz y guia-angular.md desarrollan archivos/clases/métodos, señales/Observable/shareReplay/finalize/DestroyRef, timers, interceptores y preguntas de defensa. 04 aclara los efectos del 401 sobre borradores. JWT de quince minutos no altera retroactivamente un token antiguo de veinte segundos: conserva su exp y, vencido, exige login.
+
+### Pruebas y ajustes
+
+Final: frontend build salida 0 sin avisos CSS; FE 138/138 en 18 suites (97 anteriores + 41). Backend build salida 0; BE 187/187 en 10 suites (162 anteriores + 25), ejecución completa con node node_modules/vitest/vitest.mjs run --no-file-parallelism --pool=threads. Sin tests omitidos, cambios de timeout/scripts/configuración o dependencias instaladas.
+
+Backend añade 18 HTTP (JWT/bcrypt/cookies/guard/servicio/middleware reales con ficha/transporte simulados) y siete de CSRF. Incluye 900 segundos, autorizar/renovar válidos e inválidos, cookie ausente/Bearer no sustituto, expirado/inexistente, vigencia durante consulta, cookies antiguas, producción/logout, no token/hash en JSON y orígenes. La ausencia de habilitación se documenta y prueba como limitación del schema, no como deshabilitado rechazado.
+
+Frontend añade 16 de AuthService con reloj simulado, 12 del interceptor, ocho de App, dos del modal y tres de login: inicio, caché/solicitud única, recarga/plazo restante, diez minutos, renovar/Ahora no, expiración/suspensión/limpieza, 401/403, rutas y retorno seguro. Los 97 casos previos se conservan; el guard ahora espera POST autorizar y el perfil usa caché. Se ajustó la expectativa exacta /login al nuevo /login?returnUrl=%2Fmi-perfil (primera regresión 96/97). No se debilita autenticación ni se omite el caso.
+
+Un primer build encontró una llave sobrante al editar AuthController, corregida antes de suites ampliadas. Backend en serie/forks pasó 187/187; una repetición terminó con cierre inesperado de worker, 177 contabilizados y sin aserción fallida. La repetición aislada con pool threads pasó toda la suite sin errores no controlados. Se documenta la incidencia del entorno y el comando final, sin cambiar la configuración del proyecto.
+
+### Riesgos, pendientes y cierre
+
+Sin .env/secretos modificados ni mostrados. La protección de origen se basa en comparación exacta y rechazo ante ausencia para cookie/sesión; se contrastó con OWASP, y atributos de cookies con MDN (enlaces en 02). Debe probarse FRONTEND_URL/HTTPS/Set-Cookie/credenciales y políticas de terceros en Vercel/navegador real; aquí no se hicieron llamadas/escrituras externas ni ensayo visual manual del modal.
+
+Pendiente importante de modelo: habilitado/activo y rechazo de una cuenta deshabilitada cuando exista esa funcionalidad aprobada. Sin revocación stateless: logout borra cookie pero una copia de JWT podría seguir válida hasta exp; no hay refresh tokens persistentes. Los timers son por pestaña, la estimación horaria es aproximada y el backend es autoridad. Cancelar un flujo no revierte un Set-Cookie ya emitido.
+
+API/frontend deben integrarse juntos: el arranque necesita autorizar y metadatos nuevos. Clientes manuales de sesión requieren Origin/Referer permitido; no se introducen excepciones inseguras para facilitar tests. Cookies antiguas vencidas requieren login, no renovación tardía. No se declara comprobado un bloqueo de cuentas que el modelo no representa.
+
+Revisión SHA-256 final: 26 archivos existentes modificados y 16 nuevos (42 en total), coincidentes con el inventario. Modelos/servicios de usuarios, publicaciones, comentarios, Cloudinary, dependencias y configuración de tests conservados respecto de 0d94da5. Se validaron enlaces/bloques Markdown y 44 IDs únicos; sin skip/todo/only. git diff --check termina sin errores; los avisos LF/CRLF responden a configuración existente, no a fallos de compilación.
+
+El flujo local de sesión está listo para validación integrada del Sprint 3, sin considerarlo cerrado en producción: faltan navegador/base/Vercel/cookies/CORS y la decisión explícita de habilitación. Se detiene y espera aprobación. Sin commit, merge ni deploy automáticos.
+
+---
+
+## 2026-11-01 — Sprint 4, Tarea 5A: Administración de usuarios y roles
+
+### Base y alcance
+
+Se revisó feature/renovacion-sesion y sus 42 cambios de 4C; base 0d94da5. Antes de modificar, frontend compiló y pasó 138/138 y backend compiló y pasó 187/187. Conforme a autorización expresa del enunciado se creó el respaldo local **238c440 — feat(auth): autorizar y renovar sesiones de quince minutos** y después la rama **feature/administracion-usuarios**. Los cambios de 5A quedan sin commit; sin merge ni deploy. No se modifican .env, dependencias, módulos funcionales ni datos externos.
+
+### Problema, ejemplo y decisiones
+
+El secretario necesitaba gestionar fichas del club; un jugador no debe administrar el padrón y un socio suspendido no debe seguir entrando con su carnet anterior. Se agrega activo con compatibilidad de ausencia=true, endpoints administrativos y dashboard. Flujo: formulario/modal → servicio HTTP Angular → controller con guards → servicio Nest → consultas/actualización condicional de Usuario → mensajes y recarga.
+
+Se comparte hashing con registro y persistencia sin duplicar negocio. El registro público siempre fuerza usuario/activo. DTO administrativo restringe perfil y campos; proyección positiva excluye credenciales. AuthGuard consulta MongoDB en cada acceso protegido: baja bloquea JWT anterior, login, autorizar y refrescar. Cookies/15 minutos/CSRF de 4C se conservan. Un fallo de base no se convierte en falso 401.
+
+Política conservadora: no se puede deshabilitar a uno mismo ni a ninguna cuenta administradora; protege al último sin carreras de conteo, a costa de restringir bajas de administradores adicionales. Se puede rehabilitar un admin ya inactivo desde otro activo. No hay edición de rol ni bootstrap de cuentas reales. La baja no elimina publicaciones/comentarios, y al rehabilitar un token anterior aún vigente puede volver a funcionar. Una solicitud que ya pasó el guard puede completar.
+
+Dashboard separado en TS/HTML/CSS, comentarios españoles incluidos estilos; reutiliza validadores de CineBera/registro, radios de rol y modal hijo con Input/Output. Cancelar no hace HTTP; estado de procesamiento evita duplicados. 400/409/500 conservan borrador; 403 no cierra una sesión válida. Se documentan los recorridos, permisos y conceptos en mapa/seguridad/administración/guía.
+
+### Pruebas y dificultades resueltas
+
+Resultado final: **frontend build exit 0, 162/162 en 22 suites; backend build exit 0, 223/223 en 12 suites**. Comandos completos en 08. Se conservan todos los casos anteriores; nuevos casos verifican permisos/altas/estados/JWT/DTO/modal/mensajes y esquema. Modelo de sesión de pruebas actualizado para la nueva consulta del guard. No se instalaron dependencias ni se relajó configuración.
+
+La compilación detectó overrides del DTO que necesitaban declare; la integración detectó que había que exportar MongooseModule para inyectar UsuarioModel en guards de otros módulos. La primera suite ampliada tuvo 222/223: se aceptaba una clave sin número por redecoración incompleta de validadores heredados. Se corrigieron las reglas completas, manteniendo el caso, y pasó 223/223. No se omitieron pruebas.
+
+### Archivos creados/modificados
+
+- `backend/src/auth/auth.service.ts`
+- `backend/src/auth/auth.sesion.http.spec.ts`
+- `backend/src/auth/guards/auth.guard.ts`
+- `backend/src/auth/seguridad.module.ts`
+- `backend/src/comentarios/comentarios.controller.http.spec.ts`
+- `backend/src/common/password.ts`
+- `backend/src/publicaciones/publicaciones.controller.http.spec.ts`
+- `backend/src/testing/usuario-sesion.ts`
+- `backend/src/usuarios/dto/crear-usuario-administrativo.dto.ts`
+- `backend/src/usuarios/entities/usuario.entity.spec.ts`
+- `backend/src/usuarios/entities/usuario.entity.ts`
+- `backend/src/usuarios/guards/administrador.guard.ts`
+- `backend/src/usuarios/usuarios.administracion.http.spec.ts`
+- `backend/src/usuarios/usuarios.controller.http.spec.ts`
+- `backend/src/usuarios/usuarios.controller.ts`
+- `backend/src/usuarios/usuarios.service.spec.ts`
+- `backend/src/usuarios/usuarios.service.ts`
+- `docs/00-MAPA-DEL-PROYECTO.md`
+- `docs/02-AUTENTICACION-Y-SEGURIDAD.md`
+- `docs/05-ADMINISTRACION.md`
+- `docs/08-PRUEBAS-Y-DESPLIEGUE.md`
+- `docs/09-REQUISITOS-SPRINTS.md`
+- `docs/10-BITACORA-DE-CAMBIOS.md`
+- `docs/guia-angular.md`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/components/confirmacion-usuario/confirmacion-usuario.css`
+- `frontend/src/app/components/confirmacion-usuario/confirmacion-usuario.html`
+- `frontend/src/app/components/confirmacion-usuario/confirmacion-usuario.spec.ts`
+- `frontend/src/app/components/confirmacion-usuario/confirmacion-usuario.ts`
+- `frontend/src/app/components/navbar/navbar.html`
+- `frontend/src/app/components/navbar/navbar.ts`
+- `frontend/src/app/guards/administrador.guard.spec.ts`
+- `frontend/src/app/guards/administrador.guard.ts`
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.css`
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.html`
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.spec.ts`
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.ts`
+- `frontend/src/app/pages/login/login.sesion.spec.ts`
+- `frontend/src/app/pages/login/login.ts`
+- `frontend/src/app/pages/publicaciones/publicaciones.html`
+- `frontend/src/app/pages/publicaciones/publicaciones.ts`
+- `frontend/src/app/services/auth.ts`
+- `frontend/src/app/services/usuarios.spec.ts`
+- `frontend/src/app/services/usuarios.ts`
+- `frontend/src/app/testing/usuarios-fixture.ts`
+
+### Pendientes y criterio de entrega
+
+No se verificaron Atlas, navegador/móvil real, índices ni cookies HTTPS/CORS de producción. Las pruebas HTTP usan persistencia simulada; Mongoose valida el esquema en memoria. El listado no pagina. La validación backend de fecha conserva ISO del DTO existente; la restricción de fecha futura está en el formulario. No se ha creado ni modificado ningún administrador real.
+
+Sprint 4 restante: estadísticas con Desde/Hasta y MongoDB, gráficos, PWA, dos pipes adicionales y tres directivas propias. Revisión final SHA-256: 27 archivos existentes modificados y 18 nuevos (45 en total), coincidentes con el inventario. Sin cambios en lógica productiva de publicaciones/comentarios/Cloudinary, dependencias ni main.ts. La matriz conserva 44 IDs únicos; enlaces y bloques Markdown correctos; sin pruebas omitidas/exclusivas. git diff --check correcto; avisos LF/CRLF de la configuración existente. 5A queda implementada/verificada localmente con estos límites explícitos; no se declara cerrado el sprint. Se detiene para revisión y aprobación, sin commit de 5A/merge/deploy.
+
+---
+
+## 2026-11-01 — Sprint 4, Tarea 5B: Estadísticas y moderación administrativa
+
+### Base y preservación
+
+Rama inicial feature/administracion-usuarios, HEAD 238c440, con 45 cambios de 5A pendientes. Se revisaron status, matriz, administración y arquitectura; ambos builds exit 0, frontend 162/162 y backend 223/223. Por autorización expresa de 5B se respaldó 5A en **92a58e5 — feat(usuarios): administrar cuentas y verificar habilitacion** y después se creó **feature/estadisticas-admin**. 5B sin commit; sin merge/deploy. Sin cambios de .env, dependencias, configuración de tests ni datos externos.
+
+### Problema y solución
+
+La comisión del club necesitaba comparar publicaciones por jugador y comentarios en un período. Tres GET administrativos en controllers de módulos existentes y consultas de PublicacionesService/ComentariosService: match por creación/estado, group/sum, lookup de publicación, facet para total/días, count/sort/project y populate público de autores. No se descargan documentos para contar en Angular ni se crea otro módulo funcional.
+
+Rango obligatorio YYYY-MM-DD, calendario real y Desde <= Hasta. Días completos en offset fijo UTC−03:00, inicio incluido y siguiente día de Hasta excluido; sin reglas históricas de horario de verano. A usa createdAt de publicación; B/C del comentario, aunque la publicación sea anterior. Bajas/huérfanos fuera; publicaciones antiguas sin activo visibles. Comentario no tiene baja independiente: no se añade estado ficticio. Una baja puede reducir cifras pasadas porque los reportes miden visibilidad actual.
+
+Dashboard /dashboard/estadisticas: tres formularios/rangos propios, validación, carga/vacío/error/reintento, tablas y barras CSS/línea SVG/dona SVG. Sin dependencias nuevas. Geometría/fechas comentadas y TS/HTML/CSS separados. Angular calcula dimensiones/proporciones, no cantidades de documentos. La línea lleva a cero días sin actividad sin generar un elemento por día vacío.
+
+Flujo: administradorGuard → DashboardEstadisticas → EstadisticasService GET con rango → controller AuthGuard/AdministradorGuard → servicio/agregación → MongoDB → cantidades → gráfico/tabla. Nest controla ficha habilitada/rol actual; sin credenciales/textos privados. Formularios reutilizan conceptos de validación cruzada de CineBera.
+
+### Moderación reutilizada
+
+DELETE /publicaciones/:id ya cumple autor/admin y baja lógica. Sin cambios productivos de moderación ni nuevo endpoint. El test integrado verifica baja admin ajena, conservación de documentos, retiro del feed, 404 detalle/comentarios y exclusión estadística. El caso Angular abre modal productivo como admin, cancela sin HTTP y confirma con recarga/mensaje. Se conservan casos 403/error. Aviso de ruta denegada ampliado para mencionar estadísticas.
+
+### Archivos creados/modificados
+
+- `backend/src/comentarios/comentarios.module.ts`
+- `backend/src/comentarios/comentarios.service.ts`
+- `backend/src/comentarios/estadisticas-comentarios.controller.ts`
+- `backend/src/comentarios/estadisticas.http.spec.ts`
+- `backend/src/common/estadisticas/rango-fechas.dto.ts`
+- `backend/src/publicaciones/estadisticas-publicaciones.controller.ts`
+- `backend/src/publicaciones/publicaciones.module.ts`
+- `backend/src/publicaciones/publicaciones.service.ts`
+- `backend/src/testing/agregacion-prueba.ts`
+- `docs/00-MAPA-DEL-PROYECTO.md`
+- `docs/05-ADMINISTRACION.md`
+- `docs/06-ESTADISTICAS.md`
+- `docs/08-PRUEBAS-Y-DESPLIEGUE.md`
+- `docs/09-REQUISITOS-SPRINTS.md`
+- `docs/10-BITACORA-DE-CAMBIOS.md`
+- `docs/guia-angular.md`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/components/navbar/navbar.html`
+- `frontend/src/app/guards/administrador.guard.spec.ts`
+- `frontend/src/app/pages/dashboard-estadisticas/dashboard-estadisticas.css`
+- `frontend/src/app/pages/dashboard-estadisticas/dashboard-estadisticas.html`
+- `frontend/src/app/pages/dashboard-estadisticas/dashboard-estadisticas.spec.ts`
+- `frontend/src/app/pages/dashboard-estadisticas/dashboard-estadisticas.ts`
+- `frontend/src/app/pages/publicaciones/publicaciones-interacciones.spec.ts`
+- `frontend/src/app/pages/publicaciones/publicaciones.html`
+- `frontend/src/app/services/estadisticas.ts`
+
+### Pruebas y dificultades
+
+Antes: 162/162 Angular y 223/223 Nest, builds correctos. Después: **181/181 Angular (23 archivos), 265/265 Nest (13 archivos)** y ambos builds exit 0. Comandos en 08. Se agregan 42 casos backend y 19 frontend (15 dashboard, tres router, una baja admin). Se conservan anteriores, sin skip/only. Persistencia simulada/pipelines comprobados; sin Atlas ni llamadas externas.
+
+Primer build backend detectó tipo de Model.populate incompatible con cantidad agregada: se explicitó forma de autor público/cantidad sin cambiar consulta. Primera suite Angular 180/180; se añadió línea a cero y su prueba (181/181 final). Backend completo 265/265; 42 focalizadas repetidas tras reforzar timezone. Sin fallos pendientes de las comprobaciones ejecutadas.
+
+### Documentación y pendientes
+
+Actualizados mapa, administración, estadísticas, pruebas, matriz, bitácora y guía con archivos/métodos/endpoints, ejemplos, flujo/permisos. Propuestas de auditoría en 06 separadas de estado actual. S4-06/07 y G-11/12 implementados localmente; S4-01 refuerza evidencia. Restan PWA, dos pipes y tres directivas adicionales.
+
+Revisión final SHA-256: 16 archivos existentes modificados y 10 nuevos (26 total), con inventario coincidente. Métodos anteriores de PublicacionesService/ComentariosService conservados íntegramente; sin cambios en auth/usuarios/modelos/Cloudinary/dependencias/configuración. Matriz con 44 IDs únicos; enlaces/bloques Markdown correctos; sin skip/only/todo. git diff --check correcto; avisos LF/CRLF de configuración existente.
+
+Pendientes navegador/móvil real, MongoDB/versiones, índices/planes, alto volumen y rangos largos: grupos sin paginar y duración sin límite agregado. El intérprete de tests no equivale a MongoDB. Pendientes cookies/HTTPS/CORS de producción de tareas previas. Sin escrituras externas/deploy. Se detiene para revisión y aprobación, sin commit de 5B ni merge.
+
+---
+
+## 2026-11-01 — Sprint 4, Tarea 5C: PWA, pipes y directivas Angular
+
+### Base, rama y autorización
+
+Inicio en feature/estadisticas-admin, HEAD 92a58e5 con 26 archivos de 5B sin confirmar. Se revisaron status, matriz y guía; frontend compiló y pasó 181/181, backend compiló y pasó 265/265. Según autorización expresa del enunciado, se respaldó 5B en **be005ec — feat(estadisticas): agregar reportes y verificar moderacion**, y se creó **feature/pwa-pipes-directivas**. Los cambios de 5C quedan sin commit, merge ni deploy. No se modifica backend, secretos ni módulos funcionales.
+
+### Problema y ejemplo del club
+
+La recepción del club necesita abrir su cartel sin red y presentar mejor autores/fechas, pero no debe guardar el padrón ni operaciones privadas en caché. Se configura PWA oficial de Angular con estáticos exclusivamente. Se completan exactamente tres pipes y tres directivas, usados en tarjeta, comentarios y navegación. TS/HTML/CSS separados y comentarios españoles en las decisiones importantes.
+
+Se verificaron core 22.2.3 y CLI/build 22.2.4. Se justificó antes de instalar la única dependencia añadida: @angular/service-worker 22.2.3 exacto y compatible con core. Primer intento npm falló ENOTFOUND en red restringida; la repetición autorizada agregó un paquete. No se cambian versiones anteriores del lock ni se instala @angular/pwa u otras librerías.
+
+### Implementación y recorrido
+
+Manifest de FutbolCrack con descripción, es-AR, inicio/alcance '/', standalone y colores propios. Iconos originales FC/escudo/pelota: SVG, PNG 192/512 y maskable 512; PNG creados con System.Drawing disponible en Windows sin instalar librerías y revisados visualmente. Angular production genera worker/control desde ngsw-config; AppConfig registra solo fuera de desarrollo, cuando estable o al límite de 30 segundos, updateViaCache none.
+
+Shell precargado: index/JS/CSS/chunks/manifest/favicon/iconos. dataGroups vacío, sin URLs externas/dinámicas. Se excluyen auth/usuarios/publicaciones/comentarios/estadísticas; navegación offline solo raíz/login/registro. No fallback en publicaciones (ruta compartida con nombre de API), mi-perfil o dashboards. Tras fallo de autorización, App muestra marca, limitaciones y Reintentar sin montar pantallas privadas. No altera cookies/JWT/interceptor ni agrega colas/IndexedDB/localStorage para datos. Volver a conectar ejecuta autorización real.
+
+TruncatePipe se conserva con defensa ante valores/límites inválidos. FechaRelativaPipe transforma ISO/Date a minutos/horas/días, puro y sin timer; datetime/title guardan el ISO exacto. InicialesPipe usa primera/última palabra y fallback FC sin foto. Ambos se usan en PublicacionCard y ComentariosPublicacion, ya compartidos por feed/detalle/perfil.
+
+ResaltarAutorDirective recibe la comparación autor/usuario y agrega clase; CSS comentado dibuja borde musgo. AutoFocusDirective enfoca el textarea tras afterNextRender al editar, sin búsqueda global/timer. PermisoRolDirective usa input/effect y TemplateRef/ViewContainerRef para enlaces administrativos del Navbar, reaccionando a rol/activo/logout sin duplicar vistas. Es visual: Nest mantiene todos sus permisos y guards.
+
+Los datos siguen viajando Angular → HTTP/Nest → MongoDB como antes; pipes/directivas solo actúan sobre presentación y el worker solo sobre archivos estáticos. Offline no se presenta un éxito de publicación/comentario. Los ejemplos/recorridos de estudio se adaptan de CineBera sin patrones innecesarios ni rediseñar pantallas.
+
+### Archivos creados/modificados
+
+- `docs/00-MAPA-DEL-PROYECTO.md`
+- `docs/07-ANGULAR-PWA-PIPES-DIRECTIVAS.md`
+- `docs/08-PRUEBAS-Y-DESPLIEGUE.md`
+- `docs/09-REQUISITOS-SPRINTS.md`
+- `docs/10-BITACORA-DE-CAMBIOS.md`
+- `docs/guia-angular.md`
+- `frontend/angular.json`
+- `frontend/ngsw-config.json`
+- `frontend/package-lock.json`
+- `frontend/package.json`
+- `frontend/public/icons/futbolcrack.svg`
+- `frontend/public/icons/icon-192.png`
+- `frontend/public/icons/icon-512.png`
+- `frontend/public/icons/icon-maskable-512.png`
+- `frontend/public/manifest.webmanifest`
+- `frontend/scripts/pwa.test.mjs`
+- `frontend/src/app/app.config.ts`
+- `frontend/src/app/app.html`
+- `frontend/src/app/app.sesion.spec.ts`
+- `frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.css`
+- `frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.html`
+- `frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.spec.ts`
+- `frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.ts`
+- `frontend/src/app/components/navbar/navbar.html`
+- `frontend/src/app/components/navbar/navbar.ts`
+- `frontend/src/app/components/publicacion-card/publicacion-card.html`
+- `frontend/src/app/components/publicacion-card/publicacion-card.spec.ts`
+- `frontend/src/app/components/publicacion-card/publicacion-card.ts`
+- `frontend/src/app/directives/auto-focus.directive.ts`
+- `frontend/src/app/directives/directivas.spec.ts`
+- `frontend/src/app/directives/permiso-rol.directive.ts`
+- `frontend/src/app/directives/resaltar-autor.directive.ts`
+- `frontend/src/app/pipes/fecha-relativa.pipe.spec.ts`
+- `frontend/src/app/pipes/fecha-relativa.pipe.ts`
+- `frontend/src/app/pipes/iniciales.pipe.spec.ts`
+- `frontend/src/app/pipes/iniciales.pipe.ts`
+- `frontend/src/app/pipes/truncate.pipe.spec.ts`
+- `frontend/src/app/pipes/truncate.pipe.ts`
+- `frontend/src/index.html`
+
+### Pruebas y dificultades resueltas
+
+Resultado final: **Angular build exit 0; 230/230 en 26 archivos; PWA configuración/artefactos 11/11; backend build exit 0 y 265/265 en 13 archivos**. Comandos y detalle en 08. Sin pruebas eliminadas/omitidas. Se agregan 49 casos Angular y 11 Node; se conservan 181 anteriores.
+
+La primera regresión dio 180/181: la tarjeta esperaba fecha absoluta visible. Como 5C exige formato relativo, se actualizó a reloj fijo/'Ayer', conservando comprobación ISO exacta en datetime/title. No se debilitaron las verificaciones de fecha. Primera verificación PWA 10/11: navigationUrls con ^ era tratado como ruta relativa por el generador y rompía fallback de raíz. Se corrigieron patrones de configuración; el mismo caso verifica ahora las rutas ancladas generadas.
+
+Las pruebas Node usan manifest/iconos reales, hashes del build y generador oficial con archivos señuelo de API. Garantizan exclusión en la configuración, no ejecución runtime del Service Worker. Angular prueba valores inválidos, directivas/DOM, cambios de usuario, uso real y shell/reintento. Las suites de autenticación siguen pasando con HTTP simulado y worker desactivado, por lo que no se confunden con una prueba de cookies en navegador con worker activo.
+
+### Documentación, advertencias y cierre
+
+Actualizados mapa, PWA/pipes/directivas, pruebas, matriz, bitácora y guía. Queda explicada la diferencia entre transformar un valor, modificar un elemento y cachear recursos; se documentan archivos/clases/métodos y recorrido de instalación. Antecedentes en 07 separados del estado vigente.
+
+S4-09/10 implementados/verificados localmente; S4-08 configurado y verificado por artefactos, pendiente instalación/activación/offline/actualización y auth con worker real. No se declaran cerrados integralmente los cuatro sprints: faltan aceptación externa, navegador/móvil, Atlas/Cloudinary/HTTPS/CORS y contraste con enunciados completos. La caché puede ser desalojada; primera carga necesita red; enlaces directos excluidos no tienen fallback offline. Fechas relativas no son reloj en vivo. Worker/core deben actualizarse juntos.
+
+Revisión final SHA-256: 24 archivos existentes modificados y 15 nuevos (39 total), con inventario coincidente. Backend y secretos íntegros; sin cambios de configuración de tests. Lock: solo @angular/service-worker nuevo, ninguna versión previa alterada. Conteo de código: exactamente tres @Pipe y tres @Directive. Matriz con 44 IDs únicos, enlaces/bloques Markdown correctos y ningún skip/only/todo. git diff --check correcto; avisos LF/CRLF de la configuración existente.
+
+Sin ensayo de instalación ni runtime PWA en navegador, sin despliegue ni escrituras externas. Se detiene para revisión y aprobación; sin commit de 5C, merge o deploy.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

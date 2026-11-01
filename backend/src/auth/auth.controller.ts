@@ -24,7 +24,8 @@ import {
   ParseFilePipeBuilder,
   Get,
   Req,
-  UseGuards
+  SetMetadata,
+  UseGuards,
 } from '@nestjs/common';
 
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -33,12 +34,13 @@ import { memoryStorage } from 'multer';
 import { AuthService } from './auth.service.js';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import type { JwtPayload } from './guards/auth.guard.js';
+import { SOLO_COOKIE_SESION } from './sesion.constants.js';
+import { guardarCookieSesion, opcionesCookieSesion } from './sesion-cookie.js';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   /**
    * POST /auth/registro
@@ -79,98 +81,99 @@ export class AuthController {
     return this.authService.registrar(datos, imagen);
   }
 
-  
-/**
- * POST /auth/login
- *
- * Valida las credenciales y guarda el JWT
- * en una cookie HttpOnly.
- */
-@Post('login')
-@HttpCode(HttpStatus.OK)
-async login(
-  @Body() datos: LoginDto,
-  @Res({ passthrough: true }) respuesta: Response,
-) {
-  // AuthService comprueba las credenciales y genera el JWT.
-  const resultado = await this.authService.login(
-    datos.identificador,
-    datos.password,
-  );
+  /**
+   * POST /auth/login
+   *
+   * Valida las credenciales y guarda el JWT
+   * en una cookie HttpOnly.
+   */
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body() datos: LoginDto,
+    @Res({ passthrough: true }) respuesta: Response,
+  ) {
+    // AuthService comprueba las credenciales y genera el JWT.
+    const resultado = await this.authService.login(
+      datos.identificador,
+      datos.password,
+    );
 
-  // En producción, la cookie debe viajar por HTTPS.
-  const esProduccion = process.env.NODE_ENV === 'production';
+    guardarCookieSesion(respuesta, resultado.access_token, resultado.expiraEn);
+    // Se eligen campos positivos: el token interno NUNCA se incluye en el JSON.
+    return {
+      mensaje: 'Inicio de sesión correcto',
+      usuario: resultado.usuario,
+      emitidaEn: resultado.emitidaEn,
+      expiraEn: resultado.expiraEn,
+      horaServidor: resultado.horaServidor,
+    };
+  }
 
-  // El navegador recibe el JWT mediante Set-Cookie.
-  respuesta.cookie('token', resultado.access_token, {
-    httpOnly: true,
-    secure: esProduccion,
-    sameSite: esProduccion ? 'none' : 'lax',
-    maxAge: 20 * 1000,
-    path: '/',
-  });
+  /**
+   * GET /auth/me
+   *
+   * Devuelve los datos del usuario autenticado.
+   * AuthGuard verifica el JWT enviado por cookie o Bearer.
+   */
+  @Get('me')
+  @UseGuards(AuthGuard)
+  async obtenerMiPerfil(
+    @Req()
+    request: Request & {
+      user?: { sub: string; perfil: string };
+    },
+  ) {
+    // El Guard ya verificó el token y agregó su contenido
+    // a request.user.
+    const usuarioId = request.user!.sub;
 
-  // El JWT queda almacenado exclusivamente
-// en la cookie HttpOnly.
-//
-// No devolvemos access_token en el JSON
-// para evitar que JavaScript pueda leerlo.
-return {
-  mensaje: 'Inicio de sesión correcto',
-};
-}
+    // Consultamos MongoDB y devolvemos el perfil.
+    return this.authService.obtenerMiPerfil(usuarioId);
+  }
 
+  /**
+   * POST /auth/logout
+   *
+   * Cierra la sesión eliminando la cookie JWT.
+   *
+   * El navegador deja de enviar el token
+   * en las próximas peticiones.
+   */
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  cerrarSesion(@Res({ passthrough: true }) respuesta: Response) {
+    // Eliminamos la cookie con el mismo nombre y ruta.
+    respuesta.clearCookie('token', opcionesCookieSesion());
 
-/**
- * GET /auth/me
- *
- * Devuelve los datos del usuario autenticado.
- * AuthGuard verifica el JWT enviado por cookie o Bearer.
- */
-@Get('me')
-@UseGuards(AuthGuard)
-async obtenerMiPerfil(
-  @Req() request: Request & {
-    user?: { sub: string; perfil: string };
-  },
-) {
-  // El Guard ya verificó el token y agregó su contenido
-  // a request.user.
-  const usuarioId = request.user!.sub;
+    return {
+      mensaje: 'Sesión cerrada correctamente',
+    };
+  }
 
-  // Consultamos MongoDB y devolvemos el perfil.
-  return this.authService.obtenerMiPerfil(usuarioId);
-}
+  @Post('autorizar')
+  @HttpCode(HttpStatus.OK)
+  @SetMetadata(SOLO_COOKIE_SESION, true)
+  @UseGuards(AuthGuard)
+  autorizar(@Req() request: Request & { user?: JwtPayload }) {
+    return this.authService.autorizar(request.user!);
+  }
 
-
-/**
- * POST /auth/logout
- *
- * Cierra la sesión eliminando la cookie JWT.
- *
- * El navegador deja de enviar el token
- * en las próximas peticiones.
- */
-@Post('logout')
-@HttpCode(HttpStatus.OK)
-cerrarSesion(
-  @Res({ passthrough: true }) respuesta: Response,
-) {
-  // Eliminamos la cookie con el mismo nombre y ruta.
-  respuesta.clearCookie('token', {
-    path: '/',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production'
-      ? 'none'
-      : 'lax',
-  });
-
-  return {
-    mensaje: 'Sesión cerrada correctamente',
-  };
-}
-
-
-
+  @Post('refrescar')
+  @HttpCode(HttpStatus.OK)
+  @SetMetadata(SOLO_COOKIE_SESION, true)
+  @UseGuards(AuthGuard)
+  async refrescar(
+    @Req() request: Request & { user?: JwtPayload },
+    @Res({ passthrough: true }) respuesta: Response,
+  ) {
+    const resultado = await this.authService.refrescar(request.user!);
+    guardarCookieSesion(respuesta, resultado.access_token, resultado.expiraEn);
+    return {
+      usuario: resultado.usuario,
+      emitidaEn: resultado.emitidaEn,
+      expiraEn: resultado.expiraEn,
+      horaServidor: resultado.horaServidor,
+    };
+  }
 }

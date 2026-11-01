@@ -122,3 +122,11 @@ El backend incorpora GET /publicaciones/:id porque el listado existente no podí
 PublicacionCard conserva Inputs/Outputs y permite textoCompleto en el detalle. Los servicios de acciones/modal existentes se reutilizan. Angular mantiene colecciones por id al actualizar la misma jugada para conservar borradores. Suscripciones de lectura antiguas y componentes destruidos se cancelan; la API sigue siendo responsable de persistencia/permisos.
 
 No se cambian autenticación/cookies/JWT, configuración de despliegue o dependencias. Las pruebas siguen aisladas de servicios externos; ver 08.
+
+## Ampliación 4C — Sesión central sin módulos nuevos
+
+AuthModule/AuthController/AuthService y AuthGuard existentes concentran autorización y renovación. Duración/opciones de cookie son helpers compartidos; main.ts y middleware reutilizan origenesPermitidos. No se agrega un módulo de refresh tokens ni habilitación de cuentas.
+
+Angular App espera POST autorizar antes del outlet. AuthService comparte estado/metadatos y timers; authGuard consume la autorización pendiente o estado vigente; el interceptor solo invalida por 401 protegido. ExtenderSesion emite la decisión al padre, sin HTTP propio. Las pantallas de publicaciones/comentarios siguen reutilizando sus servicios; API_URL se centraliza sin cambiar el destino.
+
+Las decisiones/contratos, límite del modelo sin habilitado y CSRF están en 02. Las pruebas no reemplazan validación externa de cookies/origen en Vercel ni revocación de un JWT stateless.

@@ -1,4 +1,8 @@
 import {
+  construirRango,
+  RangoFechasDto,
+} from '../common/estadisticas/rango-fechas.dto.js';
+import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -27,6 +31,51 @@ export class PublicacionesService {
     private readonly cloudinaryService: CloudinaryService,
     private readonly usuariosService: UsuariosService,
   ) {}
+
+  async publicacionesPorUsuario(datos: RangoFechasDto) {
+    const { inicio, finExclusivo, metadatos } = construirRango(datos);
+    // $match reduce documentos antes de agrupar: cuenta solo jugadas visibles creadas en el período.
+    const grupos = await this.publicacionModel
+      .aggregate<{ autorId: Types.ObjectId; cantidad: number }>([
+        {
+          $match: {
+            activo: { $ne: false },
+            createdAt: { $gte: inicio, $lt: finExclusivo },
+          },
+        },
+        { $group: { _id: '$autorId', cantidad: { $sum: 1 } } },
+        { $sort: { cantidad: -1, _id: 1 } },
+        { $project: { _id: 0, autorId: '$_id', cantidad: 1 } },
+      ])
+      .exec();
+    // Se resuelven autores de los grupos, no todas las publicaciones; selección pública explícita.
+    const autores = (await this.publicacionModel.populate(grupos, {
+      path: 'autorId',
+      select: 'nombre apellido nombreUsuario',
+    })) as unknown as {
+      autorId: {
+        _id: Types.ObjectId;
+        nombre?: string;
+        apellido?: string;
+        nombreUsuario?: string;
+      } | null;
+      cantidad: number;
+    }[];
+    return {
+      ...metadatos,
+      datos: autores.map((grupo) => {
+        const autor = grupo.autorId;
+        return {
+          usuarioId: autor?._id?.toString() ?? null,
+          nombre: autor
+            ? `${autor.nombre ?? ''} ${autor.apellido ?? ''}`.trim()
+            : 'Usuario no disponible',
+          nombreUsuario: autor?.nombreUsuario ?? '',
+          cantidad: grupo.cantidad,
+        };
+      }),
+    };
+  }
 
   async crear(
     autorId: string,

@@ -46,6 +46,7 @@
     @for (comentario of comentarios; track comentario._id) {
       <article
         class="comentario"
+        [appResaltarAutor]="!!usuario && comentario.autorId?._id === usuario?.id"
         [attr.aria-label]="
           'Comentario de ' + (comentario.autorId?.nombre || 'usuario no disponible')
         "
@@ -58,15 +59,20 @@
               loading="lazy"
             />
           } @else {
-            <span class="avatar" aria-hidden="true">FC</span>
+            <span class="avatar" aria-hidden="true">{{
+              (comentario.autorId
+                ? comentario.autorId.nombre + ' ' + comentario.autorId.apellido
+                : null
+              ) | iniciales
+            }}</span>
           }
           <strong>{{
             comentario.autorId
               ? comentario.autorId.nombre + ' ' + comentario.autorId.apellido
               : 'Usuario no disponible'
           }}</strong>
-          <time [attr.datetime]="comentario.createdAt">{{
-            comentario.createdAt.slice(0, 10)
+          <time [attr.datetime]="comentario.createdAt" [attr.title]="comentario.createdAt">{{
+            comentario.createdAt | fechaRelativa
           }}</time>
           @if (comentario.modificado) {
             <span class="editado">Editado</span>
@@ -82,6 +88,7 @@
             <label [for]="'editar-' + comentario._id">Editar tu comentario</label>
             <textarea
               [id]="'editar-' + comentario._id"
+              appAutoFocus
               formControlName="texto"
               [readOnly]="guardando"
               rows="3"

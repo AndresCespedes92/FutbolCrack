@@ -1,44 +1,43 @@
-
-import { Controller, Get } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import { UsuariosService } from './usuarios.service.js';
-import { UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
 import { AdministradorGuard } from './guards/administrador.guard.js';
+import { CrearUsuarioAdministrativoDto } from './dto/crear-usuario-administrativo.dto.js';
 
-/**
- * Controlador de usuarios de FutbolCrack.
- *
- * Su responsabilidad es recibir solicitudes HTTP
- * relacionadas con la consulta de usuarios.
- *
- * El registro y el login se implementarán
- * en AuthController, dentro del módulo de autenticación.
- */
+// Todo el controller es administrativo. Registro/login públicos permanecen en AuthController.
 @Controller('usuarios')
+@UseGuards(AuthGuard, AdministradorGuard)
 export class UsuariosController {
-
-  /**
-   * Inyección de dependencias:
-   *
-   * NestJS proporciona una instancia de UsuariosService
-   * para utilizar sus métodos desde este controlador.
-   */
-  constructor(
-    private readonly usuariosService: UsuariosService,
-  ) {}
-
-  /**
-   * GET /usuarios
-   *
-   * Solicita al servicio todos los usuarios
-   * registrados en MongoDB.
-   *
-   * Primero se verifica la sesión; luego el rol actual en MongoDB.
-   * Un socio autenticado no tiene permiso para consultar todo el padrón.
-   */
-  @UseGuards(AuthGuard, AdministradorGuard)
+  constructor(private readonly usuariosService: UsuariosService) {}
   @Get()
   findAll() {
     return this.usuariosService.findAll();
+  }
+  @Post()
+  crear(@Body() datos: CrearUsuarioAdministrativoDto) {
+    return this.usuariosService.crearAdministrativo(datos);
+  }
+  @Delete(':id')
+  deshabilitar(
+    @Param('id') id: string,
+    @Req() request: Request & { user?: { sub: string } },
+  ) {
+    return this.usuariosService.deshabilitar(id, request.user!.sub);
+  }
+  @Post(':id/habilitar')
+  @HttpCode(200)
+  habilitar(@Param('id') id: string) {
+    return this.usuariosService.habilitar(id);
   }
 }

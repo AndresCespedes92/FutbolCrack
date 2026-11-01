@@ -1,0 +1,37 @@
+/* Dialog nativo: mismo lenguaje visual y foco del resto de confirmaciones, sin alert/confirm. */
+dialog {
+  width: min(500px, calc(100% - 32px));
+  padding: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.75);
+}
+h2 {
+  font-size: 1.4rem;
+  overflow-wrap: anywhere;
+}
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+button {
+  padding: 12px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-secondary);
+  color: var(--color-text);
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.error {
+  color: var(--color-error);
+}

@@ -1,0 +1,134 @@
+/* Dashboard acotado: reutiliza negro/musgo/gris, superficies y radios globales. */
+:host {
+  display: block;
+}
+h1 {
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+}
+.panel,
+.aviso {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+h2 {
+  font-size: 1.3rem;
+  margin: 0 0 20px;
+}
+/* Cada llamada al factory del registro crea controles independientes. Grilla cambia a una columna. */
+.datos-formulario {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  padding: 0;
+  margin: 0 0 18px;
+  border: 0;
+  min-width: 0;
+}
+.leyenda {
+  margin-bottom: 18px;
+  font-weight: bold;
+}
+.field {
+  margin: 0;
+}
+.field .input-invalido {
+  border-color: var(--color-error);
+}
+.field .input-valido {
+  border-color: var(--color-success);
+}
+.roles {
+  grid-column: 1/-1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+.roles label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Tabla con scroll horizontal local: nunca ensancha la página del teléfono. */
+.tabla-scroll {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+caption {
+  text-align: left;
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+}
+th,
+td {
+  padding: 14px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+th {
+  font-size: 0.85rem;
+}
+td {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+td small {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+}
+.estado {
+  display: inline-block;
+  border-radius: var(--radius-control);
+  padding: 6px 10px;
+  background: var(--color-secondary);
+}
+.inactivo {
+  color: var(--color-error);
+  background: var(--color-background);
+}
+button {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 10px 14px;
+  color: var(--color-text);
+  background: var(--color-secondary);
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.deshabilitar {
+  color: var(--color-error);
+}
+.error {
+  color: var(--color-error);
+}
+.exito {
+  color: var(--color-success);
+}
+.nota {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+@media (max-width: 700px) {
+  .datos-formulario {
+    grid-template-columns: 1fr;
+  }
+  .panel {
+    padding: 18px;
+  }
+  th,
+  td {
+    padding: 12px 8px;
+  }
+}

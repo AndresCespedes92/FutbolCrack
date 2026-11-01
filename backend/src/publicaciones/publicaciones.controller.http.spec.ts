@@ -1,3 +1,5 @@
+import { modeloUsuarioSesion } from '../testing/usuario-sesion.js';
+import { Usuario } from '../usuarios/entities/usuario.entity.js';
 import { InternalServerErrorException, ValidationPipe } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -60,6 +62,10 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
       controllers: [PublicacionesController],
       providers: [
         AuthGuard,
+        {
+          provide: getModelToken(Usuario.name),
+          useValue: modeloUsuarioSesion((id) => usuarios.findById(id)),
+        },
         AutenticacionOpcionalGuard,
         PublicacionesService,
         { provide: getModelToken(Publicacion.name), useValue: ModeloDePrueba },

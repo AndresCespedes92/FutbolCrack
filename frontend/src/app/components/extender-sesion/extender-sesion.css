@@ -1,0 +1,36 @@
+/* Modal nativo y radios compartidos: conserva estética/foco sin dependencia visual. */
+dialog {
+  width: min(480px, calc(100% - 32px));
+  padding: 28px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.75);
+}
+h2 {
+  font-size: 1.4rem;
+}
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+button {
+  padding: 12px 18px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary);
+  color: var(--color-text);
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.error {
+  color: var(--color-error);
+}

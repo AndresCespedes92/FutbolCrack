@@ -7,21 +7,25 @@ describe('PublicacionCard: datos y eventos sin HTTP', () => {
   let fixture: ComponentFixture<PublicacionCard>;
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [PublicacionCard] }).compileComponents();
+    vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-11-01T12:00:00Z').getTime());
     fixture = TestBed.createComponent(PublicacionCard);
     fixture.componentRef.setInput('publicacion', publicacionPrueba());
     fixture.detectChanges();
   });
+  afterEach(() => vi.restoreAllMocks());
   it('renderiza autor, foto, fecha, título, descripción, imagen y cantidad reales', () => {
     const html = fixture.nativeElement;
     for (const texto of [
       'Camila Gómez',
       '@camila.8',
-      '2026-10-31',
+      'Ayer',
       'Jugada 1',
       'Entrenamiento del club',
       '2 Me gusta',
     ])
       expect(html.textContent).toContain(texto);
+    expect(html.querySelector('time').getAttribute('datetime')).toBe('2026-10-31T12:00:00Z');
+    expect(html.querySelector('time').getAttribute('title')).toBe('2026-10-31T12:00:00Z');
     expect(html.querySelector('.post-avatar').getAttribute('src')).toBe('/foto-perfil.png');
     expect(html.querySelector('.post-image').getAttribute('src')).toBe('/foto-jugada.png');
     expect(html.querySelector('.like').disabled).toBe(true);
@@ -103,5 +107,17 @@ describe('PublicacionCard: datos y eventos sin HTTP', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.post-body p').textContent).toBe(texto);
     expect(fixture.nativeElement.querySelector('.expandir')).toBeNull();
+  });
+  it('usa iniciales cuando no hay foto y conserva marca FC si falta autor', () => {
+    const publicacion = publicacionPrueba();
+    fixture.componentRef.setInput('publicacion', {
+      ...publicacion,
+      autorId: { ...publicacion.autorId!, imagenPerfil: '' },
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.avatar-fallback').textContent.trim()).toBe('CG');
+    fixture.componentRef.setInput('publicacion', { ...publicacion, autorId: null });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.avatar-fallback').textContent.trim()).toBe('FC');
   });
 });

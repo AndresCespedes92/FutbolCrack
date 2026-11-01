@@ -16,5 +16,14 @@
       ariaCurrentWhenActive="page"
       >Registrarse</a
     >
+    <!-- Directiva visual reutilizable; la API y el router mantienen sus controles de acceso. -->
+    <ng-container *appPermisoRol="'administrador'">
+      <a routerLink="/dashboard/usuarios" routerLinkActive="active" ariaCurrentWhenActive="page"
+        >Administrar usuarios</a
+      >
+      <a routerLink="/dashboard/estadisticas" routerLinkActive="active" ariaCurrentWhenActive="page"
+        >Estadísticas</a
+      >
+    </ng-container>
   </nav>
 </header>

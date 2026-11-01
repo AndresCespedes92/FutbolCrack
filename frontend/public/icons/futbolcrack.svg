@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Escudo de FutbolCrack">
+  <rect width="512" height="512" rx="100" fill="#101310"/>
+  <path d="M256 83 400 132 384 307Q360 381 256 429 152 381 128 307L112 132Z" fill="#596b42" stroke="#a8c987" stroke-width="10"/>
+  <circle cx="256" cy="180" r="49" fill="#f1f1e9"/>
+  <path d="m256 151 28 20-11 33h-34l-11-33z" fill="#101310"/>
+  <text x="256" y="335" font-family="Arial,sans-serif" font-size="110" font-weight="700" text-anchor="middle" fill="#f1f1e9">FC</text>
+</svg>

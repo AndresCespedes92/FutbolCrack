@@ -225,3 +225,107 @@ Esta sección actualiza los pendientes de UI de 4A. Se conserva Angular standalo
 Se amplían también los tests de PublicacionCard, PublicacionesService y MiPerfil, conservando las suites existentes. El mapa de relaciones backend sigue en 04 y el recorrido educativo completo en [guia-angular.md](guia-angular.md).
 
 Ejemplo del club: cada ficha de jugada tiene debajo su propio cuaderno de comentarios, identificado por publicacionId. No comparte array con la otra jugada. «Cargar más» pide solo tres hojas siguientes y las anexa. Tras escribir una nota nueva se vuelve a la primera página para no continuar con offsets viejos.
+
+## Sprint 3, Tarea 4C — Sesión inicial y renovación voluntaria
+
+| Archivo | Funcionalidad actual |
+| --- | --- |
+| backend/src/auth/sesion.constants.ts y seguridad.module.ts | Plazo compartido 900 segundos para JWT. |
+| backend/src/auth/sesion-cookie.ts | Opciones HttpOnly/Secure/SameSite y maxAge según exp real; limpieza coherente. |
+| backend/src/auth/auth.controller.ts | POST /auth/autorizar y /auth/refrescar (200/401), login con metadatos, me compatible y logout. |
+| backend/src/auth/auth.service.ts | Consulta usuario actual, vigencia antes/después, emisión y proyección pública sin JWT en JSON. |
+| backend/src/auth/guards/auth.guard.ts | Guard único, cookie obligatoria en nuevos endpoints, claims y firma/exp válidos. |
+| backend/src/common/origenes-permitidos.ts | Orígenes exactos compartidos por CORS y CSRF. |
+| backend/src/common/middlewares/validar-origen.middleware.ts y main.ts | Origin/Referer/rechazo ante ausencia para cookies/sesión; CORS conserva credentials. |
+| frontend/src/app/services/auth.ts | Estado/fechas en memoria, autorizar compartido, renovación, aviso/expiración, timers/listeners y limpieza. |
+| frontend/src/app/services/api.config.ts | Origen API compartido con servicios e interceptor. |
+| frontend/src/app/interceptors/sesion.interceptor.ts y app.config.ts | 401 de endpoints protegidos; 403/red/500 no cierran sesión. |
+| frontend/src/app/app.ts/html/css | Carga inicial/reintento, continuidad de ruta y modal de sesión. |
+| frontend/src/app/components/extender-sesion/ | Dialog propio con Extender sesión/Ahora no y estados de espera/error. |
+| frontend/src/app/guards/auth.guard.ts y pages/login/ | Reutiliza sesión/autorización pendiente y returnUrl interno. |
+| backend/src/auth/auth.sesion.http.spec.ts | 18 casos HTTP con JWT/bcrypt/cookie/middleware reales y usuarios simulados. |
+| backend/src/common/middlewares/validar-origen.middleware.spec.ts | Siete casos de política CSRF y compatibilidad de Bearer/lecturas. |
+| frontend/src/app/services/auth.spec.ts | 16 casos con reloj simulado: autorización, caché, aviso, renovación, vencimiento, suspensión y limpieza. |
+| frontend/src/app/interceptors/sesion.interceptor.spec.ts | 12 casos de 401/403/500, excepciones y origen exacto. |
+| frontend/src/app/app.sesion.spec.ts | Ocho casos de pantalla inicial, rutas, errores, modal y solicitud compartida raíz/guard. |
+| frontend/src/app/components/extender-sesion/extender-sesion.spec.ts | Dos casos de Outputs/teclado/bloqueo del modal. |
+| frontend/src/app/pages/login/login.sesion.spec.ts | Tres casos de destino seguro/credenciales y recuperación del estado. |
+| frontend/src/app/testing/sesion-fixture.ts | Metadatos exclusivos de pruebas, sin tokens. |
+
+Limitación de modelo: no existe habilitado/activo en Usuario; solo se puede comprobar existencia/ficha actual. No se implementa bloqueo de cuentas de Sprint 4 ni se declara comprobado un usuario deshabilitado. Explicación, endpoints, decisiones CSRF y límites en [02](02-AUTENTICACION-Y-SEGURIDAD.md).
+
+## Incorporaciones 5A — Administración de usuarios (2026-11-01)
+
+| Ubicación | Responsabilidad y métodos |
+| --- | --- |
+| `backend/src/usuarios/entities/usuario.entity.ts` | Usuario.activo, default true; esquema existente |
+| `backend/src/usuarios/dto/crear-usuario-administrativo.dto.ts` | CrearUsuarioAdministrativoDto; datos de alta y perfil permitido |
+| `backend/src/common/password.ts` | generarHashPassword: coincidencia y bcrypt; compartido por alta pública/administrativa |
+| `backend/src/usuarios/usuarios.controller.ts` | GET/POST usuarios, DELETE :id, POST :id/habilitar; guards de clase |
+| `backend/src/usuarios/usuarios.service.ts` | crearAdministrativo, guardarUsuario, findAll, deshabilitar, habilitar, validarId |
+| `backend/src/auth/guards/auth.guard.ts` | canActivate: JWT y ficha/estado/rol actuales |
+| `backend/src/usuarios/guards/administrador.guard.ts` | canActivate: cuenta habilitada y administrador actual |
+| `backend/src/auth/seguridad.module.ts` | Inyección/exportación del modelo existente para guards |
+| `backend/src/auth/auth.service.ts` | registrar comparte hash; login/me/exigirUsuarioDeSesion rechazan bajas |
+| `frontend/src/app/services/usuarios.ts` | listar, crear, deshabilitar, habilitar y tipos de contrato |
+| `frontend/src/app/guards/administrador.guard.ts` | Ruta privada administrativa, retorno a login/feed según sesión/rol |
+| `frontend/src/app/app.routes.ts` | Lazy route /dashboard/usuarios |
+| `frontend/src/app/pages/dashboard-usuarios/` | TS contenedor, HTML tabla/formulario, CSS responsive comentado y spec |
+| `frontend/src/app/components/confirmacion-usuario/` | Modal TS/HTML/CSS; Inputs usuario/procesando/error y Outputs cancelar/confirmar |
+| `frontend/src/app/components/navbar/` | Enlace condicional Administrar usuarios |
+| `frontend/src/app/pages/publicaciones/` | Aviso de acceso denegado mediante query param; feed conservado |
+| `frontend/src/app/services/auth.ts` y `pages/login/` | Estado compatible y mensaje de cuenta deshabilitada |
+| `backend/src/usuarios/usuarios.administracion.http.spec.ts` | 34 casos HTTP integrados, MongoDB simulado |
+| `backend/src/usuarios/entities/usuario.entity.spec.ts` | Defaults y selección de hash con Mongoose en memoria |
+| `backend/src/testing/usuario-sesion.ts` | Modelo exclusivo de pruebas para consulta de sesión |
+| `frontend/src/app/testing/usuarios-fixture.ts` | Datos exclusivos de pruebas administrativas |
+
+El inventario completo de archivos modificados está en [10-BITACORA-DE-CAMBIOS.md](10-BITACORA-DE-CAMBIOS.md). No se agrega módulo funcional; se reutilizan UsuariosModule, AuthService y crearFormularioRegistro. La política vigente y los contratos están en [05-ADMINISTRACION.md](05-ADMINISTRACION.md).
+
+## Incorporaciones 5B — Estadísticas y moderación
+
+| Archivo real | Responsabilidad/clases/métodos |
+| --- | --- |
+| `backend/src/common/estadisticas/rango-fechas.dto.ts` | RangoFechasDto, construirRango y ZONA_REPORTES: calendario y límites UTC−03:00 |
+| `backend/src/publicaciones/estadisticas-publicaciones.controller.ts` | EstadisticasPublicacionesController.porUsuario, GET /estadisticas/publicaciones-por-usuario; AuthGuard/AdministradorGuard |
+| `backend/src/publicaciones/publicaciones.service.ts` | publicacionesPorUsuario: match/group/sort/project y populate público |
+| `backend/src/publicaciones/publicaciones.module.ts` | Controller de reportes en módulo existente |
+| `backend/src/comentarios/estadisticas-comentarios.controller.ts` | EstadisticasComentariosController.total y porPublicacion; GET /estadisticas/comentarios-totales y /estadisticas/comentarios-por-publicacion |
+| `backend/src/comentarios/comentarios.service.ts` | pipelineVisibles, totalEnRango, porPublicacionEnRango: lookup/facet/count/group |
+| `backend/src/comentarios/comentarios.module.ts` | Controller de reportes, reutiliza modelo Publicacion |
+| `backend/src/comentarios/estadisticas.http.spec.ts` | 42 casos HTTP de fechas, cantidades, permisos y moderación integrada |
+| `backend/src/testing/agregacion-prueba.ts` | Intérprete limitado de pipelines exclusivo de tests, sin conexión externa |
+| `frontend/src/app/services/estadisticas.ts` | EstadisticasService y contratos tipados de los tres GET |
+| `frontend/src/app/pages/dashboard-estadisticas/` | TS: formularios/cargas/geometría; HTML: gráficos/tablas; CSS: responsive comentado; spec: pruebas |
+| `frontend/src/app/app.routes.ts` | /dashboard/estadisticas lazy con administradorGuard existente |
+| `frontend/src/app/components/navbar/navbar.html` | Enlace Estadísticas para administrador habilitado |
+| `frontend/src/app/guards/administrador.guard.spec.ts` | Casos de ruta estadística con Router real |
+| `frontend/src/app/pages/publicaciones/publicaciones-interacciones.spec.ts` | Confirmación/cancelación de baja administrativa ajena |
+| `frontend/src/app/pages/publicaciones/publicaciones.html` | Aviso de acceso denegado también menciona estadísticas |
+
+No se agregan esquemas/modelos/módulos funcionales. DELETE /publicaciones/:id, darDeBaja, ConfirmacionBaja y AccionesPublicaciones se reutilizan sin cambios productivos. Inventario en 10; contratos, consultas y ejemplos en [06-ESTADISTICAS.md](06-ESTADISTICAS.md).
+
+## Incorporaciones 5C — PWA, tres pipes y tres directivas
+
+| Archivo/clase real | Responsabilidad y ubicación de uso |
+| --- | --- |
+| `frontend/ngsw-config.json` | Caché cerrada de estáticos; dataGroups vacío; fallback exacto raíz/login/registro, sin endpoints API |
+| `frontend/angular.json`, `src/app/app.config.ts` | Worker oficial de producción, registro con isDevMode/registerWhenStable/updateViaCache |
+| `frontend/public/manifest.webmanifest`, `src/index.html` | Identidad/instalación/enlaces/colores; start_url '/' |
+| `frontend/public/icons/` | Escudo propio FC, SVG y PNG 192/512/maskable |
+| `frontend/scripts/pwa.test.mjs` | Once pruebas Node sobre configuración y build real; npm run test:pwa después de build |
+| `frontend/package.json`, `package-lock.json` | Única dependencia añadida: @angular/service-worker 22.2.3; script test:pwa |
+| `frontend/src/app/pipes/truncate.pipe.ts` | TruncatePipe existente, defensa de entradas inválidas; tarjeta/comentarios con Ver más/menos |
+| `frontend/src/app/pipes/fecha-relativa.pipe.ts` | FechaRelativaPipe.transform: tiempo transcurrido, sin timers; tarjeta/comentarios |
+| `frontend/src/app/pipes/iniciales.pipe.ts` | InicialesPipe.transform: avatar sin foto en tarjeta/comentarios |
+| `frontend/src/app/directives/resaltar-autor.directive.ts` | ResaltarAutorDirective: clase comentario-propio; comentarios según identidad recibida |
+| `frontend/src/app/directives/auto-focus.directive.ts` | AutoFocusDirective: afterNextRender/focus al editar comentario |
+| `frontend/src/app/directives/permiso-rol.directive.ts` | PermisoRolDirective: input/effect, TemplateRef/ViewContainerRef, enlaces administrativos del Navbar |
+| `frontend/src/app/directives/directivas.spec.ts` | Host de pruebas de las tres directivas y cambios de sesión |
+| `frontend/src/app/pipes/*.spec.ts` | Pruebas de los tres pipes, entradas vacías/invalidas y límites |
+| `frontend/src/app/components/publicacion-card/` | Import/uso de tres pipes y verificación de time con datetime/title exactos |
+| `frontend/src/app/components/comentarios-publicacion/` | Pipes, resaltado, autofocus de edición y CSS comentado; pruebas integradas |
+| `frontend/src/app/components/navbar/` | Uso real de *appPermisoRol, conserva guards/rutas Nest |
+| `frontend/src/app/app.html`, `app.sesion.spec.ts` | Shell de reconexión sin datos/cola offline; autorización real preservada |
+
+Hay exactamente tres @Pipe y tres @Directive propios; NgClass/RouterLink/guards no suman al conteo. No se modifica backend. Inventario íntegro en 10; detalles de caché, limitaciones y estudio en [07](07-ANGULAR-PWA-PIPES-DIRECTIVAS.md).

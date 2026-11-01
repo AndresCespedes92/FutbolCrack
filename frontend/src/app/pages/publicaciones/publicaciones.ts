@@ -13,7 +13,7 @@ import {
   ViewChild,
   inject,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
@@ -36,6 +36,8 @@ import { imagenPerfilValidator as imagenPublicacionValidator } from '../../valid
 export class Publicaciones implements OnInit {
   private readonly publicacionesService = inject(PublicacionesService);
   private readonly router = inject(Router);
+  readonly accesoDenegado =
+    inject(ActivatedRoute).snapshot.queryParamMap.get('acceso') === 'sin-permiso';
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);

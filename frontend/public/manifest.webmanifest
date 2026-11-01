@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "FutbolCrack",
+  "short_name": "FutbolCrack",
+  "description": "Compartí tus jugadas, construí tu perfil de futbolista y descubrí oportunidades en el fútbol.",
+  "lang": "es-AR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101310",
+  "theme_color": "#596b42",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

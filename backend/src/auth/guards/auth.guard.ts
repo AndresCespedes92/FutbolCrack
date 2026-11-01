@@ -1,4 +1,6 @@
-
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { Usuario } from '../../usuarios/entities/usuario.entity.js';
 import {
   CanActivate,
   ExecutionContext,
@@ -7,10 +9,12 @@ import {
 } from '@nestjs/common';
 
 import { JwtService } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
+import { SOLO_COOKIE_SESION } from '../sesion.constants.js';
 import type { Request } from 'express';
 
 // Información que guardamos en el JWT al iniciar sesión.
-interface JwtPayload {
+export interface JwtPayload {
   sub: string;
   perfil: string;
   iat?: number;
@@ -26,6 +30,8 @@ interface RequestAutenticada extends Request {
 export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
+    private readonly reflector: Reflector,
+    @InjectModel(Usuario.name) private readonly usuarioModel: Model<Usuario>,
   ) {}
 
   /**
@@ -33,21 +39,19 @@ export class AuthGuard implements CanActivate {
    *
    * Permite acceder solamente si recibe un JWT válido.
    */
-  async canActivate(
-    context: ExecutionContext,
-  ): Promise<boolean> {
-    const request = context
-      .switchToHttp()
-      .getRequest<RequestAutenticada>();
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<RequestAutenticada>();
 
     // Opción 1: buscar el JWT en Authorization: Bearer ...
-    const tokenBearer = this.extraerTokenBearer(request);
+    const soloCookie = this.reflector.get<boolean>(
+      SOLO_COOKIE_SESION,
+      context.getHandler(),
+    );
+    const tokenBearer = soloCookie ? null : this.extraerTokenBearer(request);
 
     // Opción 2: buscar el JWT en la cookie "token".
     // Solo utilizamos la cookie cuando no hay Bearer.
-    const tokenCookie = tokenBearer
-      ? null
-      : this.extraerTokenCookie(request);
+    const tokenCookie = tokenBearer ? null : this.extraerTokenCookie(request);
 
     const token = tokenBearer ?? tokenCookie;
 
@@ -57,20 +61,47 @@ export class AuthGuard implements CanActivate {
       );
     }
 
+    let payload: JwtPayload;
     try {
-      // Verifica la firma y la expiración del JWT.
-      const payload =
-        await this.jwtService.verifyAsync<JwtPayload>(token);
-
-      // Dejamos la identidad disponible para el Controller.
-      request.user = payload;
-
-      return true;
+      payload = await this.jwtService.verifyAsync<JwtPayload>(token);
+      if (
+        typeof payload.sub !== 'string' ||
+        !Types.ObjectId.isValid(payload.sub) ||
+        typeof payload.exp !== 'number' ||
+        !Number.isFinite(payload.exp) ||
+        typeof payload.iat !== 'number' ||
+        !Number.isFinite(payload.iat)
+      ) {
+        throw new UnauthorizedException(
+          'La sesión no contiene identidad y vencimiento válidos',
+        );
+      }
     } catch {
+      throw new UnauthorizedException('La sesión es inválida o ha vencido');
+    }
+    // La consulta queda FUERA del catch de JWT: una caída de MongoDB es 500, no una falsa sesión 401.
+    const identidad = new Types.ObjectId(payload.sub);
+    const usuario = await this.usuarioModel
+      .findById(identidad)
+      .select('_id perfil activo')
+      .lean()
+      .exec();
+    if (
+      !usuario ||
+      usuario.activo === false ||
+      payload.exp! * 1000 <= Date.now()
+    ) {
       throw new UnauthorizedException(
-        'La sesión es inválida o ha vencido',
+        'La cuenta no está habilitada o la sesión venció',
       );
     }
+    // La ficha actual manda sobre el rol anterior del token, sin guardar estado dentro del JWT.
+    request.user = {
+      ...payload,
+      sub: identidad.toString(),
+      perfil: usuario.perfil,
+    };
+    return true;
   }
 
   /**

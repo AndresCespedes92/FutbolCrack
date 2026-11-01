@@ -1,3 +1,4 @@
+import { modeloUsuarioSesion } from '../testing/usuario-sesion.js';
 import { Global, Module, ValidationPipe } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -28,11 +29,12 @@ class ModeloComentarioPrueba {
     return guardar(this.datos);
   }
 }
+const usuarios = { findById: vi.fn() };
 const conexion = {
   models: {
     Comentario: ModeloComentarioPrueba,
     Publicacion: { findOne: buscarPublicacion },
-    Usuario: {},
+    Usuario: modeloUsuarioSesion((id) => usuarios.findById(id)),
   },
 };
 @Global()
@@ -54,7 +56,6 @@ describe('Comentarios HTTP 4A: módulo, validación, autoría y paginación', ()
     otraPublicacionId = '000000000000000000000012';
   const comentarioId = '000000000000000000000101';
   const token = jwt.sign({ sub: autorId, perfil: 'usuario' });
-  const usuarios = { findById: vi.fn() };
   let publicaciones: any[], comentarios: any[];
   const fichas = [
     {
