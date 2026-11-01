@@ -236,3 +236,23 @@ Se retiró PUBLICACIONES_DEMO de esta pantalla; no se inventan likes, jugadas ni
 El mapa de archivos está en 00 y la [guía Angular](guia-angular.md) incluye ejemplos y preguntas de defensa. Los CSS explican radio/padding, colores de estados, fotos y reglas móviles; para ajustar todas las tarjetas se cambia publicacion-card.css, no el feed por separado. La paleta/radios globales de styles.css se reutilizan sin modificarlos.
 
 Las pruebas DOM/HTTP locales cubren renderizado, los tres Outputs, bloqueo, expansión, diez registros/páginas, orden, modal/cancelación/errores, última página tras baja y perfil real. Ver ejecución y límites en 08. El comportamiento modal nativo, aspecto en distintos dispositivos y ciclo con Atlas/Cloudinary/cookies reales deben verificarse en navegador/entorno de ensayo: JSDOM no demuestra esos puntos.
+
+## Sprint 3, Tarea 4B — Abrir una jugada por ID
+
+El feed y Mi Perfil habilitan detalleDisponible en PublicacionCard y escuchan abrirDetalle. verDetalle recibe la publicación y navega a `/publicaciones/:id`; la ruta pública carga PublicacionDetalle. La pantalla reutiliza tarjeta, acciones de likes y modal de baja del Sprint 2. textoCompleto permite leer toda la descripción; en el feed se conserva Ver más/Ver menos con TruncatePipe.
+
+No existía un endpoint individual y el listado solo filtraba por autor: no era correcto descargar páginas del feed hasta encontrar una jugada. Se agrega **GET /publicaciones/:id**, autorizado expresamente por 4B. Valida ObjectId (400) y filtra `_id` y activo distinto de false antes de consultar; inexistente/inactiva da 404. La respuesta 200 es **una Publicacion**, con los mismos campos, autor público, compatibilidad antigua, cantidadLikes y meGusta del listado, sin el sobre de páginas ni array de votantes.
+
+```text
+GET /publicaciones/000000000000000000000011
+200 { _id, autorId, titulo, descripcion, contenido, multimediaUrl, tipoMultimedia,
+      activo, createdAt, updatedAt, cantidadLikes, meGusta }
+```
+
+obtenerPorId reutiliza consultarListado con limit 1 y filtro de id. listar conserva el pipeline/contrato de 3B; no se duplican cálculo de likes ni fallbacks de documentos antiguos. AutenticacionOpcionalGuard sigue siendo el existente, sin cambios JWT/cookies: anónimo lee con meGusta false y una sesión válida permite calcular su voto. Los endpoints de escritura permanecen iguales.
+
+Detalle usa paramMap para responder a cambios de id y cancela el GET previo; no conserva la jugada anterior al navegar a otra. Muestra carga, error con reintento, id inválido y ausencia/baja. También oculta una respuesta inactiva como defensa visual. Si comentarios indica que la publicación dejó de existir/estar activa, oculta la tarjeta y sus comentarios. No se interpretan todos los errores como publicación ausente.
+
+La recarga tras un like mantiene la sección de comentarios y sus borradores si sigue siendo la misma jugada. Mi Perfil mantiene igualmente sus hijos por id y bloquea la tarjeta mientras recarga; una baja exitosa retira primero la jugada de la colección y después repone las últimas tres para no mostrar una inactiva durante la consulta. El modal sigue siendo obligatorio y la autorización definitiva permanece en Nest.
+
+ComentariosPublicacion se reutiliza tanto aquí como en cada una de las tres jugadas del perfil; detalles de creación, anexado, edición y límites en [04](04-COMENTARIOS.md). La pareja API/frontend debe integrarse coordinadamente porque el endpoint individual es nuevo. No se verificó la versión que hoy está desplegada en Vercel ni se hizo deploy.

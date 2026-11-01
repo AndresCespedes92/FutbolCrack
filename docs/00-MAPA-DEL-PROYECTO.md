@@ -177,3 +177,51 @@ La tarjeta real reemplaza la demo en feed y Mi Perfil; no cambian endpoints, mod
 Ejemplo del club: el entrenador (padre) entrega a la tarjeta la ficha de una jugada. La tarjeta avisa «quiero votar»; el contenedor coordina al servicio, espera la confirmación de Nest y consulta otra vez la cartelera. No se permite que cada tarjeta gestione una conexión propia.
 
 La salida de detalle está preparada y probada, pero detalleDisponible permanece false porque la pantalla/API de detalle y comentarios son de Sprint 3. No hay enlaces a rutas inexistentes ni comentarios inventados. Ver [03](03-PUBLICACIONES.md), [08](08-PRUEBAS-Y-DESPLIEGUE.md) y [guía Angular](guia-angular.md).
+
+## Sprint 3, Tarea 4A — Backend de comentarios
+
+| Archivo en backend/src/ | Clase / método y endpoint |
+| --- | --- |
+| comentarios/comentarios.module.ts | ComentariosModule: único módulo funcional nuevo; registra Comentario y reutiliza Seguridad/Usuarios/Publicaciones. |
+| comentarios/entities/comentario.entity.ts | Comentario, ComentarioSchema: publicacionId/autorId, texto, modificado, timestamps e índice compuesto. |
+| comentarios/comentarios.constants.ts | Máximo texto 1000; página 3, máximo técnico 100. |
+| comentarios/dto/crear-comentario.dto.ts | CrearComentarioDto: texto obligatorio, trim, string, máximo; propiedades ajenas rechazadas por pipe global. |
+| comentarios/dto/editar-comentario.dto.ts | EditarComentarioDto hereda las mismas validaciones; PUT exige texto. |
+| comentarios/dto/listar-comentarios.dto.ts | ListarComentariosDto: offset/limit estrictos. |
+| comentarios/comentarios.controller.ts | crear: POST /publicaciones/:publicacionId/comentarios; listar: GET misma ruta; editar: PUT /comentarios/:id. |
+| comentarios/comentarios.service.ts | crear/listar/editar; validarId, validarUsuario, exigirPublicacionActiva, validarTexto, presentar. Reglas de autoría, actividad, página/total y populate mínimo. |
+| common/validation/entero-query.ts | enteroDeQuery compartido por DTO de comentarios/publicaciones, sin cambiar reglas del listado existente. |
+| publicaciones/publicaciones.module.ts | Exporta MongooseModule para reutilizar el modelo Publicacion ya registrado. |
+| app.module.ts | Importa ComentariosModule. |
+| comentarios/comentarios.controller.http.spec.ts | HTTP con módulo real y conexión/modelos/usuarios simulados; guards/DTO/servicio reales, sin Atlas. |
+| comentarios/entities/comentario.entity.spec.ts | Cuatro casos de schema real en memoria: referencias/defaults, texto, fechas/índice. |
+
+El socio envía texto → DTO verifica forma → AuthGuard aporta identidad → servicio comprueba usuario/jugada/propiedad → modelo guarda referencias → presentar/populate devuelve nombre/foto mínimos. Listar es público y devuelve comentarios/total/offset/limit/hayMas, default 3. Editar exige autor real (admin no tiene excepción), marca modificado true y mantiene fecha original. No existe DELETE de comentarios ni integración Angular en 4A.
+
+Contrato, ejemplos, decisiones de límites y riesgos entre colecciones en [04](04-COMENTARIOS.md). La documentación de Sprint 2 se conserva; no cambian sus funcionalidades.
+
+## Sprint 3, Tarea 4B — Detalle y comentarios Angular
+
+Esta sección actualiza los pendientes de UI de 4A. Se conserva Angular standalone y no se agregan módulos funcionales ni dependencias.
+
+| Archivo | Clase / método y responsabilidad |
+| --- | --- |
+| backend/src/publicaciones/publicaciones.controller.ts | obtenerPorId: GET /publicaciones/:id público, identidad opcional para meGusta. |
+| backend/src/publicaciones/publicaciones.service.ts | obtenerPorId valida ObjectId y 404; consultarListado comparte la consulta/normalización del feed con filtro _id y limit 1. listar mantiene su contrato. |
+| backend/src/publicaciones/publicaciones.controller.http.spec.ts | Cinco casos nuevos de detalle; se conservan los anteriores y el doble interpreta el filtro _id. |
+| frontend/src/app/app.routes.ts | Nueva ruta pública publicaciones/:id, carga PublicacionDetalle. |
+| frontend/src/app/pages/publicacion-detalle/publicacion-detalle.ts/html/css | PublicacionDetalle: paramMap, cargarDetalle, marcarNoDisponible, confirmarBaja; tarjeta completa, likes/baja compartidos y sección de comentarios. |
+| frontend/src/app/services/comentarios.ts | Comentario, AutorComentario, ListadoComentarios, RespuestaComentario; listar(publicacionId, offset), crear(publicacionId, texto), editar(id, texto), cookies existentes. |
+| frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.ts/html/css | ComentariosPublicacion: Inputs publicacionId/usuario; Output publicacionNoDisponible; cargarComentarios, publicar, puedeEditar, iniciarEdicion, cancelarEdicion, guardarEdicion, alternarTexto; estado local/formularios y páginas de tres. |
+| frontend/src/app/services/publicaciones.ts | obtenerPorId: GET individual tipado sin descargar el feed. |
+| frontend/src/app/components/publicacion-card/publicacion-card.ts/html | textoCompleto permite descripción íntegra en detalle, preservando TruncatePipe; abrirDetalle ahora se conecta desde feed/perfil. |
+| frontend/src/app/pages/publicaciones/publicaciones.ts/html | verDetalle navega con el id recibido del Output. |
+| frontend/src/app/pages/mi-perfil/mi-perfil.ts/html/css | Cada una de las tres publicaciones agrupa su tarjeta y ComentariosPublicacion; retirarNoDisponible elimina de la vista una jugada cuyo GET de comentarios da 404. Conserva hijos/borradores al recargar un like. |
+| frontend/src/app/services/comentarios.spec.ts | Tres pruebas del contrato HTTP de 4A. |
+| frontend/src/app/components/comentarios-publicacion/comentarios-publicacion.spec.ts | 23 casos: anexado, duplicados, offsets, creación/edición, validaciones, errores, permisos, Input y truncado. |
+| frontend/src/app/pages/publicacion-detalle/publicacion-detalle.spec.ts | Ocho casos: URL directa/Output, lectura pública, errores/404/inactiva/id inválido, datos antiguos y cambio de id. |
+| frontend/src/app/testing/comentarios-fixture.ts | Datos/HTTP simulados exclusivos de tests; no se usan desde componentes productivos. |
+
+Se amplían también los tests de PublicacionCard, PublicacionesService y MiPerfil, conservando las suites existentes. El mapa de relaciones backend sigue en 04 y el recorrido educativo completo en [guia-angular.md](guia-angular.md).
+
+Ejemplo del club: cada ficha de jugada tiene debajo su propio cuaderno de comentarios, identificado por publicacionId. No comparte array con la otra jugada. «Cargar más» pide solo tres hojas siguientes y las anexa. Tras escribir una nota nueva se vuelve a la primera página para no continuar con offsets viejos.

@@ -40,6 +40,12 @@ export class PublicacionesController {
     return this.publicacionesService.listar(consulta, request.user?.sub);
   }
 
+  @Get(':id')
+  @UseGuards(AutenticacionOpcionalGuard)
+  obtenerPorId(@Param('id') id: string, @Req() request: RequestAutenticada) {
+    return this.publicacionesService.obtenerPorId(id, request.user?.sub);
+  }
+
   @Post()
   @UseGuards(AuthGuard)
   @UseInterceptors(

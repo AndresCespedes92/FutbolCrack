@@ -93,6 +93,10 @@ export class PublicacionesService {
     });
   }
 
+  obtenerPorId(id: string): Observable<Publicacion> {
+    return this.http.get<Publicacion>(`${this.apiUrl}/${id}`, { withCredentials: true });
+  }
+
   darMeGusta(id: string): Observable<RespuestaMeGusta> {
     // No se recibe usuarioId: el servidor lo obtiene de la cookie/JWT.
     return this.http.post<RespuestaMeGusta>(

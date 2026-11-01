@@ -46,7 +46,7 @@ El servicio HTTP devuelve Observable tipado. El contenedor o servicio de accione
 5. Un voto emite cambiarLike; AccionesPublicaciones bloquea ese id, llama al endpoint y recarga la página para obtener valores actuales. Los fallos muestran mensajes sin simular éxito.
 6. Dar de baja abre el modal. Cancelar no envía HTTP; Confirmar recién entonces ejecuta DELETE. Nest comprueba autor/admin y marca activo false.
 7. Ir a `/mi-perfil` pasa por authGuard existente. MiPerfil consulta los datos actuales y después solo sus tres publicaciones recientes. Se reutilizan tarjeta, acciones y modal.
-8. Los comentarios y el detalle se integrarán en Sprint 3. abrirDetalle está preparado y probado, pero su botón no se habilita mientras no exista la pantalla real.
+8. Desde 4B, abrirDetalle navega a publicaciones/:id. PublicacionDetalle obtiene una jugada y reutiliza ComentariosPublicacion para leer/escribir/editar; Mi Perfil monta la misma sección con el id de cada una de sus tres jugadas.
 
 ## Cómo cambiar la apariencia
 
@@ -71,7 +71,30 @@ Se reutiliza la idea de rutas/pantallas, servicios HTTP, formularios reactivos, 
 | ¿Qué evita dos votos por doble clic? | El botón y Set pendiente en Angular; además el filtro atómico con addToSet en MongoDB evita duplicados entre solicitudes. |
 | ¿Cancelar elimina algo? | No. Solo borra selección/cierra modal. DELETE solo se llama desde confirmarBaja. |
 | ¿El pipe modifica la base? | No. Es puro y transforma exclusivamente la presentación del texto. |
-| ¿Están completos comentarios y detalle? | No; corresponden a Sprint 3 y no se muestran datos ficticios. |
+| ¿Están completos comentarios y detalle? | Implementados localmente en 4B, pendientes de ensayo integrado en navegador/API real. |
 | ¿Qué falta para aceptar producción? | Ensayo con API/base/cookies reales y navegador, además de los requisitos restantes del TP. |
 
 Pruebas y comandos exactos en [08](08-PRUEBAS-Y-DESPLIEGUE.md); ubicaciones backend/frontend en [00](00-MAPA-DEL-PROYECTO.md). No hay cambios de JWT/cookies, dependencias ni contratos backend en esta tarea.
+
+## Recorrido y conceptos nuevos de 4B
+
+- **Ruta:** app.routes.ts agrega publicaciones/:id. PublicacionDetalle escucha ActivatedRoute.paramMap, consulta un solo id y cancela la lectura anterior al cambiar de jugada. Una URL directa funciona sin haber cargado el feed.
+- **Comunicación:** feed/perfil escuchan abrirDetalle de PublicacionCard y llaman verDetalle. La tarjeta sigue sin HTTP. textoCompleto muestra la descripción íntegra en detalle con el mismo TruncatePipe.
+- **Comentarios:** components/comentarios-publicacion usa Inputs publicacionId/usuario y Output publicacionNoDisponible. El padre conserva la ficha y sesión; la sección controla su colección, formularios y llamadas delegadas a services/comentarios.ts.
+- **Formulario:** nuevoForm y edicionForm son FormGroup. formControlName conecta el texto; validadores impiden vacíos/solo espacios y más de 1000 unidades UTF-16. El contador usa `.length`; un emoji puede contar dos. En error se conserva el texto y en éxito se usa la respuesta real.
+- **Página:** siguienteOffset empieza en cero y cada GET envía limit 3. Una Map por _id anexa sin duplicar; el offset avanza por filas recibidas. Tras crear se reinicia desde cero porque los offsets anteriores se desplazaron.
+- **Editar:** puedeEditar muestra el botón solo al autor; Nest vuelve a validarlo. Guardar envía PUT, sustituye un único objeto y la marca modificado muestra Editado. Cancelar no solicita HTTP.
+- **Perfil:** cada publicacion-del-perfil agrupa la tarjeta y la sección con el mismo id; como máximo tres consultas de tres comentarios al principio. No se duplica el detalle ni se cargan cantidades ilimitadas.
+- **CSS:** comentarios-publicacion.css define formularios/autor/texto/estados y su regla móvil; publicacion-detalle.css solo dispone los hijos. mi-perfil.css agrupa cada jugada y comentarios. Paleta y radios globales permanecen iguales.
+
+Ejemplo real: el encargado entrega a cada cuaderno el id de su jugada. «Cargar más» agrega tres notas del mismo cuaderno; si el socio escribe una nueva, vuelve a abrir las primeras tres para no saltar notas con números de página viejos.
+
+| Pregunta de defensa | Respuesta |
+| --- | --- |
+| ¿Por qué hubo que agregar GET individual? | El listado solo filtraba por autor; buscar un id descargando páginas sería incorrecto. El nuevo GET filtra por id antes de limitar. |
+| ¿Por qué offset no es comentarios.length? | Una fila repetida por cambios externos se deduplica en pantalla, pero el servidor ya la contó entre las recibidas. Se avanza por registros recibidos. |
+| ¿Se mantiene lo cargado al fallar Cargar más? | Sí; el array y offset previo quedan intactos para reintentar. |
+| ¿Por qué vuelve a tres después de crear? | La nueva nota desplaza los offsets de páginas anteriores; reiniciar mantiene una secuencia coherente. |
+| ¿Un admin puede editar otra opinión? | No. La UI compara autor y Nest lo exige sin excepción de admin. |
+| ¿TruncatePipe ahora cuenta dos veces? | No; se reutiliza el mismo pipe en publicaciones y comentarios. |
+| ¿Se renovó la sesión? | No; el 401 conserva el borrador y explica que debe ingresar. Renovación y TTL quedan para 4C. |

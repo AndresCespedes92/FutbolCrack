@@ -1,0 +1,23 @@
+/* Una columna de lectura: conserva la identidad del feed sin rediseñar toda la aplicación. */
+:host {
+  display: block;
+  max-width: 850px;
+  margin: 0 auto;
+}
+.detalle-heading {
+  margin-top: 24px;
+}
+h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+.detalle-contenido {
+  display: grid;
+  gap: 24px;
+}
+/* Los componentes hijos conservan estilos propios; aquí solo se distribuyen y muestran avisos. */
+.exito {
+  color: var(--color-success);
+}
+.error {
+  color: var(--color-error);
+}

@@ -69,11 +69,45 @@ export class PublicacionesService {
     consulta: ListarPublicacionesDto = new ListarPublicacionesDto(),
     usuarioAutenticadoId?: string,
   ) {
+    return this.consultarListado(consulta, usuarioAutenticadoId);
+  }
+
+  async obtenerPorId(id: string, usuarioAutenticadoId?: string) {
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException(
+        'El identificador de publicación no es válido',
+      );
+    // Una consulta filtrada por _id, no una descarga del feed para buscar en memoria.
+    // Comparte normalización antigua, autor público y cálculo de likes con el listado.
+    const consulta = new ListarPublicacionesDto();
+    consulta.limit = 1;
+    const resultado = await this.consultarListado(
+      consulta,
+      usuarioAutenticadoId,
+      new Types.ObjectId(id),
+    );
+    if (!resultado.publicaciones.length)
+      throw new NotFoundException(
+        'La publicación no existe o está dada de baja',
+      );
+    return resultado.publicaciones[0];
+  }
+
+  private async consultarListado(
+    consulta: ListarPublicacionesDto,
+    usuarioAutenticadoId?: string,
+    publicacionId?: Types.ObjectId,
+  ) {
     const { orden, usuarioId, offset, limit } = consulta;
-    const filtro: { activo: { $ne: false }; autorId?: Types.ObjectId } = {
+    const filtro: {
+      activo: { $ne: false };
+      autorId?: Types.ObjectId;
+      _id?: Types.ObjectId;
+    } = {
       activo: { $ne: false },
     };
     if (usuarioId) filtro.autorId = new Types.ObjectId(usuarioId);
+    if (publicacionId) filtro._id = publicacionId;
     const ordenamiento: Record<string, 1 | -1> =
       orden === 'likes'
         ? { cantidadLikes: -1, createdAt: -1, _id: -1 }

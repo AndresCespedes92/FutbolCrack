@@ -15,6 +15,7 @@ import { UsuariosModule } from './usuarios/usuarios.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CloudinaryModule } from './cloudinary/cloudinary.module.js';
 import { PublicacionesModule } from './publicaciones/publicaciones.module.js';
+import { ComentariosModule } from './comentarios/comentarios.module.js';
 
 // Middleware que verifica el origen de las solicitudes.
 import { ValidarOrigenMiddleware } from './common/middlewares/validar-origen.middleware.js';
@@ -44,6 +45,9 @@ import { ValidarOrigenMiddleware } from './common/middlewares/validar-origen.mid
 
     // Gestión de publicaciones.
     PublicacionesModule,
+
+    // Notas de los jugadores sobre publicaciones activas.
+    ComentariosModule,
   ],
 
   controllers: [AppController],

@@ -122,6 +122,9 @@ export class Publicaciones implements OnInit {
     this.cargarPublicaciones({ offset: (pagina - 1) * 10 });
   }
   readonly cargarTrasAccion = () => this.cargarPublicaciones();
+  verDetalle(publicacion: Publicacion): void {
+    void this.router.navigate(['/publicaciones', publicacion._id]);
+  }
   confirmarBaja(): void {
     this.acciones.confirmarBaja(() => this.cargarPublicaciones());
   }

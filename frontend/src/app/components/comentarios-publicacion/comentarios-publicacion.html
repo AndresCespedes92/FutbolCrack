@@ -1,0 +1,161 @@
+<section class="comentarios-publicacion" [attr.aria-labelledby]="'comentarios-' + publicacionId">
+  <header>
+    <h2 [id]="'comentarios-' + publicacionId">Comentarios</h2>
+    <span>{{ total }} en esta publicación</span>
+  </header>
+  @if (mensaje) {
+    <p class="exito" role="status">{{ mensaje }}</p>
+  }
+  @if (noDisponible) {
+    <p role="alert">Esta publicación ya no está disponible.</p>
+  } @else {
+    @if (usuario) {
+      <form class="nuevo-comentario" [formGroup]="nuevoForm" (ngSubmit)="publicar()" novalidate>
+        <label [for]="'nuevo-' + publicacionId">Compartí tu comentario</label>
+        <textarea
+          [id]="'nuevo-' + publicacionId"
+          formControlName="texto"
+          [readOnly]="enviando"
+          rows="3"
+          maxlength="1000"
+          required
+          [attr.aria-invalid]="nuevoForm.controls.texto.touched && nuevoForm.controls.texto.invalid"
+          [attr.aria-describedby]="'ayuda-' + publicacionId"
+        ></textarea>
+        <small [id]="'ayuda-' + publicacionId"
+          >{{ nuevoForm.controls.texto.value.length }} / 1000 unidades UTF-16</small
+        >
+        @if (nuevoForm.controls.texto.touched && nuevoForm.controls.texto.invalid) {
+          <p class="error" role="alert">
+            Escribí un comentario de 1 a 1000 unidades UTF-16, no solo espacios.
+          </p>
+        }
+        @if (errorNuevo) {
+          <p class="error" role="alert">{{ errorNuevo }}</p>
+        }
+        <button type="submit" [disabled]="ocupado || !!editandoId || nuevoForm.invalid">
+          {{ enviando ? 'Publicando…' : 'Publicar comentario' }}
+        </button>
+      </form>
+    } @else {
+      <p class="nota">
+        <a routerLink="/login">Iniciá sesión</a> para comentar. Podés leer los comentarios sin
+        ingresar.
+      </p>
+    }
+    @for (comentario of comentarios; track comentario._id) {
+      <article
+        class="comentario"
+        [attr.aria-label]="
+          'Comentario de ' + (comentario.autorId?.nombre || 'usuario no disponible')
+        "
+      >
+        <div class="autor-comentario">
+          @if (comentario.autorId?.imagenPerfil) {
+            <img
+              [src]="comentario.autorId!.imagenPerfil"
+              alt="Foto del autor del comentario"
+              loading="lazy"
+            />
+          } @else {
+            <span class="avatar" aria-hidden="true">FC</span>
+          }
+          <strong>{{
+            comentario.autorId
+              ? comentario.autorId.nombre + ' ' + comentario.autorId.apellido
+              : 'Usuario no disponible'
+          }}</strong>
+          <time [attr.datetime]="comentario.createdAt">{{
+            comentario.createdAt.slice(0, 10)
+          }}</time>
+          @if (comentario.modificado) {
+            <span class="editado">Editado</span>
+          }
+        </div>
+        @if (editandoId === comentario._id) {
+          <form
+            class="editar-comentario"
+            [formGroup]="edicionForm"
+            (ngSubmit)="guardarEdicion()"
+            novalidate
+          >
+            <label [for]="'editar-' + comentario._id">Editar tu comentario</label>
+            <textarea
+              [id]="'editar-' + comentario._id"
+              formControlName="texto"
+              [readOnly]="guardando"
+              rows="3"
+              maxlength="1000"
+              required
+              [attr.aria-invalid]="
+                edicionForm.controls.texto.touched && edicionForm.controls.texto.invalid
+              "
+            ></textarea>
+            <small>{{ edicionForm.controls.texto.value.length }} / 1000 unidades UTF-16</small>
+            @if (edicionForm.controls.texto.touched && edicionForm.controls.texto.invalid) {
+              <p class="error" role="alert">
+                Escribí un texto válido de hasta 1000 unidades UTF-16.
+              </p>
+            }
+            @if (errorEdicion) {
+              <p class="error" role="alert">{{ errorEdicion }}</p>
+            }
+            <div class="acciones">
+              <button type="button" [disabled]="guardando" (click)="cancelarEdicion()">
+                Cancelar</button
+              ><button type="submit" [disabled]="ocupado || edicionForm.invalid">
+                {{ guardando ? 'Guardando…' : 'Guardar cambios' }}
+              </button>
+            </div>
+          </form>
+        } @else {
+          <p class="texto-comentario">
+            {{ comentario.texto | truncate: 280 : expandidos.has(comentario._id) }}
+          </p>
+          @if (comentario.texto.length > 280) {
+            <button
+              type="button"
+              class="texto-expandir"
+              [attr.aria-expanded]="expandidos.has(comentario._id)"
+              (click)="alternarTexto(comentario._id)"
+            >
+              {{ expandidos.has(comentario._id) ? 'Ver menos' : 'Ver más' }}
+            </button>
+          }
+          @if (puedeEditar(comentario)) {
+            <button
+              type="button"
+              class="editar"
+              [disabled]="ocupado"
+              (click)="iniciarEdicion(comentario)"
+            >
+              Editar
+            </button>
+          }
+        }
+      </article>
+    }
+    @if (cargando) {
+      <p class="nota" role="status">Cargando comentarios…</p>
+    }
+    @if (errorLectura) {
+      <div class="error" role="alert">
+        <p>{{ errorLectura }}</p>
+        <button type="button" [disabled]="ocupado" (click)="cargarComentarios()">
+          Reintentar comentarios
+        </button>
+      </div>
+    }
+    @if (!cargando && !errorLectura && comentarios.length === 0) {
+      <p class="nota">Todavía no hay comentarios. ¡Compartí tu opinión!</p>
+    }
+    @if (hayMas && !errorLectura) {
+      <button type="button" class="cargar-mas" [disabled]="ocupado" (click)="cargarComentarios()">
+        Cargar más
+      </button>
+    }
+    @if (!hayMas && !cargando && !errorLectura && comentarios.length > 0) {
+      <p class="nota" role="status">No hay más comentarios.</p>
+    }
+  }
+</section>
