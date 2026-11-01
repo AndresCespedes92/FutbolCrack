@@ -133,27 +133,35 @@
     }
     @if (cargandoPublicaciones) {
       <p role="status">Cargando tus publicaciones...</p>
-    } @else if (errorPublicaciones) {
+    }
+    @if (errorPublicaciones) {
       <p role="alert">{{ errorPublicaciones }}</p>
       <button class="button" type="button" (click)="cargarPublicaciones()">Reintentar</button>
-    } @else {
-      @if (publicaciones.length === 0) {
-        <p class="material-note">Todavía no publicaste tus jugadas. Podés hacerlo desde el feed.</p>
-      }
-      @for (publicacion of publicaciones; track publicacion._id) {
+    }
+    <!-- Mantener los hijos por ID durante una recarga conserva borradores y páginas de comentarios. -->
+    @if (!cargandoPublicaciones && !errorPublicaciones && publicaciones.length === 0) {
+      <p class="material-note">Todavía no publicaste tus jugadas. Podés hacerlo desde el feed.</p>
+    }
+    @for (publicacion of publicaciones; track publicacion._id) {
+      <div class="publicacion-del-perfil">
         <app-publicacion-card
           [publicacion]="publicacion"
+          [detalleDisponible]="true"
+          (abrirDetalle)="verDetalle($event)"
           [autenticado]="!!usuario"
           [puedeDarBaja]="acciones.puedeDarBaja(publicacion, usuario)"
-          [procesando]="acciones.pendientes().has(publicacion._id)"
+          [procesando]="cargandoPublicaciones || acciones.pendientes().has(publicacion._id)"
           (cambiarLike)="acciones.alternarLike($event, usuario, cargarTrasAccion)"
           (solicitarBaja)="acciones.solicitarBaja($event, usuario)"
         />
-      }
+        <!-- Cada una de las tres jugadas pide solo sus tres comentarios iniciales. -->
+        <app-comentarios-publicacion
+          [publicacionId]="publicacion._id"
+          [usuario]="usuario"
+          (publicacionNoDisponible)="retirarNoDisponible(publicacion._id)"
+        />
+      </div>
     }
-    <p class="material-note">
-      Los comentarios de estas publicaciones estarán disponibles próximamente.
-    </p>
   </section>
 }
 @if (acciones.seleccionada(); as publicacion) {

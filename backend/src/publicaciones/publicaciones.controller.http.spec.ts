@@ -100,6 +100,7 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
           .filter(
             (doc) =>
               (!filtro.activo || doc.activo !== false) &&
+              (!filtro._id || doc._id.toString() === filtro._id.toString()) &&
               (!filtro.autorId ||
                 doc.autorId?.toString() === filtro.autorId.toString()),
           )
@@ -874,6 +875,70 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
         total: 3,
         hayMas: false,
       });
+    });
+  });
+  describe('Detalle individual 4B', () => {
+    it('obtiene solo el id activo solicitado con el mismo contrato de publicación y likes del feed', async () => {
+      prepararPublicacion();
+      documentos[0].likes = [new Types.ObjectId(autorId)];
+      documentos.push({
+        _id: '000000000000000000000099',
+        contenido: 'Otra publicación',
+        activo: true,
+      });
+      const respuesta = await request(app.getHttpServer())
+        .get(`/publicaciones/${id}`)
+        .set('Cookie', `token=${token}`)
+        .expect(200);
+      expect(respuesta.body).toMatchObject({
+        _id: id,
+        titulo: 'Publicación anterior',
+        descripcion: 'Parte antiguo',
+        contenido: 'Parte antiguo',
+        activo: true,
+        cantidadLikes: 1,
+        meGusta: true,
+      });
+      expect(respuesta.body).not.toHaveProperty('likes');
+      expect(respuesta.body).not.toHaveProperty('publicaciones');
+      expect(agregar.mock.calls[0][0][0]).toEqual({
+        $match: { activo: { $ne: false }, _id: new Types.ObjectId(id) },
+      });
+      expect(agregar.mock.calls[0][0][2].$facet.publicaciones[2]).toEqual({
+        $limit: 1,
+      });
+      expect(poblar.mock.calls[0][0]).toHaveLength(1);
+      expect(poblar.mock.calls[0][1].select).toBe(
+        'nombre apellido nombreUsuario imagenPerfil',
+      );
+    });
+    it('permite lectura anónima sin inventar un like propio', async () => {
+      prepararPublicacion();
+      documentos[0].likes = [new Types.ObjectId(autorId)];
+      const respuesta = await request(app.getHttpServer())
+        .get(`/publicaciones/${id}`)
+        .expect(200);
+      expect(respuesta.body).toMatchObject({
+        cantidadLikes: 1,
+        meGusta: false,
+      });
+    });
+    it.each(['inexistente', 'inactiva'])(
+      'rechaza detalle de publicación %s con 404',
+      async (estado) => {
+        prepararPublicacion();
+        if (estado === 'inexistente') documentos = [];
+        else documentos[0].activo = false;
+        await request(app.getHttpServer())
+          .get(`/publicaciones/${id}`)
+          .expect(404);
+      },
+    );
+    it('rechaza id mal formado con 400 antes de consultar MongoDB', async () => {
+      await request(app.getHttpServer())
+        .get('/publicaciones/incorrecto')
+        .expect(400);
+      expect(agregar).not.toHaveBeenCalled();
     });
   });
 });

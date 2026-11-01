@@ -112,3 +112,13 @@ Relación: Usuario → muchos Comentarios; Publicacion → muchos Comentarios. C
 Crear/editar requieren identidad JWT verificada; leer es público pero exige publicación visible. Editar solo permite al autor, sin permiso especial de administrador. El formato de paginación mantiene el patrón de publicaciones, con limit predeterminado 3. enteroDeQuery se extrajo a common/validation para reutilizar exactamente la conversión existente sin duplicar validación técnica.
 
 No se modificaron Angular, JWT/cookies, lógica de likes ni baja lógica. No hay transacción entre publicación y comentario: la comprobación de actividad antecede a la operación y la ventana concurrente queda documentada en [04](04-COMENTARIOS.md). La arquitectura no incorpora una solución de atomicidad entre colecciones fuera del alcance solicitado.
+
+## Ampliación 4B — Detalle y sección Angular reutilizable
+
+Se agrega la pantalla pública PublicacionDetalle en publicaciones/:id y el contenedor ComentariosPublicacion compartido con Mi Perfil. Cada instancia guarda únicamente comentarios de su publicacionId y consume ComentariosService, que centraliza el contrato HTTP de 4A. La identidad visible llega por Input del padre, pero no se manda como permiso al backend; este verifica JWT/autoría.
+
+El backend incorpora GET /publicaciones/:id porque el listado existente no podía filtrar por id y no corresponde recorrer/descargar el feed para buscar una jugada. obtenerPorId comparte consultarListado con filtro _id y limit 1, conservando autor público, normalización antigua y likes sin duplicar reglas. No se crean módulos funcionales nuevos ni se modifica el contrato del listado o comentarios.
+
+PublicacionCard conserva Inputs/Outputs y permite textoCompleto en el detalle. Los servicios de acciones/modal existentes se reutilizan. Angular mantiene colecciones por id al actualizar la misma jugada para conservar borradores. Suscripciones de lectura antiguas y componentes destruidos se cancelan; la API sigue siendo responsable de persistencia/permisos.
+
+No se cambian autenticación/cookies/JWT, configuración de despliegue o dependencias. Las pruebas siguen aisladas de servicios externos; ver 08.

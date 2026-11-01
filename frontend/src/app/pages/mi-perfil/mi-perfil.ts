@@ -1,3 +1,4 @@
+import { ComentariosPublicacion } from '../../components/comentarios-publicacion/comentarios-publicacion';
 import { Component, ChangeDetectorRef, DestroyRef, OnInit, inject } from '@angular/core';
 
 import { Router } from '@angular/router';
@@ -15,7 +16,7 @@ import { ConfirmacionBaja } from '../../components/confirmacion-baja/confirmacio
 @Component({
   selector: 'app-mi-perfil',
   standalone: true,
-  imports: [PublicacionCard, ConfirmacionBaja],
+  imports: [PublicacionCard, ConfirmacionBaja, ComentariosPublicacion],
   providers: [AccionesPublicaciones],
   templateUrl: './mi-perfil.html',
   styleUrl: './mi-perfil.css',
@@ -62,8 +63,20 @@ export class MiPerfil implements OnInit {
         },
       });
   }
+  verDetalle(publicacion: Publicacion): void {
+    void this.router.navigate(['/publicaciones', publicacion._id]);
+  }
+  retirarNoDisponible(id: string): void {
+    this.publicaciones = this.publicaciones.filter((publicacion) => publicacion._id !== id);
+    this.cdr.markForCheck();
+  }
   confirmarBaja(): void {
-    this.acciones.confirmarBaja(this.cargarTrasAccion);
+    const id = this.acciones.seleccionada()?._id;
+    this.acciones.confirmarBaja(() => {
+      // Retirarla de inmediato evita mostrar una jugada ya inactiva mientras llegan las demás.
+      if (id) this.retirarNoDisponible(id);
+      this.cargarPublicaciones();
+    });
   }
 
   /**

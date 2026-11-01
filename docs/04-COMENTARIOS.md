@@ -201,3 +201,61 @@ Con 8 comentarios, la secuencia debe verse 3 → 6 → 8; la última solicitud d
 Base aislada con una publicación y 8 comentarios: verificar 3/3/2 y anexado, orden de fechas empatadas, ausencia de duplicados tras reintentar, crear con identidad correcta, editar propio con Editado, rechazar edición ajena aun llamando directamente a Nest, rechazar token vencido e ids inexistentes. Probar visualmente mensajes, accesibilidad y cancelación de cualquier baja futura.
 
 Conceptos: relación entre colecciones, integridad de referencias, paginación, array y anexado, autoría, DTO, autenticación/autorización y comunicación entre componentes. No se implementó ninguno de estos endpoints en esta auditoría.
+
+## Interfaz vigente — Sprint 3, Tarea 4B
+
+El backend de 4A se conserva. Se implementó el consumo Angular de creación, listado paginado y edición propia, sin eliminación ni cambio de JWT. Las referencias anteriores a UI pendiente describen el estado de 4A y quedan actualizadas por esta sección.
+
+### Responsabilidades y recorrido
+
+ComentariosService (`frontend/src/app/services/comentarios.ts`) define tipos iguales a las respuestas reales: autor mínimo o null, comentario con texto/modificado/fechas, sobre de página y respuesta mensaje/comentario. listar envía offset y limit fijo 3; crear/editar envían solo `{ texto }` con withCredentials. El autor y la marca de edición continúan siendo decisiones del servidor.
+
+ComentariosPublicacion recibe por Input publicacionId y usuario del padre; emite publicacionNoDisponible si el GET/POST indica 404. Es el contenedor reutilizable de la sección, con formularios, colección, estados y llamadas delegadas al servicio HTTP. Detalle y perfil no copian esa lógica. El padre obtiene la sesión una vez y la comparte; cada comentario no vuelve a pedir /auth/me.
+
+Ejemplo del club: el padre entrega el número de la jugada y quién está mirando. La sección abre el cuaderno correspondiente (GET), muestra sus primeras tres notas y permite al socio agregar/corregir las propias. Nest vuelve a verificar JWT y autoría aunque Angular muestre un botón.
+
+Flujo: ruta o perfil → Input publicacionId → ComentariosService → endpoint/controller Nest → DTO/guard/servicio 4A → MongoDB → respuesta tipada → colección/formularios Angular. La imagen/nombre se toman del autor poblado mínimo; autorId null muestra «Usuario no disponible», sin datos inventados.
+
+### Crear y validar
+
+nuevoForm es un FormGroup con texto requerido, patrón no solo espacios y maxlength 1000. Angular Validators.maxLength y el contador usan String.length/unidades UTF-16; 501 emojis de dos unidades superan el máximo. El textarea tiene maxlength y errores visibles/aria-invalid. Antes de enviar se recortan espacios externos; la UI limita también el borrador sin trim, pudiendo ser más estricta con espacios que luego descartaría el backend. Nest mantiene su validación independiente.
+
+No hay formulario para visitante; aparece el enlace a login y se puede leer públicamente. Al enviar se bloquea la acción, se evita doble POST y el textarea queda de solo lectura mientras espera. Si falla, conserva lo escrito y explica 400/401/404/red/servidor; no usa alert ni window.confirm. Un 401 no renueva ni modifica sesión en esta tarea.
+
+Tras 201 se muestra el mensaje del backend y se limpia el formulario. Se reinicia la colección a offset 0, solicitando solo los tres más recientes: una nota nueva desplaza los offsets y no se mezclan seis/nueve notas anteriores con páginas de una secuencia vieja. Si falla esa recarga, se mantiene el éxito confirmado y el error de lectura permite reintentar; no se repite automáticamente el POST.
+
+### Cargar más y deduplicar
+
+La primera consulta usa offset 0, limit 3; «Cargar más» solicita offset 3, luego 6, etc. Las filas se anexan a una Map por _id basada en lo ya visible, evitando duplicados. siguienteOffset avanza según **offset retornado + cantidad de registros recibidos**, no según cantidad de IDs únicos, porque una inserción externa puede desplazar una nota entre páginas.
+
+Con ocho notas sin cambios, la pantalla muestra 3 → 6 → 8. Se respetan el orden reciente recibido del servidor y sus desempates; no se descarga toda la colección ni se ordena una descarga completa en Angular. La marca hayMas controla el botón; al terminar se informa «No hay más comentarios». Mientras carga se bloquean repeticiones. Un error de una página adicional conserva lo anterior y Reintentar pide el mismo offset.
+
+El estado es local a cada instancia: los comentarios de la jugada A no se mezclan con los de B. Cambiar publicacionId cancela las suscripciones previas, reinicia formularios/colección/offset y pide los tres iniciales de la nueva jugada. takeUntilDestroyed cancela al salir de la vista; cancelar la suscripción no deshace una escritura que el servidor ya haya procesado.
+
+### Editar propio
+
+puedeEditar exige usuario autenticado y comentario.autorId._id igual a usuario.id; no hay excepción de administrador. iniciarEdicion carga el texto real en edicionForm. Se puede Guardar cambios o Cancelar; cancelar no ejecuta PUT. La validación es la misma que en alta, el botón se bloquea mientras guarda y se evita el doble envío.
+
+Tras 200 se reemplaza solo el comentario con ese id usando el objeto confirmado por el backend. Se mantienen el resto de comentarios, orden, total y offset. modificado true muestra «Editado»; no se simula la etiqueta al hacer clic ni se infiere de timestamps. Una edición fallida mantiene el texto editable y explica el error, incluido 403 aunque el botón hubiera estado visible con datos anteriores.
+
+Las descripciones largas de comentarios usan TruncatePipe con Ver más/Ver menos y estado por id; no se transforma el texto persistido ni se usa innerHTML. Este uso sigue contando como el mismo pipe de Sprint 4, no como un pipe adicional.
+
+### Mi Perfil
+
+MiPerfil conserva su consulta de últimas tres publicaciones propias, orden fecha/limit 3. Cada wrapper publicacion-del-perfil agrupa PublicacionCard y ComentariosPublicacion con el mismo `_id`. Así se cargan como máximo **nueve comentarios iniciales** (tres por publicación), con peticiones independientes y acotadas. No se llama al detalle individual por cada ficha ni se duplica la pantalla de detalle.
+
+Cada sección tiene su propio formulario, edición, offset y botón Cargar más; no hay precarga ilimitada. Se mantienen los componentes por id al refrescar likes para conservar borradores y páginas ya cargadas. Una baja de publicación elimina su grupo y sus comentarios de la vista. Este trabajo completa el requisito local de comentarios asociados a las últimas tres publicaciones del usuario.
+
+### Detalle y estados
+
+PublicacionDetalle usa la ruta pública publicaciones/:id y el GET individual mínimo agregado en 4B. Reutiliza PublicacionCard con textoCompleto y esta misma sección; carga/error/404/id inválido se distinguen. No se montan comentarios antes de recibir una publicación activa. Un 404 de listado/alta de comentarios limpia datos y avisa al padre; un 404 de PUT puede significar comentario ausente y mantiene la edición con error, sin asumir automáticamente que desapareció toda la jugada.
+
+Los CSS explican superficies, radios globales, formularios, fotos, estados y ajuste móvil. Se mantiene negro/verde musgo/gris, sin dependencia visual ni rediseño global. Código y ejemplos para defensa en [guia-angular.md](guia-angular.md).
+
+### Pruebas y límites vigentes
+
+Ver comandos/resultados en 08. Se prueban servicios HTTP, ruta directa y navegación desde tarjeta, datos antiguos/inactivos/404, primera carga, 3/3/2 con anexado, duplicados/offsets, creación después de páginas cargadas, formularios/UTF-16/errores y doble envío, edición propia/ajena/admin/cancelación/Editado, Input nuevo y asociación de tres jugadas del perfil. Se conservan los casos anteriores, adaptando las consultas nuevas esperadas.
+
+Las pruebas Angular interceptan HTTP y no conectan con Vercel/Atlas/Cloudinary. Sigue pendiente ensayo integrado con cookies/CORS/JWT reales, navegador/dispositivos y datos persistidos. Las ventanas entre publicación/comentarios de 4A y el desplazamiento entre páginas offset por nuevas notas externas no desaparecen: se deduplica lo recibido, pero no se promete una instantánea entre páginas ni incorporar automáticamente toda nota externa nueva. Para incorporarlas, volver al detalle/recargar; tras una creación local se reinicia explícitamente.
+
+No se implementan renovación de sesión, interceptor global de 401, autorizar/refrescar, aviso/modal temporal ni cambio de TTL; son de 4C. El JWT sigue con los 20 segundos existentes. No se implementa eliminación de comentarios.

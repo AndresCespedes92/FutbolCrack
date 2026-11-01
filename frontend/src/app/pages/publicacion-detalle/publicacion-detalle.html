@@ -1,0 +1,55 @@
+<a class="text-link" routerLink="/publicaciones">← Volver al feed</a>
+<header class="detalle-heading">
+  <span class="eyebrow">FUTBOLCRACK / TALENTO EN JUEGO</span>
+  <h1>Detalle de publicación</h1>
+</header>
+@if (mensajeSesion) {
+  <p class="demo-note" role="status">{{ mensajeSesion }}</p>
+}
+@if (acciones.mensaje()) {
+  <p class="exito" role="status">{{ acciones.mensaje() }}</p>
+}
+@if (acciones.error() && !acciones.seleccionada()) {
+  <p class="error" role="alert">{{ acciones.error() }}</p>
+}
+@if (cargando) {
+  <p role="status">Cargando publicación…</p>
+}
+@if (noDisponible) {
+  <p class="demo-note" role="alert">La publicación no existe o fue dada de baja.</p>
+}
+@if (mensajeError) {
+  <div class="demo-note" role="alert">
+    <p>{{ mensajeError }}</p>
+    <button class="button" type="button" [disabled]="cargando" (click)="cargarDetalle()">
+      Reintentar
+    </button>
+  </div>
+}
+@if (publicacion; as jugada) {
+  <div class="detalle-contenido">
+    <app-publicacion-card
+      [publicacion]="jugada"
+      [autenticado]="!!usuario"
+      [textoCompleto]="true"
+      [puedeDarBaja]="acciones.puedeDarBaja(jugada, usuario)"
+      [procesando]="cargando || acciones.pendientes().has(jugada._id)"
+      (cambiarLike)="acciones.alternarLike($event, usuario, cargarTrasAccion)"
+      (solicitarBaja)="acciones.solicitarBaja($event, usuario)"
+    />
+    <app-comentarios-publicacion
+      [publicacionId]="jugada._id"
+      [usuario]="usuario"
+      (publicacionNoDisponible)="marcarNoDisponible()"
+    />
+  </div>
+}
+@if (acciones.seleccionada(); as seleccionada) {
+  <app-confirmacion-baja
+    [publicacion]="seleccionada"
+    [procesando]="acciones.eliminando()"
+    [error]="acciones.error()"
+    (cancelar)="acciones.cancelarBaja()"
+    (confirmar)="confirmarBaja()"
+  />
+}

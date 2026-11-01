@@ -1,6 +1,41 @@
 # 08 — Pruebas y despliegue
 
-## Estado actual — Sprint 3, Tarea 4A
+## Estado actual — Sprint 3, Tarea 4B (01/11/2026)
+
+Base: feature/comentarios-backend con los 20 archivos de 4A pendientes esperados, HEAD 9224cad. Antes de guardar se repitieron ambas compilaciones (salida 0), FE 60/60 en 10 suites y BE 157/157 en 8 suites con archivos en serie. Se creó el respaldo autorizado **70622bb**, «feat(comentarios): agregar backend con paginacion y edicion propia», y luego feature/comentarios-interfaz. No hay commit de 4B, merge ni deploy.
+
+| Comando | Resultado final |
+| --- | --- |
+| frontend: npm run build | Correcto, salida 0 y sin advertencias CSS. |
+| frontend: node node_modules/@angular/cli/bin/ng.js test --watch=false | 97/97, 13 suites; conserva las 60 anteriores y agrega 37. |
+| backend: npm run build | Correcto, salida 0. |
+| backend: node node_modules/vitest/vitest.mjs run --no-file-parallelism | 162/162, 8 suites; conserva 157 y agrega cinco del GET individual. |
+
+Se utiliza el mismo Vitest instalado, con archivos en serie por los cierres de workers observados en 4A; no se modifican scripts, timeouts, configuración o dependencias. No se omiten ni deshabilitan tests.
+
+### Cobertura y ajustes
+
+- 23 casos de ComentariosPublicacion: tres iniciales, anexado 3/3/2, doble carga, deduplicación con offset por recibidos, error/reintento sin borrar, alta tras dos páginas reiniciando offset 0, vacíos/longitud/UTF-16, errores POST/PUT sin perder texto, identidad propia frente a admin ajeno/visitante, edición/cancelación/modificado, 404 con Output al padre, Input de nueva publicación y TruncatePipe/autor ausente.
+- Tres casos de ComentariosService: GET con offset/limit 3, POST y PUT solo con texto, cookies y respuestas reales de 4A.
+- Ocho casos de PublicacionDetalle: URL directa y navegación desde Output de tarjeta, descripción completa, imágenes/likes/comentarios, visitante, 404/inactiva/id inválido, error/reintento, documentos antiguos y cambio de id.
+- Un caso adicional de PublicacionCard para texto completo, uno de PublicacionesService para GET individual y uno de MiPerfil para comentarios asociados a las tres jugadas. Se amplía el test de like del perfil para comprobar conservación de borrador durante recarga.
+- Cinco casos backend nuevos: detalle autenticado con flag de like/consulta por id, lectura anónima, ausente/inactiva e id inválido. El doble de aggregate ahora también respeta `_id`; los casos anteriores se mantienen.
+
+Las pruebas antiguas de app/perfil se actualizan para esperar los GET reales nuevos de comentarios y comprobar que ya se muestra la sección, en lugar de la nota temporal. El helper verifica offset 0/limit 3; no simula publicaciones o comentarios en código productivo.
+
+Primer intento con las 60 pruebas previas: 59/60; formatear la interpolación multilinea agregó espacios de plantilla al texto de la tarjeta. Se corrigió la plantilla con binding textContent al resultado del pipe, manteniendo las aserciones exactas previas (incluidos espacios del contenido), sin recortar datos ni debilitar el test. La suite ampliada pasó luego 97/97.
+
+La compilación final detectó que el helper nuevo de tests usaba expect en un archivo .ts incluido en la revisión de tipos productiva. Se reemplazó por una comprobación explícita que arroja Error si los parámetros son incorrectos; no se agregaron globals de Vitest al proyecto productivo ni se relajó la condición. Tras ese ajuste y preservar borradores en Mi Perfil, build y suite completa pasan nuevamente.
+
+### Qué se verificó y qué no
+
+Angular utiliza HttpTestingController y RouterTestingHarness con rutas/componentes/servicios reales y HTTP interceptado; no envía solicitudes a Vercel/Atlas/Cloudinary. La prueba de ruta desde tarjeta sí dispara el Output y espera la navegación real del router. Los tests del perfil comprueban consultas independientes/acotadas por cada id.
+
+Nest mantiene controllers, validaciones, guards y servicios reales con modelos/ejecución MongoDB simulados; el nuevo detalle comparte consulta del listado. Los esquemas Mongoose se validan en memoria. No se comprobó persistencia/timestamps/índices contra base real, cookie/CORS con navegador, capa modal nativa o apariencia en dispositivos. No se realizó despliegue ni ensayo visual manual en navegador.
+
+Pendiente antes de integración externa: backend con 4A y GET /publicaciones/:id, frontend con ruta/servicios nuevos, sesión válida; probar una URL directa, publicación activa/inactiva/antigua, ocho comentarios (3/6/8 visibles), alta tras cargar dos páginas y edición propia/403 ajeno. Verificar en perfil las tres jugadas y sus comentarios, borradores al votar y cancelación de baja. La URL de API continúa apuntando al Vercel existente: su versión desplegada no se verificó. TTL JWT previo de 20 segundos conservado; renovación/avisos/redirección global pertenecen a 4C.
+
+## Historial — Sprint 3, Tarea 4A
 
 Inicio limpio en main, HEAD 9224cad (merge de la interfaz 3C, ya guardada por el usuario). Se verificaron los cambios existentes antes de programar: frontend 60/60 en 10 suites, backend 95/95 en 6 suites al repetir su ejecución, ambas compilaciones salida 0 y sin aviso CSS. No hacía falta otro commit de respaldo y no se creó uno vacío. Nueva rama feature/comentarios-backend, sin commits nuevos, merge ni deploy.
 

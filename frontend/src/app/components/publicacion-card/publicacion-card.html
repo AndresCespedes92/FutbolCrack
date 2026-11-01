@@ -32,8 +32,11 @@
     <h2 [id]="'publicacion-' + publicacion._id">
       {{ publicacion.titulo || 'Publicación anterior' }}
     </h2>
-    <p [id]="'texto-' + publicacion._id">{{ descripcion | truncate: limiteTexto : expandido }}</p>
-    @if (descripcion.length > limiteTexto) {
+    <p
+      [id]="'texto-' + publicacion._id"
+      [textContent]="descripcion | truncate: limiteTexto : expandido || textoCompleto"
+    ></p>
+    @if (descripcion.length > limiteTexto && !textoCompleto) {
       <button
         type="button"
         class="expandir"

@@ -54,4 +54,14 @@ describe('PublicacionesService: paginación y likes', () => {
     solicitud.flush({ mensaje: 'Quitado', cantidadLikes: 0, meGusta: false });
     expect(estado).toEqual({ mensaje: 'Quitado', cantidadLikes: 0, meGusta: false });
   });
+  it('obtiene una sola publicación por ID y envía cookies para calcular el like propio', () => {
+    let resultado: unknown;
+    servicio.obtenerPorId(id).subscribe((datos) => (resultado = datos));
+    const solicitud = http.expectOne(`${url}/${id}`);
+    expect(solicitud.request.method).toBe('GET');
+    expect(solicitud.request.withCredentials).toBe(true);
+    solicitud.flush({ _id: id, cantidadLikes: 2, meGusta: true });
+    expect(resultado).toEqual({ _id: id, cantidadLikes: 2, meGusta: true });
+    http.expectNone(url);
+  });
 });

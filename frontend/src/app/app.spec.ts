@@ -1,3 +1,4 @@
+import { responderComentariosVacios } from './testing/comentarios-fixture';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -123,6 +124,8 @@ describe('Navegación de FutbolCrack', () => {
       hayMas: false,
     });
     harness.detectChanges();
+    responderComentariosVacios(http);
+    harness.detectChanges();
   }
 
   it('muestra los cuatro enlaces de navegación', async () => {
@@ -206,9 +209,8 @@ describe('Navegación de FutbolCrack', () => {
     const perfil = harness.routeNativeElement!;
     expect(perfil.querySelector('#nombre-jugador')?.textContent).toContain('Camila');
     expect(perfil.querySelector('.player-facts')?.textContent).toContain('camila@ejemplo.com');
-    expect(perfil.textContent).toContain(
-      'Los comentarios de estas publicaciones estarán disponibles próximamente',
-    );
+    expect(perfil.querySelectorAll('app-comentarios-publicacion').length).toBe(1);
+    expect(perfil.textContent).toContain('Todavía no hay comentarios');
     const cards = perfil.querySelectorAll('app-publicacion-card');
     expect(cards.length).toBe(1);
     expect(perfil.querySelectorAll('.video-demo').length).toBe(0);

@@ -203,3 +203,10 @@ dd {
 .player-art img {
   border-radius: var(--radius-control);
 }
+
+/* Agrupa visualmente cada jugada con sus propios comentarios, sin mezclar las tres colecciones. */
+.publicacion-del-perfil {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}

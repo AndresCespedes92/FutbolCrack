@@ -96,4 +96,12 @@ describe('PublicacionCard: datos y eventos sin HTTP', () => {
     expect(html.querySelector('.expandir').textContent).toContain('Ver más');
     expect(html.querySelector('.post-body p').textContent).toBe(texto.slice(0, 280) + '…');
   });
+  it('muestra la descripción íntegra en detalle sin perder el pipe ni ofrecer un truncado innecesario', () => {
+    const texto = 'Jugada completa '.repeat(40);
+    fixture.componentRef.setInput('publicacion', { ...publicacionPrueba(), descripcion: texto });
+    fixture.componentRef.setInput('textoCompleto', true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.post-body p').textContent).toBe(texto);
+    expect(fixture.nativeElement.querySelector('.expandir')).toBeNull();
+  });
 });

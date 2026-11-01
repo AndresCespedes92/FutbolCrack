@@ -128,6 +128,8 @@
       @for (publicacion of publicaciones; track publicacion._id) {
         <app-publicacion-card
           [publicacion]="publicacion"
+          [detalleDisponible]="true"
+          (abrirDetalle)="verDetalle($event)"
           [autenticado]="!!usuario"
           [puedeDarBaja]="acciones.puedeDarBaja(publicacion, usuario)"
           [procesando]="acciones.pendientes().has(publicacion._id)"

@@ -16,8 +16,9 @@ export class PublicacionCard {
   @Input() autenticado = false;
   @Input() puedeDarBaja = false;
   @Input() procesando = false;
-  // El detalle y los comentarios todavía no tienen ruta/API de Sprint 3.
+  // El padre decide si ofrece navegación; en el detalle se muestra el texto completo.
   @Input() detalleDisponible = false;
+  @Input() textoCompleto = false;
   @Output() cambiarLike = new EventEmitter<Publicacion>();
   @Output() solicitarBaja = new EventEmitter<Publicacion>();
   @Output() abrirDetalle = new EventEmitter<Publicacion>();
