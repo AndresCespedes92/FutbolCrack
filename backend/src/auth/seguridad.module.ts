@@ -1,3 +1,5 @@
+import { MongooseModule } from '@nestjs/mongoose';
+import { Usuario, UsuarioSchema } from '../usuarios/entities/usuario.entity.js';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 
@@ -12,6 +14,8 @@ import { DURACION_SESION_SEGUNDOS } from './sesion.constants.js';
  */
 @Module({
   imports: [
+    // Reutiliza el schema para consultar estado sin un ciclo SeguridadModule <-> UsuariosModule.
+    MongooseModule.forFeature([{ name: Usuario.name, schema: UsuarioSchema }]),
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,
@@ -23,6 +27,6 @@ import { DURACION_SESION_SEGUNDOS } from './sesion.constants.js';
 
   // Permite que otros módulos utilicen JwtService
   // y AuthGuard al importar SeguridadModule.
-  exports: [JwtModule, AuthGuard],
+  exports: [JwtModule, AuthGuard, MongooseModule],
 })
 export class SeguridadModule {}

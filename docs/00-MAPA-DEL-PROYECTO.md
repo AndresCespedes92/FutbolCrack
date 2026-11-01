@@ -253,3 +253,31 @@ Ejemplo del club: cada ficha de jugada tiene debajo su propio cuaderno de coment
 | frontend/src/app/testing/sesion-fixture.ts | Metadatos exclusivos de pruebas, sin tokens. |
 
 Limitación de modelo: no existe habilitado/activo en Usuario; solo se puede comprobar existencia/ficha actual. No se implementa bloqueo de cuentas de Sprint 4 ni se declara comprobado un usuario deshabilitado. Explicación, endpoints, decisiones CSRF y límites en [02](02-AUTENTICACION-Y-SEGURIDAD.md).
+
+## Incorporaciones 5A — Administración de usuarios (2026-11-01)
+
+| Ubicación | Responsabilidad y métodos |
+| --- | --- |
+| `backend/src/usuarios/entities/usuario.entity.ts` | Usuario.activo, default true; esquema existente |
+| `backend/src/usuarios/dto/crear-usuario-administrativo.dto.ts` | CrearUsuarioAdministrativoDto; datos de alta y perfil permitido |
+| `backend/src/common/password.ts` | generarHashPassword: coincidencia y bcrypt; compartido por alta pública/administrativa |
+| `backend/src/usuarios/usuarios.controller.ts` | GET/POST usuarios, DELETE :id, POST :id/habilitar; guards de clase |
+| `backend/src/usuarios/usuarios.service.ts` | crearAdministrativo, guardarUsuario, findAll, deshabilitar, habilitar, validarId |
+| `backend/src/auth/guards/auth.guard.ts` | canActivate: JWT y ficha/estado/rol actuales |
+| `backend/src/usuarios/guards/administrador.guard.ts` | canActivate: cuenta habilitada y administrador actual |
+| `backend/src/auth/seguridad.module.ts` | Inyección/exportación del modelo existente para guards |
+| `backend/src/auth/auth.service.ts` | registrar comparte hash; login/me/exigirUsuarioDeSesion rechazan bajas |
+| `frontend/src/app/services/usuarios.ts` | listar, crear, deshabilitar, habilitar y tipos de contrato |
+| `frontend/src/app/guards/administrador.guard.ts` | Ruta privada administrativa, retorno a login/feed según sesión/rol |
+| `frontend/src/app/app.routes.ts` | Lazy route /dashboard/usuarios |
+| `frontend/src/app/pages/dashboard-usuarios/` | TS contenedor, HTML tabla/formulario, CSS responsive comentado y spec |
+| `frontend/src/app/components/confirmacion-usuario/` | Modal TS/HTML/CSS; Inputs usuario/procesando/error y Outputs cancelar/confirmar |
+| `frontend/src/app/components/navbar/` | Enlace condicional Administrar usuarios |
+| `frontend/src/app/pages/publicaciones/` | Aviso de acceso denegado mediante query param; feed conservado |
+| `frontend/src/app/services/auth.ts` y `pages/login/` | Estado compatible y mensaje de cuenta deshabilitada |
+| `backend/src/usuarios/usuarios.administracion.http.spec.ts` | 34 casos HTTP integrados, MongoDB simulado |
+| `backend/src/usuarios/entities/usuario.entity.spec.ts` | Defaults y selección de hash con Mongoose en memoria |
+| `backend/src/testing/usuario-sesion.ts` | Modelo exclusivo de pruebas para consulta de sesión |
+| `frontend/src/app/testing/usuarios-fixture.ts` | Datos exclusivos de pruebas administrativas |
+
+El inventario completo de archivos modificados está en [10-BITACORA-DE-CAMBIOS.md](10-BITACORA-DE-CAMBIOS.md). No se agrega módulo funcional; se reutilizan UsuariosModule, AuthService y crearFormularioRegistro. La política vigente y los contratos están en [05-ADMINISTRACION.md](05-ADMINISTRACION.md).

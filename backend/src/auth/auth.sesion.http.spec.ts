@@ -1,3 +1,6 @@
+import { getModelToken } from '@nestjs/mongoose';
+import { Usuario } from '../usuarios/entities/usuario.entity.js';
+import { modeloUsuarioSesion } from '../testing/usuario-sesion.js';
 import { ValidationPipe } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -40,6 +43,10 @@ describe('Sesiones HTTP 4C', () => {
       providers: [
         AuthService,
         AuthGuard,
+        {
+          provide: getModelToken(Usuario.name),
+          useValue: modeloUsuarioSesion((id) => usuarios.findById(id)),
+        },
         { provide: UsuariosService, useValue: usuarios },
         { provide: CloudinaryService, useValue: { subirImagen: vi.fn() } },
       ],
@@ -159,9 +166,9 @@ describe('Sesiones HTTP 4C', () => {
       expect(respuesta.headers['set-cookie']).toBeUndefined();
     },
   );
-  it('documenta que el modelo actual no tiene habilitación y no inventa un estado de Sprint 4', () => {
+  it('mantiene la compatibilidad del modelo incorporando activo true por defecto', () => {
     expect(UsuarioSchema.path('habilitado')).toBeUndefined();
-    expect(UsuarioSchema.path('activo')).toBeUndefined();
+    expect(UsuarioSchema.path('activo').options.default).toBe(true);
   });
   it('renueva solo voluntariamente un token vigente, con rol actual y nueva expiración de 15 minutos', async () => {
     const anterior = token();

@@ -12,6 +12,7 @@ import type { JwtPayload } from './guards/auth.guard.js';
 import type { UsuarioDocument } from '../usuarios/entities/usuario.entity.js';
 import { DURACION_SESION_SEGUNDOS } from './sesion.constants.js';
 import * as bcrypt from 'bcrypt';
+import { generarHashPassword } from '../common/password.js';
 
 import { UsuariosService } from '../usuarios/usuarios.service.js';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto.js';
@@ -41,13 +42,10 @@ export class AuthService {
    * La imagen se almacena en Cloudinary.
    */
   async registrar(datos: CreateUsuarioDto, imagen?: ArchivoImagen) {
-    // 1. Validamos que ambas contraseñas coincidan.
-    if (datos.password !== datos.repetirPassword) {
-      throw new BadRequestException('Las contraseñas no coinciden');
-    }
-
-    // 2. Generamos el hash de la contraseña.
-    const passwordHash = await bcrypt.hash(datos.password, 12);
+    const passwordHash = await generarHashPassword(
+      datos.password,
+      datos.repetirPassword,
+    );
 
     // 3. Si recibimos una imagen, la subimos a Cloudinary.
     // Si no hay imagen, guardamos una cadena vacía.
@@ -96,6 +94,10 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales incorrectas');
     }
 
+    if (usuario.activo === false)
+      throw new UnauthorizedException(
+        'Tu cuenta está deshabilitada. Contactá a un administrador.',
+      );
     return this.emitirSesion(usuario);
   }
 
@@ -113,8 +115,10 @@ export class AuthService {
 
     // Si el usuario fue eliminado o no existe,
     // rechazamos la consulta.
-    if (!usuario) {
-      throw new UnauthorizedException('El usuario autenticado no existe');
+    if (!usuario || usuario.activo === false) {
+      throw new UnauthorizedException(
+        'El usuario autenticado no está habilitado',
+      );
     }
 
     return this.datosPublicos(usuario);
@@ -141,9 +145,9 @@ export class AuthService {
   ): Promise<UsuarioDocument> {
     this.exigirVigencia(payload);
     const usuario = await this.usuariosService.findById(payload.sub);
-    if (!usuario)
+    if (!usuario || usuario.activo === false)
       throw new UnauthorizedException('El usuario de la sesión no existe');
-    // El modelo actual no tiene habilitado/activo. No se inventa una baja de usuarios de Sprint 4.
+    // Solo false bloquea: los registros antiguos sin activo conservan su acceso.
     this.exigirVigencia(payload);
     return usuario;
   }
@@ -177,6 +181,7 @@ export class AuthService {
       descripcion: usuario.descripcion,
       imagenPerfil: usuario.imagenPerfil,
       perfil: usuario.perfil,
+      activo: usuario.activo !== false,
     };
   }
 }

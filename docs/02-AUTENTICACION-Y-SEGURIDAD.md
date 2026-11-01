@@ -1,5 +1,25 @@
 # 02 — Autenticación y seguridad
 
+## Estado vigente de habilitación — Tarea 5A
+
+Las limitaciones históricas de 4C sobre ausencia de `activo` quedan resueltas localmente. UsuarioSchema incorpora booleano con default true; ausencia significa activo. No se migró la base.
+
+AuthGuard verifica firma/expiración y consulta el modelo Usuario (`_id perfil activo`) en **cada solicitud protegida**. Cuenta inexistente o `activo:false`: 401, aun si el JWT fue emitido antes de la baja. Usa el rol actual de la ficha, no el claim antiguo. La consulta se realiza fuera del catch de verificación: una caída de MongoDB produce error de servidor, sin simular una sesión inválida. SeguridadModule registra/exporta el mismo modelo Mongoose existente para permitir la inyección en guards sin crear un ciclo con UsuariosService.
+
+AuthService.login comprueba la contraseña y luego el estado; con credenciales correctas de cuenta deshabilitada informa 401 y un mensaje comprensible, que Angular muestra. No revela el estado si la contraseña es incorrecta. `me`, `autorizar` y `refrescar` también exigen cuenta habilitada. JWT de 900 segundos, cookies HttpOnly y protección CSRF de 4C se conservan. Las respuestas públicas agregan `activo`, nunca JWT ni hash.
+
+Ejemplo: el club suspende el carnet de un jugador. Aunque conserve una credencial firmada, la puerta vuelve a consultar su ficha y lo rechaza. El padrón y su contenido no se destruyen. Las lecturas públicas siguen siendo públicas: el guard opcional puede tratarlas como anónimas, mientras que las escrituras protegidas se rechazan.
+
+Rehabilitar permite usar otra vez un JWT anterior si todavía no venció. No hay revocación individual persistente de tokens ni cancelación de solicitudes que ya superaron el guard antes de la baja. Logout conserva su política anterior de borrar cookie. Esta solución añade una consulta a MongoDB por acceso protegido y depende de su disponibilidad.
+
+AdministradorGuard exige nuevamente cuenta existente/habilitada y rol vigente. Todas las operaciones de UsuariosController lo usan. CrearUsuarioAdministrativoDto es exclusivo del endpoint protegido; el registro público continúa forzando usuario/activo. No se habilita asignación libre de roles. La baja protege todas las cuentas administradoras y la propia cuenta; consultar política detallada en [05-ADMINISTRACION.md](05-ADMINISTRACION.md).
+
+Angular administradorGuard utiliza comprobarAcceso de AuthService y verifica rol/estado para navegar; la decisión definitiva sigue en Nest porque cualquier cliente puede construir una solicitud HTTP. Un 403 mantiene la sesión válida y muestra aviso en el feed; un 401 sigue el tratamiento de expiración de 4C. AuthService también rechaza defensivamente metadatos de sesión que indiquen activo false.
+
+Pruebas HTTP locales cubren 401/403/200, token previo, autorización/renovación, rol actual, fallo de base, CSRF y compatibilidad sin campo. Ver comandos y límites en [08-PRUEBAS-Y-DESPLIEGUE.md](08-PRUEBAS-Y-DESPLIEGUE.md). No se inspeccionaron secretos, cuentas ni roles reales.
+
+## Antecedentes históricos (anteriores a 5A)
+
 ## Estado vigente — Sprint 3, Tarea 4C (01/11/2026)
 
 Se implementan JWT de 15 minutos, autorización inicial, renovación voluntaria de JWT vigente, aviso/modal a los diez minutos, expiración/redirección y manejo central de 401. Se reutilizan AuthModule, AuthService, AuthController y el guard existente, sin refresh tokens persistentes ni módulos nuevos. Las descripciones históricas de 20 segundos al final registran estados anteriores y quedan reemplazadas por esta sección.

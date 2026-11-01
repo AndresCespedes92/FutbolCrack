@@ -1,3 +1,6 @@
+import { getModelToken } from '@nestjs/mongoose';
+import { modeloUsuarioSesion } from '../testing/usuario-sesion.js';
+import { Usuario } from '../usuarios/entities/usuario.entity.js';
 import type { INestApplication } from '@nestjs/common';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -36,6 +39,10 @@ describe('GET /usuarios: autenticación y rol administrador', () => {
       controllers: [UsuariosController],
       providers: [
         AuthGuard,
+        {
+          provide: getModelToken(Usuario.name),
+          useValue: modeloUsuarioSesion((id) => usuarios.findById(id)),
+        },
         AdministradorGuard,
         { provide: UsuariosService, useValue: usuarios },
       ],

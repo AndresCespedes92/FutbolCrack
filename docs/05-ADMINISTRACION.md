@@ -1,5 +1,48 @@
 # 05 — Administración
 
+## Estado vigente — Tarea 5A, 2026-11-01
+
+La administración se implementa en UsuariosModule existente y en `/dashboard/usuarios`. Resuelve que el secretario del club pueda mantener el padrón sin permitir que un jugador común lo descargue o cambie permisos. **Rol** indica qué puede hacer (`usuario`/`administrador`); **activo** indica si puede usar la cuenta. No son tipos nuevos de jugador/reclutador.
+
+### Endpoints y recorrido de datos
+
+Todos los métodos de UsuariosController tienen AuthGuard y AdministradorGuard a nivel de clase. La identidad proviene del JWT verificado y el estado/rol se consultan en MongoDB.
+
+| Endpoint | Método de servicio | Respuesta correcta |
+| --- | --- | --- |
+| GET `/usuarios` | `findAll` | 200, array con `_id`, ficha, `perfil` y `activo`; selección positiva sin hash |
+| POST `/usuarios` | `crearAdministrativo` | 201, `{mensaje, usuario}` sin credenciales |
+| DELETE `/usuarios/:id` | `deshabilitar` | 200, `{mensaje}`; establece `activo:false` |
+| POST `/usuarios/:id/habilitar` | `habilitar` | 200, `{mensaje}`; establece `activo:true` |
+
+Sin sesión: 401. Sesión de usuario común: 403. DTO/ID inválido: 400; cuenta inexistente: 404; duplicado, operación repetida o cuenta protegida: 409. El middleware CSRF existente puede responder 403 antes de los guards cuando una escritura con cookie no tiene origen permitido. Las pruebas usan Origin autorizado para distinguir permisos de CSRF.
+
+DashboardUsuarios → UsuariosService Angular (`withCredentials`) → UsuariosController Nest → UsuariosService Nest → modelo Usuario/MongoDB → mensaje o listado. El componente de confirmación solo emite eventos; no conoce HTTP.
+
+### Alta y validaciones
+
+CrearUsuarioAdministrativoDto hereda el contrato público y agrega únicamente `perfil` con dos valores. Declara completas las reglas de los campos que redefine: nombres de 2 a 50 letras/separadores; nombreUsuario de 3 a 20 caracteres permitidos; clave de 8 a 64 caracteres con mayúscula y número. Conserva correo, fecha ISO, confirmación y descripción del DTO base; la coincidencia de claves se verifica en `generarHashPassword`. Angular además rechaza fechas futuras. La fecha futura no tiene una validación equivalente nueva en Nest: queda como límite de las reglas heredadas.
+
+`backend/src/common/password.ts` comparte bcrypt costo 12 con AuthService.registrar. `guardarUsuario` concentra normalización de correo, duplicados y persistencia. El registro público sigue forzando `perfil:usuario` y `activo:true`; no acepta campos de rol/estado. El alta administrativa recibe texto, no hash ni imagen. El DTO rechaza propiedades ajenas; no existe PATCH genérico para cambiar roles.
+
+### Baja lógica y política de administradores
+
+Deshabilitar conserva ficha, contraseña y relaciones con publicaciones/comentarios: como suspender el carnet sin destruir el archivo del club. Habilitar recupera el acceso. Los registros antiguos sin campo se interpretan como activos mediante `activo !== false`; no hay migración ni escritura masiva.
+
+**Política conservadora explícita:** nadie puede deshabilitarse a sí mismo y este endpoint no permite deshabilitar ninguna cuenta administradora, aunque existan varias. La UI explica que esas cuentas están protegidas. Esto protege al último administrador incluso frente a bajas simultáneas sin introducir transacciones ni un conteo vulnerable a concurrencia. Otro administrador activo sí puede rehabilitar una cuenta administradora que ya estuviera inactiva. No se implementa edición de roles. Esta restricción es más amplia que proteger únicamente al último administrador.
+
+La actualización incluye el estado esperado y, para baja, el rol distinto de administrador. Si cambian mientras se procesa, responde 409 en lugar de informar una baja inexistente. No se borra ningún documento. Si no existe ningún administrador activo en la base real, se requiere un procedimiento externo autorizado para recuperarlo; esta tarea no crea cuentas reales ni credenciales de emergencia.
+
+### Dashboard y comprobación
+
+Formulario con radios de rol, validaciones rojas/verdes y reglas reutilizadas del registro/CineBera; la factoría crea controles independientes. Carga, vacío, reintento y errores tienen texto propio. Durante solicitudes se bloquean envíos repetidos. El modal identifica nombre y usuario, permite cancelar sin DELETE, mantiene el error si falla y muestra éxito solo tras respuesta correcta. Habilitar es una acción directa; la baja siempre requiere confirmar. CSS separado comenta grilla, radios y scroll horizontal local para móviles.
+
+Para probar con cuentas de un entorno de prueba: entrar como admin, abrir Administrar usuarios, crear ambos roles, cancelar una baja y comprobar que no hay DELETE; confirmarla y verificar el estado. Intentar login y un endpoint protegido con el JWT anterior: 401. Rehabilitar y volver a acceder. Un usuario común que navega al dashboard vuelve al feed con aviso, conservando su sesión. No usar cuentas reales para ensayos destructivos.
+
+Pruebas automatizadas: backend 223/223 y frontend 162/162, ambas compilaciones correctas. Se utilizan HTTP local y persistencia simulada, más validación Mongoose en memoria; no se comprobó Atlas, navegador real ni despliegue. El listado administrativo actual no pagina; evaluar paginación si aumenta el padrón. Conceptos: roles/estado, DTO, inyección, guards, proyección, actualización condicional, formularios reactivos e Input/Output.
+
+## Antecedentes históricos (anteriores a 5A)
+
 ## Qué existe y qué no
 
 Usuario declara perfil con enum `usuario` o `administrador` y valor por defecto usuario. UsuariosService.create fuerza `perfil: 'usuario'`; CreateUsuarioDto no acepta un perfil enviado desde el registro público. El JWT incluye perfil, pero AuthGuard solo verifica firma/expiración.

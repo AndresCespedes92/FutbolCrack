@@ -360,3 +360,24 @@ No existen POST autorizar/refrescar, detalle por id, comentarios, likes o estad�
 8. Recargar rutas SPA, revisar ancho de 360/768/1280px, foco y mensajes, incluido el aria-describedby que referencia aviso-registro sin elemento con ese id.
 
 Los futuros casos de paginación, permisos, comentarios, reportes y PWA figuran en sus documentos y en la matriz. Conceptos: prueba unitaria frente a integración/e2e, doble de dependencia, compilación frente a comportamiento, configuración por entorno y evidencia reproducible.
+
+## Verificación 5A — 2026-11-01
+
+| Comprobación | Antes: 4C preservada | Después: 5A |
+| --- | --- | --- |
+| Frontend `npm run build` | exit 0 | exit 0; sin advertencias de presupuesto |
+| Frontend `node node_modules/@angular/cli/bin/ng.js test --watch=false` | 138/138, 18 archivos | **162/162, 22 archivos**, exit 0 |
+| Backend `npm run build` | exit 0 | exit 0 |
+| Backend `node node_modules/vitest/vitest.mjs run --no-file-parallelism --pool=threads` | 187/187, 10 archivos | **223/223, 12 archivos**, exit 0 |
+
+Ejecutar cada comando desde frontend o backend, respectivamente. Sin instalación de dependencias ni cambios de configuración de tests. Se usan threads en serie por la incidencia de workers ya documentada en 4C. Los npm notice del entorno no son errores de compilación.
+
+Backend incorpora 34 casos HTTP de administración y dos de esquema: autenticación/roles en los cuatro endpoints, ambos tipos de alta, duplicados y DTO, registro público sin escalación, ausencia de hash, baja lógica y rehabilitación, cuentas protegidas, concurrencia sobre el estado, IDs, fallos y CSRF. El mismo JWT deja de acceder a me/listado/autorizar/refrescar después de la baja. Login de baja rechaza con mensaje; registro antiguo sin activo funciona sin escritura de migración. Las suites anteriores conservan sus casos; dobles de modelo se actualizan porque AuthGuard ahora consulta UsuarioModel. La prueba antigua de ausencia de estado pasa a verificar el nuevo default, no una funcionalidad eliminada.
+
+Frontend añade 24 casos: servicio HTTP (4), dashboard (14), guard con router real (3), modal (2), login de cuenta deshabilitada (1). Comprueban radios, creación, datos inválidos, borrador preservado frente a 400/409/500, 403 sin destruir sesión, carga/vacío/reintento, confirmación, cancelación sin DELETE, bloqueo de solicitudes repetidas y éxito/error. Los dos tipos de cuenta se prueban con el formulario real. El dialog usa un doble de API nativa donde el DOM de tests no la implementa.
+
+Durante desarrollo: TypeScript detectó overrides de DTO sin declare y la inyección de UsuarioModel no exportada para guards usados en otros módulos. Se corrigieron las declaraciones y la exportación de MongooseModule, sin debilitar pruebas. Una primera suite ampliada dio 222/223: password sin número se aceptaba al redefinir validadores heredados. Se declararon completas las reglas del campo y el mismo caso ahora espera y recibe 400. Resultado final: 223/223. No hay pruebas eliminadas, skip ni only.
+
+### Ensayos pendientes y límites
+
+No se conectó Atlas ni se modificaron usuarios externos. La persistencia HTTP usa dobles, y el esquema se valida con Mongoose sin conexión: no demuestra índices, latencia ni concurrencia real de MongoDB. No hubo ensayo visual manual en navegador/móvil ni verificación de cookies/HTTPS/CORS en producción. Probar el recorrido detallado en 05 con cuentas de prueba antes de integrar. No se hizo merge/deploy; las condiciones externas de 4C siguen pendientes.

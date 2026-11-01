@@ -1,3 +1,6 @@
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { Usuario } from '../../usuarios/entities/usuario.entity.js';
 import {
   CanActivate,
   ExecutionContext,
@@ -28,6 +31,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    @InjectModel(Usuario.name) private readonly usuarioModel: Model<Usuario>,
   ) {}
 
   /**
@@ -57,13 +61,12 @@ export class AuthGuard implements CanActivate {
       );
     }
 
+    let payload: JwtPayload;
     try {
-      // Verifica la firma y la expiración del JWT.
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
-
+      payload = await this.jwtService.verifyAsync<JwtPayload>(token);
       if (
         typeof payload.sub !== 'string' ||
-        !payload.sub ||
+        !Types.ObjectId.isValid(payload.sub) ||
         typeof payload.exp !== 'number' ||
         !Number.isFinite(payload.exp) ||
         typeof payload.iat !== 'number' ||
@@ -73,13 +76,32 @@ export class AuthGuard implements CanActivate {
           'La sesión no contiene identidad y vencimiento válidos',
         );
       }
-      // Dejamos la identidad disponible para el Controller.
-      request.user = payload;
-
-      return true;
     } catch {
       throw new UnauthorizedException('La sesión es inválida o ha vencido');
     }
+    // La consulta queda FUERA del catch de JWT: una caída de MongoDB es 500, no una falsa sesión 401.
+    const identidad = new Types.ObjectId(payload.sub);
+    const usuario = await this.usuarioModel
+      .findById(identidad)
+      .select('_id perfil activo')
+      .lean()
+      .exec();
+    if (
+      !usuario ||
+      usuario.activo === false ||
+      payload.exp! * 1000 <= Date.now()
+    ) {
+      throw new UnauthorizedException(
+        'La cuenta no está habilitada o la sesión venció',
+      );
+    }
+    // La ficha actual manda sobre el rol anterior del token, sin guardar estado dentro del JWT.
+    request.user = {
+      ...payload,
+      sub: identidad.toString(),
+      perfil: usuario.perfil,
+    };
+    return true;
   }
 
   /**

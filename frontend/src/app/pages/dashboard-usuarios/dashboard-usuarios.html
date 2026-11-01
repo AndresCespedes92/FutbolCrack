@@ -1,0 +1,158 @@
+<header>
+  <span class="eyebrow">ADMINISTRACIÓN DEL CLUB</span>
+  <h1>Usuarios</h1>
+  <p>Gestioná el padrón, los roles y el acceso a FutbolCrack.</p>
+</header>
+@if (mensaje) {
+  <p class="exito" role="status">{{ mensaje }}</p>
+}
+@if (errorListado) {
+  <div class="aviso" role="alert">
+    <p>{{ errorListado }}</p>
+    <button class="button" type="button" [disabled]="cargando" (click)="cargarUsuarios()">
+      Reintentar listado
+    </button>
+  </div>
+}
+@if (errorOperacion && !seleccionado) {
+  <p class="error" role="alert">{{ errorOperacion }}</p>
+}
+@if (!sinPermiso) {
+  <section class="panel" aria-labelledby="titulo-alta">
+    <h2 id="titulo-alta">Crear usuario</h2>
+    <form [formGroup]="formulario" (ngSubmit)="crearUsuario()" novalidate>
+      <fieldset class="datos-formulario" [disabled]="creando">
+        <legend class="leyenda">Datos de la cuenta nueva</legend>
+        @for (campo of camposTexto; track campo.nombre) {
+          <div class="field">
+            <label [for]="'admin-' + campo.nombre">{{ campo.etiqueta }}</label
+            ><input
+              [id]="'admin-' + campo.nombre"
+              [type]="campo.tipo"
+              [formControlName]="campo.nombre"
+              [attr.autocomplete]="campo.tipo === 'password' ? 'new-password' : 'off'"
+              required
+              [class.input-invalido]="campos[campo.nombre].touched && campos[campo.nombre].invalid"
+              [class.input-valido]="campos[campo.nombre].dirty && campos[campo.nombre].valid"
+              [attr.aria-invalid]="campos[campo.nombre].touched && campos[campo.nombre].invalid"
+              [attr.aria-describedby]="'ayuda-admin-' + campo.nombre"
+            />
+            <small [id]="'ayuda-admin-' + campo.nombre">{{ campo.ayuda }}</small>
+            @if (campos[campo.nombre].touched && campos[campo.nombre].invalid) {
+              <small class="error">Revisá este campo antes de crear la cuenta.</small>
+            }
+          </div>
+        }
+        <div class="field">
+          <label for="admin-descripcion">Descripción (opcional)</label
+          ><textarea
+            id="admin-descripcion"
+            formControlName="descripcion"
+            rows="3"
+            maxlength="300"
+          ></textarea
+          ><small>Hasta 300 caracteres.</small>
+        </div>
+        <fieldset class="roles">
+          <legend>Rol de la cuenta</legend>
+          <label><input type="radio" [formControl]="perfil" value="usuario" /> Usuario</label
+          ><label
+            ><input type="radio" [formControl]="perfil" value="administrador" />
+            Administrador</label
+          >
+        </fieldset>
+      </fieldset>
+      @if (formulario.hasError('clavesNoCoinciden') && campos.repetirClave.touched) {
+        <p class="error" role="alert">Las contraseñas no coinciden.</p>
+      }
+      @if (errorAlta) {
+        <p class="error" role="alert">{{ errorAlta }}</p>
+      }
+      <button
+        type="submit"
+        class="button"
+        [disabled]="creando || cargando || !!procesandoId || formulario.invalid"
+      >
+        {{ creando ? 'Creando…' : 'Crear usuario' }}
+      </button>
+    </form>
+  </section>
+  <section class="panel" aria-labelledby="titulo-padron">
+    <h2 id="titulo-padron">Padrón de usuarios</h2>
+    <p class="nota">
+      Las cuentas administradoras están protegidas contra la deshabilitación. Los datos se conservan
+      al suspender una cuenta.
+    </p>
+    @if (cargando) {
+      <p role="status">Cargando usuarios…</p>
+    } @else if (!errorListado && usuarios.length === 0) {
+      <p class="nota">No hay usuarios para mostrar.</p>
+    } @else if (!errorListado) {
+      <div class="tabla-scroll">
+        <table>
+          <caption>
+            Rol y estado de cada cuenta
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Usuario</th>
+              <th scope="col">Correo</th>
+              <th scope="col">Rol</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (usuario of usuarios; track usuario._id) {
+              <tr>
+                <td>
+                  <strong>{{ usuario.nombre }} {{ usuario.apellido }}</strong
+                  ><small>@{{ usuario.nombreUsuario }}</small>
+                </td>
+                <td>{{ usuario.correo }}</td>
+                <td>{{ usuario.perfil === 'administrador' ? 'Administrador' : 'Usuario' }}</td>
+                <td>
+                  <span class="estado" [class.inactivo]="usuario.activo === false">{{
+                    usuario.activo === false ? 'Deshabilitado' : 'Activo'
+                  }}</span>
+                </td>
+                <td>
+                  @if (usuario.activo === false) {
+                    <button
+                      type="button"
+                      class="habilitar"
+                      [disabled]="!!procesandoId || creando"
+                      (click)="habilitar(usuario)"
+                    >
+                      {{ procesandoId === usuario._id ? 'Procesando…' : 'Habilitar' }}
+                    </button>
+                  } @else if (puedeDeshabilitar(usuario)) {
+                    <button
+                      type="button"
+                      class="deshabilitar"
+                      [disabled]="!!procesandoId || creando"
+                      (click)="solicitarDeshabilitar(usuario)"
+                    >
+                      Deshabilitar
+                    </button>
+                  } @else {
+                    <span class="nota">Cuenta protegida</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}
+@if (seleccionado; as usuario) {
+  <app-confirmacion-usuario
+    [usuario]="usuario"
+    [procesando]="!!procesandoId"
+    [error]="errorOperacion"
+    (cancelar)="cancelarBaja()"
+    (confirmar)="confirmarBaja()"
+  />
+}

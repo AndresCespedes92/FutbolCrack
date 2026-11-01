@@ -108,7 +108,11 @@ export class Login {
         this.enviando = false;
 
         if (error.status === 401) {
-          this.mensajeError = 'El usuario o la contraseña son incorrectos.';
+          this.mensajeError =
+            typeof error.error?.message === 'string' &&
+            error.error.message.includes('deshabilitada')
+              ? error.error.message
+              : 'El usuario o la contraseña son incorrectos.';
         } else if (error.status === 400) {
           this.mensajeError = 'Completá tu usuario y contraseña.';
         } else if (error.status === 0) {

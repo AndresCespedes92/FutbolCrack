@@ -16,6 +16,7 @@ export interface Usuario {
   descripcion: string;
   imagenPerfil: string;
   perfil: string;
+  activo?: boolean;
 }
 
 // Respuesta del endpoint POST /auth/registro.
@@ -190,6 +191,11 @@ export class AuthService {
       .pipe(tap(() => this.finalizarSesion('', false)));
   }
   private recuperarSesion(datos: DatosSesion): void {
+    if (datos.usuario?.activo === false)
+      throw new HttpErrorResponse({
+        status: 401,
+        error: { mensaje: 'La cuenta está deshabilitada' },
+      });
     const vence = Date.parse(datos.expiraEn),
       servidor = Date.parse(datos.horaServidor);
     if (

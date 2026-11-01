@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 // Guard que comprueba la sesión mediante NestJS.
 import { authGuard } from './guards/auth.guard';
+import { administradorGuard } from './guards/administrador.guard';
 
 /**
  * RUTAS DE FUTBOLCRACK
@@ -45,6 +46,13 @@ export const routes: Routes = [
     canActivate: [authGuard],
 
     loadComponent: () => import('./pages/mi-perfil/mi-perfil').then((m) => m.MiPerfil),
+  },
+  {
+    path: 'dashboard/usuarios',
+    title: 'Usuarios | FutbolCrack',
+    canActivate: [administradorGuard],
+    loadComponent: () =>
+      import('./pages/dashboard-usuarios/dashboard-usuarios').then((m) => m.DashboardUsuarios),
   },
   {
     path: '**',

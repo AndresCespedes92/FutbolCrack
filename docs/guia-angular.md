@@ -154,3 +154,54 @@ El 401 de credenciales de login y el de autorizar sin sesión son esperables y t
 | ¿Se puede comprobar un usuario deshabilitado? | Todavía no: el modelo no tiene habilitación. Se valida existencia, sin inventar campos/administración de Sprint 4. |
 
 CSS del spinner en app.css y del dialog en extender-sesion.css: mismos colores/radios globales, contorno de teclado y preferencia de movimiento reducido. Pruebas con reloj simulado y límites reales en 08; contratos, cookies/CSRF y riesgos en 02.
+
+## Tarea 5A — Cómo estudiar la administración de usuarios
+
+### Archivos y responsabilidades
+
+`pages/dashboard-usuarios/dashboard-usuarios.ts` coordina listado, formulario y operaciones. Su HTML muestra tabla, radios y mensajes; su CSS comenta grilla de dos columnas, cambio móvil, colores y bordes redondeados. Para cambiar espaciado se modifica .panel; para el ancho móvil, @media (max-width:700px); la tabla tiene scroll local. Se conservan variables globales de negro/musgo/gris.
+
+`services/usuarios.ts` concentra HTTP y contratos. `guards/administrador.guard.ts` controla navegación. `components/confirmacion-usuario/` separa TS, HTML y CSS del modal. `app.routes.ts` carga la pantalla al navegar a /dashboard/usuarios; navbar muestra el enlace según el usuario de AuthService. El backend vuelve a verificar todo: esconder un botón no impide llamadas manuales.
+
+### Recorrido paso a paso
+
+1. El secretario inicia sesión. AuthService conserva la ficha y metadatos de 4C, sin exponer JWT al componente.
+2. Pulsa Administrar usuarios. administradorGuard llama comprobarAcceso. Sin sesión redirige al login con returnUrl; con sesión común vuelve al feed con acceso=sin-permiso y aviso, sin cerrar sesión; un admin continúa.
+3. DashboardUsuarios.ngOnInit llama cargarUsuarios. UsuariosService.listar envía GET con cookie. Nest verifica JWT, ficha activa y rol actual, consulta MongoDB y responde sin hash. Angular reemplaza usuarios y termina el estado de carga.
+4. El formulario usa crearFormularioRegistro: reutiliza reglas y estilos rojo/verde de CineBera, con controles nuevos para esta pantalla. Perfil es un FormControl separado y se elige con radio buttons. CrearUsuario mapea nombres del formulario a DTO y nunca envía hash ni activo.
+5. Nest valida DTO, compara contraseñas, genera hash y guarda mediante el mismo método privado usado por el registro. Tras 201 se limpia el formulario, vuelve el rol usuario y se recarga el padrón. Ante error se conserva el borrador.
+6. Deshabilitar solo selecciona una cuenta y abre ConfirmacionUsuario. Input usuario le indica a quién; procesando/error muestran estado. Output cancelar llama cancelarBaja sin HTTP; confirmar llama confirmarBaja en el padre y recién ahí ejecuta DELETE.
+7. Si Nest confirma, se cierra el modal y se recarga el listado con mensaje. Si falla, el modal permanece con error. Habilitar llama su endpoint y espera confirmación de éxito del servidor.
+8. El jugador suspendido recibe 401 incluso con JWT anterior: la ficha tiene activo false. No se eliminan sus publicaciones ni comentarios. Las cuentas antiguas sin campo continúan activas.
+
+### Fragmentos reales y conceptos
+
+```ts
+readonly formulario = crearFormularioRegistro();
+readonly perfil = new FormControl<PerfilUsuario>('usuario', { nonNullable: true });
+```
+
+La factoría comparte validadores, no instancias de controles: escribir aquí no cambia el registro. Los bindings [formControl] y [class.input-invalido]/[class.input-valido] conectan estado y presentación; @if decide qué mensaje renderizar y @for recorre el padrón. No son directivas propias. takeUntilDestroyed evita mantener suscripciones de un componente destruido. markForCheck notifica los cambios de llamadas asíncronas a la vista.
+
+```ts
+cancelarBaja(): void {
+  if (!this.procesandoId) {
+    this.seleccionado = null;
+    this.errorOperacion = '';
+  }
+}
+```
+
+Cancelar cambia estado local. El modal no tiene servicio HTTP: se comunican hijo y padre mediante Input/Output. La comparación de claves, formulario reactivo y feedback visual retoman CineBera; se adaptan al perfil de jugador y al rol administrativo, sin crear un panel de reclutadores.
+
+### Preguntas de defensa
+
+- **¿Rol y activo son lo mismo?** No: rol define permisos; activo permite o bloquea usar la cuenta. Un admin inactivo también queda bloqueado.
+- **¿Por qué no alcanza un guard Angular?** El cliente puede evitarlo y llamar al endpoint; Nest consulta identidad, estado y rol.
+- **¿Cómo se invalida un JWT anterior?** Su firma puede seguir válida, pero AuthGuard consulta activo en MongoDB y responde 401. No se cambia la duración de 15 minutos.
+- **¿Qué es una baja lógica?** Cambiar activo false conservando el documento y sus relaciones, como suspender un carnet del club sin destruir la ficha.
+- **¿Cómo se protege el último admin?** Esta implementación no permite deshabilitar ninguna cuenta administradora. Evita contar y luego actualizar con una carrera; es una política explícitamente más restrictiva.
+- **¿Qué pasa con un usuario antiguo?** activo !== false considera activa la ausencia; no se migró la base.
+- **¿Por qué compartir hash y formulario?** Evita duplicar reglas y negocio. El backend sigue siendo autoridad aunque Angular valide primero.
+- **¿Cómo se demuestra cancelar?** Las pruebas abren el modal, cancelan y verifican que no se emitió DELETE. No se usa window.confirm ni alert.
+- **¿Qué está pendiente de comprobar?** Navegador/móvil real, Atlas e integración de cookies en producción; las suites locales usan HTTP y dobles controlados.

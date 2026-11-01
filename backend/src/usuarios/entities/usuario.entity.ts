@@ -14,8 +14,6 @@
 // required: true: establece que el campo es obligatorio.
 // SchemaFactory.createForClass(Usuario): genera el esquema de Mongoose a partir de la clase.
 
-
-
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
@@ -26,7 +24,6 @@ export type UsuarioDocument = HydratedDocument<Usuario>;
 // timestamps agrega automáticamente createdAt y updatedAt.
 @Schema({ timestamps: true })
 export class Usuario {
-
   @Prop({ required: true, trim: true })
   nombre: string;
   // trim: true Elimina espacios al principio y al final
@@ -54,6 +51,10 @@ export class Usuario {
   @Prop({ default: '' })
   imagenPerfil: string;
 
+  // Baja lógica: solo false bloquea. Los documentos anteriores sin este campo siguen activos.
+  @Prop({ type: Boolean, default: true })
+  activo: boolean;
+
   // El registro público asignará siempre el perfil usuario.
   @Prop({
     type: String,
@@ -65,4 +66,3 @@ export class Usuario {
 
 // Convierte la clase Usuario en un esquema de Mongoose.
 export const UsuarioSchema = SchemaFactory.createForClass(Usuario);
-

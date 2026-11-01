@@ -63,4 +63,16 @@ describe('Login: metadatos y retorno seguro al detalle', () => {
     expect(login.mensajeError).toContain('incorrectos');
     expect(TestBed.inject(Router).url).toContain('/login');
   });
+  it('muestra el motivo de cuenta deshabilitada sin borrar las credenciales ni navegar', async () => {
+    const login = await abrir('/publicaciones');
+    http
+      .expectOne(`${API_URL}/auth/login`)
+      .flush(
+        { message: 'Tu cuenta está deshabilitada. Contactá a un administrador.' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+    expect(login.mensajeError).toContain('deshabilitada');
+    expect(login.loginForm.controls.identificador.value).toBe('lucia.8');
+    expect(TestBed.inject(Router).url).toContain('/login');
+  });
 });

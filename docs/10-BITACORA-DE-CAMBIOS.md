@@ -639,6 +639,84 @@ El flujo local de sesión está listo para validación integrada del Sprint 3, s
 
 ---
 
+## 2026-11-01 — Sprint 4, Tarea 5A: Administración de usuarios y roles
+
+### Base y alcance
+
+Se revisó feature/renovacion-sesion y sus 42 cambios de 4C; base 0d94da5. Antes de modificar, frontend compiló y pasó 138/138 y backend compiló y pasó 187/187. Conforme a autorización expresa del enunciado se creó el respaldo local **238c440 — feat(auth): autorizar y renovar sesiones de quince minutos** y después la rama **feature/administracion-usuarios**. Los cambios de 5A quedan sin commit; sin merge ni deploy. No se modifican .env, dependencias, módulos funcionales ni datos externos.
+
+### Problema, ejemplo y decisiones
+
+El secretario necesitaba gestionar fichas del club; un jugador no debe administrar el padrón y un socio suspendido no debe seguir entrando con su carnet anterior. Se agrega activo con compatibilidad de ausencia=true, endpoints administrativos y dashboard. Flujo: formulario/modal → servicio HTTP Angular → controller con guards → servicio Nest → consultas/actualización condicional de Usuario → mensajes y recarga.
+
+Se comparte hashing con registro y persistencia sin duplicar negocio. El registro público siempre fuerza usuario/activo. DTO administrativo restringe perfil y campos; proyección positiva excluye credenciales. AuthGuard consulta MongoDB en cada acceso protegido: baja bloquea JWT anterior, login, autorizar y refrescar. Cookies/15 minutos/CSRF de 4C se conservan. Un fallo de base no se convierte en falso 401.
+
+Política conservadora: no se puede deshabilitar a uno mismo ni a ninguna cuenta administradora; protege al último sin carreras de conteo, a costa de restringir bajas de administradores adicionales. Se puede rehabilitar un admin ya inactivo desde otro activo. No hay edición de rol ni bootstrap de cuentas reales. La baja no elimina publicaciones/comentarios, y al rehabilitar un token anterior aún vigente puede volver a funcionar. Una solicitud que ya pasó el guard puede completar.
+
+Dashboard separado en TS/HTML/CSS, comentarios españoles incluidos estilos; reutiliza validadores de CineBera/registro, radios de rol y modal hijo con Input/Output. Cancelar no hace HTTP; estado de procesamiento evita duplicados. 400/409/500 conservan borrador; 403 no cierra una sesión válida. Se documentan los recorridos, permisos y conceptos en mapa/seguridad/administración/guía.
+
+### Pruebas y dificultades resueltas
+
+Resultado final: **frontend build exit 0, 162/162 en 22 suites; backend build exit 0, 223/223 en 12 suites**. Comandos completos en 08. Se conservan todos los casos anteriores; nuevos casos verifican permisos/altas/estados/JWT/DTO/modal/mensajes y esquema. Modelo de sesión de pruebas actualizado para la nueva consulta del guard. No se instalaron dependencias ni se relajó configuración.
+
+La compilación detectó overrides del DTO que necesitaban declare; la integración detectó que había que exportar MongooseModule para inyectar UsuarioModel en guards de otros módulos. La primera suite ampliada tuvo 222/223: se aceptaba una clave sin número por redecoración incompleta de validadores heredados. Se corrigieron las reglas completas, manteniendo el caso, y pasó 223/223. No se omitieron pruebas.
+
+### Archivos creados/modificados
+
+- `backend/src/auth/auth.service.ts`
+- `backend/src/auth/auth.sesion.http.spec.ts`
+- `backend/src/auth/guards/auth.guard.ts`
+- `backend/src/auth/seguridad.module.ts`
+- `backend/src/comentarios/comentarios.controller.http.spec.ts`
+- `backend/src/common/password.ts`
+- `backend/src/publicaciones/publicaciones.controller.http.spec.ts`
+- `backend/src/testing/usuario-sesion.ts`
+- `backend/src/usuarios/dto/crear-usuario-administrativo.dto.ts`
+- `backend/src/usuarios/entities/usuario.entity.spec.ts`
+- `backend/src/usuarios/entities/usuario.entity.ts`
+- `backend/src/usuarios/guards/administrador.guard.ts`
+- `backend/src/usuarios/usuarios.administracion.http.spec.ts`
+- `backend/src/usuarios/usuarios.controller.http.spec.ts`
+- `backend/src/usuarios/usuarios.controller.ts`
+- `backend/src/usuarios/usuarios.service.spec.ts`
+- `backend/src/usuarios/usuarios.service.ts`
+- `docs/00-MAPA-DEL-PROYECTO.md`
+- `docs/02-AUTENTICACION-Y-SEGURIDAD.md`
+- `docs/05-ADMINISTRACION.md`
+- `docs/08-PRUEBAS-Y-DESPLIEGUE.md`
+- `docs/09-REQUISITOS-SPRINTS.md`
+- `docs/10-BITACORA-DE-CAMBIOS.md`
+- `docs/guia-angular.md`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/components/confirmacion-usuario/confirmacion-usuario.css`
+- `frontend/src/app/components/confirmacion-usuario/confirmacion-usuario.html`
+- `frontend/src/app/components/confirmacion-usuario/confirmacion-usuario.spec.ts`
+- `frontend/src/app/components/confirmacion-usuario/confirmacion-usuario.ts`
+- `frontend/src/app/components/navbar/navbar.html`
+- `frontend/src/app/components/navbar/navbar.ts`
+- `frontend/src/app/guards/administrador.guard.spec.ts`
+- `frontend/src/app/guards/administrador.guard.ts`
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.css`
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.html`
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.spec.ts`
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.ts`
+- `frontend/src/app/pages/login/login.sesion.spec.ts`
+- `frontend/src/app/pages/login/login.ts`
+- `frontend/src/app/pages/publicaciones/publicaciones.html`
+- `frontend/src/app/pages/publicaciones/publicaciones.ts`
+- `frontend/src/app/services/auth.ts`
+- `frontend/src/app/services/usuarios.spec.ts`
+- `frontend/src/app/services/usuarios.ts`
+- `frontend/src/app/testing/usuarios-fixture.ts`
+
+### Pendientes y criterio de entrega
+
+No se verificaron Atlas, navegador/móvil real, índices ni cookies HTTPS/CORS de producción. Las pruebas HTTP usan persistencia simulada; Mongoose valida el esquema en memoria. El listado no pagina. La validación backend de fecha conserva ISO del DTO existente; la restricción de fecha futura está en el formulario. No se ha creado ni modificado ningún administrador real.
+
+Sprint 4 restante: estadísticas con Desde/Hasta y MongoDB, gráficos, PWA, dos pipes adicionales y tres directivas propias. Revisión final SHA-256: 27 archivos existentes modificados y 18 nuevos (45 en total), coincidentes con el inventario. Sin cambios en lógica productiva de publicaciones/comentarios/Cloudinary, dependencias ni main.ts. La matriz conserva 44 IDs únicos; enlaces y bloques Markdown correctos; sin pruebas omitidas/exclusivas. git diff --check correcto; avisos LF/CRLF de la configuración existente. 5A queda implementada/verificada localmente con estos límites explícitos; no se declara cerrado el sprint. Se detiene para revisión y aprobación, sin commit de 5A/merge/deploy.
+
+---
+
 ## Plantilla para la próxima tarea
 
 ### AAAA-MM-DD — Número y título

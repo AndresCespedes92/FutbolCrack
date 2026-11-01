@@ -16,5 +16,12 @@
       ariaCurrentWhenActive="page"
       >Registrarse</a
     >
+    @if (
+      auth.usuarioActual()?.perfil === 'administrador' && auth.usuarioActual()?.activo !== false
+    ) {
+      <a routerLink="/dashboard/usuarios" routerLinkActive="active" ariaCurrentWhenActive="page"
+        >Administrar usuarios</a
+      >
+    }
   </nav>
 </header>
