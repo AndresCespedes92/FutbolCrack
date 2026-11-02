@@ -43,6 +43,8 @@ export class ComentariosPublicacion implements OnChanges {
   @Input({ required: true }) publicacionId!: string;
   @Input() usuario: Usuario | null = null;
   @Output() publicacionNoDisponible = new EventEmitter<void>();
+  // Comunica el total real al padre (como los eventos de CineBera), también tras publicar.
+  @Output() totalActualizado = new EventEmitter<number>();
   private readonly api = inject(ComentariosService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
@@ -112,6 +114,7 @@ export class ComentariosPublicacion implements OnChanges {
           for (const comentario of respuesta.comentarios) porId.set(comentario._id, comentario);
           this.comentarios = [...porId.values()];
           this.total = respuesta.total;
+          this.totalActualizado.emit(this.total);
           this.siguienteOffset = respuesta.offset + respuesta.comentarios.length;
           this.hayMas = respuesta.hayMas;
           this.cargando = false;

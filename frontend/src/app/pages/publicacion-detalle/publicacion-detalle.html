@@ -39,6 +39,7 @@
     />
     <app-comentarios-publicacion
       [publicacionId]="jugada._id"
+      (totalActualizado)="actualizarTotalComentarios($event)"
       [usuario]="usuario"
       (publicacionNoDisponible)="marcarNoDisponible()"
     />

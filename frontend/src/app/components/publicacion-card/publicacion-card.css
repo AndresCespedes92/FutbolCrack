@@ -76,7 +76,11 @@ p {
   padding-top: 16px;
   margin-top: 22px;
 }
-.cantidad-likes {
+/* Ambos totales quedan juntos; en móvil pueden pasar de fila sin desbordar la tarjeta. */
+.contadores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-right: auto;
   font-size: 0.85rem;
 }

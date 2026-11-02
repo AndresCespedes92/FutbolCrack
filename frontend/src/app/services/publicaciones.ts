@@ -30,6 +30,7 @@ export interface Publicacion {
   activo?: boolean;
   // Calculados por el listado; opcionales para conservar la respuesta de creación y datos antiguos.
   cantidadLikes?: number;
+  cantidadComentarios?: number;
   meGusta?: boolean;
   multimediaUrl: string;
   tipoMultimedia: 'ninguno' | 'imagen' | 'video';

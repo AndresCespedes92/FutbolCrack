@@ -157,6 +157,7 @@
         <!-- Cada una de las tres jugadas pide solo sus tres comentarios iniciales. -->
         <app-comentarios-publicacion
           [publicacionId]="publicacion._id"
+          (totalActualizado)="actualizarTotalComentarios(publicacion._id, $event)"
           [usuario]="usuario"
           (publicacionNoDisponible)="retirarNoDisponible(publicacion._id)"
         />

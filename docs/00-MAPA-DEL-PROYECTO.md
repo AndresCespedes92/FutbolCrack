@@ -364,3 +364,10 @@ Inventario completo en 10. Base main 7f327ec, rama test/auditoria-final; 5C ya r
 ## Preparación QA HTTPS pendiente de aprobación
 
 Configuración concreta en docs/15-CONFIGURACION-QA-HTTPS.md; plantillas inertes frontend/backend Vercel, entrada de aislamiento QA y huellas de fuentes en docs/qa-https/. No están en rutas activas de despliegue; no cambian la aplicación.
+
+## Contador de comentarios por publicación — 2026-11-02
+
+- `backend/src/publicaciones/publicaciones.service.ts`, `consultarListado`: agrega cantidadComentarios mediante lookup/count sobre comentarios después de paginar. GET /publicaciones y GET /publicaciones/:id comparten el cálculo.
+- `frontend/src/app/services/publicaciones.ts`: campo opcional cantidadComentarios en Publicacion.
+- `frontend/src/app/components/publicacion-card/publicacion-card.html` / `.css`: contadores de likes y comentarios juntos, con ajuste de línea en móvil.
+- `ComentariosPublicacion.totalActualizado`: Output con el total de la respuesta paginada; perfil/detalle lo reciben en actualizarTotalComentarios y actualizan la tarjeta sin HTTP adicional.

@@ -13,6 +13,20 @@ describe('PublicacionCard: datos y eventos sin HTTP', () => {
     fixture.detectChanges();
   });
   afterEach(() => vi.restoreAllMocks());
+  it.each([
+    [undefined, '0 comentarios'],
+    [1, '1 comentario'],
+    [8, '8 comentarios'],
+  ])(
+    'muestra el total %s junto a Me gusta, con singular y compatibilidad anterior',
+    (cantidadComentarios, texto) => {
+      fixture.componentRef.setInput('publicacion', { ...publicacionPrueba(), cantidadComentarios });
+      fixture.detectChanges();
+      const contadores = fixture.nativeElement.querySelector('.contadores');
+      expect(contadores.querySelector('.cantidad-likes').textContent).toContain('2 Me gusta');
+      expect(contadores.querySelector('.cantidad-comentarios').textContent.trim()).toBe(texto);
+    },
+  );
   it('renderiza autor, foto, fecha, título, descripción, imagen y cantidad reales', () => {
     const html = fixture.nativeElement;
     for (const texto of [

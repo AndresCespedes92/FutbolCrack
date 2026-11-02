@@ -46,6 +46,13 @@ describe('ComentariosPublicacion: flujo compartido de detalle y perfil', () => {
     responder(1, 3);
   });
   afterEach(() => http.verify());
+  it('comunica el total completo al padre aunque solo reciba otra página de tres comentarios', () => {
+    const totales: number[] = [];
+    fixture.componentInstance.totalActualizado.subscribe((total) => totales.push(total));
+    fixture.componentInstance.cargarComentarios();
+    lectura().flush(paginaComentarios(lista(4, 3), 8, 3));
+    expect(totales).toEqual([8]);
+  });
   it('presenta tres comentarios en el orden recibido con autor/foto y formulario validado', () => {
     expect(fixture.nativeElement.querySelectorAll('.comentario').length).toBe(3);
     expect(fixture.nativeElement.textContent).toContain('Camila Gómez');

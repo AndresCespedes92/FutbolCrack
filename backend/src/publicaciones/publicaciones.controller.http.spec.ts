@@ -29,6 +29,7 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
   const cloudinary = { subirImagen: vi.fn() };
   const usuarios = { findById: vi.fn() };
   let documentos: any[];
+  let notas: { publicacionId: Types.ObjectId }[];
   const agregar = vi.fn();
   const poblar = vi.fn();
   const cambiarLike = vi.fn();
@@ -84,6 +85,7 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
 
   beforeEach(() => {
     documentos = [];
+    notas = [];
     guardar.mockReset().mockImplementation(async (datos) => {
       const documento = { _id: id, ...datos };
       documentos.push(documento);
@@ -135,6 +137,11 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
         const pagina = filas.slice(inicio, inicio + limite).map((doc) => {
           const vista = { ...doc };
           if (faceta.publicaciones[3].$project.likes === 0) delete vista.likes;
+          if (faceta.publicaciones[4]?.$lookup) {
+            vista.cantidadComentarios = notas.filter(
+              (nota) => nota.publicacionId.toString() === doc._id.toString(),
+            ).length;
+          }
           return vista;
         });
         return [
@@ -653,6 +660,48 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
   }
 
   describe('Listado 3B: filtros, orden y paginación de servidor', () => {
+    it('incluye el total de comentarios de cada jugada sin confundirlo con la página de comentarios', async () => {
+      generarPartes(2);
+      notas = Array.from({ length: 8 }, () => ({
+        publicacionId: documentos[1]._id,
+      }));
+      notas.push({
+        publicacionId: new Types.ObjectId('000000000000000000000099'),
+      });
+      const respuesta = await request(app.getHttpServer())
+        .get('/publicaciones')
+        .expect(200);
+      expect(
+        respuesta.body.publicaciones.map((pub: any) => pub.cantidadComentarios),
+      ).toEqual([8, 0]);
+      const etapas = agregar.mock.calls[0][0][2].$facet.publicaciones;
+      expect(etapas[4]).toEqual({
+        $lookup: {
+          from: 'comentarios',
+          let: { publicacionId: '$_id' },
+          pipeline: [
+            {
+              $match: { $expr: { $eq: ['$publicacionId', '$$publicacionId'] } },
+            },
+            { $count: 'total' },
+          ],
+          as: 'conteoComentarios',
+        },
+      });
+      expect(etapas[5]).toEqual({
+        $set: {
+          cantidadComentarios: {
+            $ifNull: [{ $arrayElemAt: ['$conteoComentarios.total', 0] }, 0],
+          },
+        },
+      });
+      expect(etapas[6]).toEqual({ $project: { conteoComentarios: 0 } });
+      const detalle = await request(app.getHttpServer())
+        .get(`/publicaciones/${documentos[1]._id}`)
+        .expect(200);
+      expect(detalle.body.cantidadComentarios).toBe(8);
+      expect(detalle.body).not.toHaveProperty('conteoComentarios');
+    });
     it('devuelve por defecto diez registros y total filtrado, excluyendo inactivas', async () => {
       generarPartes(23);
       documentos.push({ _id: 'inactiva', activo: false });

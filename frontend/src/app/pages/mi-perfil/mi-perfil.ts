@@ -151,4 +151,10 @@ export class MiPerfil implements OnInit {
         },
       });
   }
+  actualizarTotalComentarios(id: string, total: number): void {
+    this.publicaciones = this.publicaciones.map((publicacion) =>
+      publicacion._id === id ? { ...publicacion, cantidadComentarios: total } : publicacion,
+    );
+    this.cdr.markForCheck();
+  }
 }

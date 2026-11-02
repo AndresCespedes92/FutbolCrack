@@ -982,3 +982,11 @@ Actualizados 00/02/05/07/08/09/10/13; creado 14 y evidencias-5f. Matriz vigente 
 ## Preparación QA HTTPS — 2026-11-01
 
 Usuario aprobó resultados 5F y autorizó preparar configuración antes de deploy. Se conserva test/aceptacion-final y todo el trabajo pendiente de 5F, sin commit. Creados docs/15-CONFIGURACION-QA-HTTPS.md y plantillas inertes docs/qa-https/: proyectos y dominios previstos, target QA, variables sin secretos, cookies existentes, CORS efectivo con localhost, CSRF, Atlas con credencial QA limitada propuesta, prefijo Cloudinary lógico y cierre. Se revisó historia c8383c9 para G-15; no hay evidencia nueva suficiente para cambiarlo. Matriz sin cambios 42/1/0/1. Validación de sintaxis/huellas local; sin cambios funcionales, recursos externos, instalación, push, merge ni deploy. Ejecución pendiente de aprobación de configuración y titular Vercel.
+
+## Contador de comentarios junto a Me gusta — 2026-11-02
+
+Estado inicial: main limpia; se utilizó main sin crear ramas innecesarias. Alcance autorizado: indicador por publicación. PublicacionesService.consultarListado calcula cantidadComentarios con lookup/count de comentarios de la página, sin texto ni contador persistido. Publicacion Angular incorpora el campo opcional; PublicacionCard agrupa likes/comentarios con flex-wrap y singular/plural. ComentariosPublicacion comunica totalActualizado al padre; MiPerfil y PublicacionDetalle actualizan la tarjeta al cargar/recargar comentarios, incluido después de publicar. Comentarios técnicos en español y CSS explicativo.
+
+Pruebas: builds frontend/backend exit 0, Angular 241/241, Nest 279/279, PWA 11/11; diff --check correcto. Datos de prueba aislados en suites; sin Atlas/Cloudinary real ni navegador para este cambio. Se actualizan mapa, publicaciones, comentarios, guía Angular, pruebas y matriz como seguimiento sin cambiar estados de aceptación. La preparación HTTPS anterior y sus huellas representan el estado previo: revisar/regenerar el artefacto tras aprobar este cambio antes de cualquier futuro deploy, sin actualizarlo silenciosamente.
+
+Sin dependencias, cambios de permisos/modelos/autenticación, commit, merge, push ni deploy. Pendiente ensayo manual y ejecutar/actualizar backend junto con frontend para ver totales reales; respuestas de backend anterior muestran cero por compatibilidad.

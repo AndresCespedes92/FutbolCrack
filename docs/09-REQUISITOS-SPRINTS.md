@@ -195,3 +195,7 @@ Se implementan los tres pipes y tres directivas de S4-09/10, con uso real y prue
 Alcance funcional solicitado a lo largo de las tareas: implementado localmente. **Los cuatro sprints no se declaran cerrados/verificados integralmente**: la matriz resume material recibido y no sustituye enunciados oficiales completos; faltan ensayos de integración anteriores, navegador/dispositivos y aceptación runtime de PWA. No hay merge ni despliegue. G-14 mantiene esa distinción.
 
 Compatibilidad con sesiones: no hay cambios backend ni reglas de caché API; se conservan cookies/JWT y suites existentes. Las restricciones de baja de todas las cuentas administradoras en 5A y las métricas de visibilidad actual de 5B siguen vigentes. PWA solo guarda interfaz estática; no implementa operaciones offline.
+
+## Seguimiento visual — contador de comentarios, 2026-11-02
+
+Se agrega cantidadComentarios al contrato de lectura de publicaciones y un indicador en la tarjeta reutilizada; Input desde el padre y Output totalActualizado desde los comentarios mantienen sincronizados perfil/detalle. Extiende las evidencias de componente reutilizable/comunicación y comentarios; no cambia el estado de los 44 requisitos ni certifica el QA HTTPS pendiente. Detalle y prueba manual en 03/04; resultados automatizados en 08 y bitácora.

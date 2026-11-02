@@ -466,3 +466,9 @@ Respaldo autorizado 5E 6a66fc9 tras builds correctos, Angular 236/236, Nest 275/
 Se documentan intentos fallidos en 14: sandbox ENOENT/EACCES, fixture de Angular sin markForCheck y timeout de navegación existente. Repetición sin concurrencia pasó sin aumentar límites ni omitir tests. Mongoose `new` deprecado y LF/CRLF siguen como avisos, sin refactor. No dependencias ni modificaciones JWT/cookies/caché.
 
 JWT con reloj real, instalación/update/cache PWA y cuatro tamaños responsive comprobados con evidencias. HTTPS real bloqueado a la espera de aprobar propuesta concreta en [14](14-ACEPTACION-FINAL.md); no se crearon proyectos ni se desplegó. Scripts externos se ejecutan únicamente con autorización/namespace QA; las cuentas temporales no son datos de demo del producto.
+
+## Contador de comentarios — 2026-11-02
+
+Ambos npm run build finalizaron exit 0; frontend sin advertencias de presupuesto. Suite Angular completa: **241/241, 26 archivos**. Suite Nest completa con threads sin paralelismo de archivos: **279/279, 14 archivos**. PWA tras el build: **11/11**. Suites Angular/Nest fuera del sandbox por las restricciones temporales/HTTP ya identificadas en esta sesión. Prueba PWA inicialmente invocada desde raíz sin package.json (ENOENT); corregido directorio a frontend, 11/11. Git diff --check correcto; avisos LF/CRLF existentes.
+
+Regresiones nuevas: tarjeta con total ausente/1/8, Output comunica total ocho aunque la página tenga tres, y HTTP listado/detalle con conteo por publicación, cero y filtro de asociación; se verifican explícitamente operadores lookup/count y colocación después del límite. MongoDB se simula en esa suite: no se certifica ejecución real Atlas ni ensayo visual integrado. Prueba manual pendiente detallada en 03. Requiere frontend y backend de esta versión; un backend desplegado anterior todavía no incluye cantidadComentarios. No deploy ni operaciones externas.

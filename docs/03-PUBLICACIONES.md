@@ -256,3 +256,15 @@ Detalle usa paramMap para responder a cambios de id y cancela el GET previo; no 
 La recarga tras un like mantiene la sección de comentarios y sus borradores si sigue siendo la misma jugada. Mi Perfil mantiene igualmente sus hijos por id y bloquea la tarjeta mientras recarga; una baja exitosa retira primero la jugada de la colección y después repone las últimas tres para no mostrar una inactiva durante la consulta. El modal sigue siendo obligatorio y la autorización definitiva permanece en Nest.
 
 ComentariosPublicacion se reutiliza tanto aquí como en cada una de las tres jugadas del perfil; detalles de creación, anexado, edición y límites en [04](04-COMENTARIOS.md). La pareja API/frontend debe integrarse coordinadamente porque el endpoint individual es nuevo. No se verificó la versión que hoy está desplegada en Vercel ni se hizo deploy.
+
+## Cantidad de comentarios junto a Me gusta — 2026-11-02
+
+Problema: antes había que abrir la jugada para conocer cuántas notas tenía. Ahora la tarjeta compartida muestra, por ejemplo, «2 Me gusta · 8 comentarios», también en perfil y detalle. Se respeta el singular «1 comentario» y se muestra cero si una respuesta anterior todavía no incluye el campo.
+
+Recorrido: GET /publicaciones (o detalle por ID) → PublicacionesService.consultarListado → facet con sort/skip/limit → lookup sobre la colección comentarios por publicacionId y count → cantidadComentarios → interfaz Publicacion Angular → PublicacionCard por Input. Solo se cuentan comentarios de las jugadas de la página; no se descargan sus textos ni se hace una petición HTTP por tarjeta. El índice existente por publicacionId/fecha es compatible con el filtro. No hay contador persistido que pueda desincronizarse.
+
+Ejemplo del club: ocho compañeros comentaron una jugada. La tarjeta muestra ocho aunque el panel solo cargue tres notas inicialmente. Cuando se publica otra, el panel recarga su página y emite el total confirmado; el padre actualiza el Input de la tarjeta. Editar texto no aumenta la cantidad. No se agrega polling ni actualización automática de comentarios de terceros sin recargar.
+
+Archivos: service Nest y su prueba HTTP de publicaciones, interfaz del servicio Angular, PublicacionCard HTML/CSS/pruebas, ComentariosPublicacion TS/pruebas y padres MiPerfil/PublicacionDetalle TS/HTML. No cambian esquemas, permisos, autoría, paginación, endpoints de escritura ni autenticación. La consulta solo devuelve conteo de comentarios de publicaciones visibles, sin datos personales adicionales.
+
+Prueba manual pendiente contra entorno real: comparar total de una jugada con 0/1/8 comentarios en feed/perfil/detalle; agregar uno propio y comprobar incremento tras la respuesta; cargar más sin duplicar el total; editar sin incrementarlo; verificar ajuste móvil. No se escribieron datos externos para este cambio. Los ensayos HTTP automatizados utilizan dobles de MongoDB: verifican contrato y operadores, no se presentan como ejecución de lookup en Atlas.

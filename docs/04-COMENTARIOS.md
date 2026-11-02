@@ -263,3 +263,7 @@ No se implementan renovación de sesión, interceptor global de 401, autorizar/r
 ## Cambio transversal de sesión — 4C
 
 JWT pasa a quince minutos con autorización inicial y renovación voluntaria; ver 02. El interceptor conserva sesión y borradores ante 403/red/500. Ante 401 protegido o vencimiento real redirige al login y destruye la vista: el borrador local no persiste entre pantallas. Se ajusta el mensaje de error 401 de ComentariosPublicacion para no prometer esa persistencia. No cambia el contrato, modelo, validaciones, autoría ni paginación de comentarios.
+
+## Comunicación del total a la tarjeta — 2026-11-02
+
+ComentariosPublicacion emite el Output totalActualizado después de una lectura exitosa, con respuesta.total (no comentarios.length). El mismo flujo se ejecuta al recargar los tres recientes después de publicar. MiPerfil y PublicacionDetalle reciben ese evento en actualizarTotalComentarios y reemplazan el objeto/array para actualizar el Input de PublicacionCard, usando markForCheck en Angular zoneless. No cambia la edición, el anexado de páginas ni las validaciones del formulario. Ejemplo: cargar tres notas de una jugada con ocho mantiene «8 comentarios» al lado de Me gusta.

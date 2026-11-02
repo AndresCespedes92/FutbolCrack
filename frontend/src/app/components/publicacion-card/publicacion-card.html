@@ -64,7 +64,13 @@
     }
   </div>
   <footer class="post-footer">
-    <span class="cantidad-likes">{{ publicacion.cantidadLikes ?? 0 }} Me gusta</span>
+    <div class="contadores">
+      <span class="cantidad-likes">{{ publicacion.cantidadLikes ?? 0 }} Me gusta</span>
+      <span class="cantidad-comentarios"
+        >{{ publicacion.cantidadComentarios ?? 0 }}
+        {{ publicacion.cantidadComentarios === 1 ? 'comentario' : 'comentarios' }}</span
+      >
+    </div>
     @if (activa) {
       <button
         type="button"

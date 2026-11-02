@@ -331,3 +331,11 @@ Se retiraron datos/tipo de demo sin uso y una camiseta con apellido ficticio usa
 Para estudiar la evidencia, leer [11-AUDITORIA-FINAL.md](11-AUDITORIA-FINAL.md): 44 filas, fuente/test y diferencia entre inspección, HTTP simulado, artefactos y red real. Para exponer, seguir [12-GUIA-DE-DEMOSTRACION.md](12-GUIA-DE-DEMOSTRACION.md). [sprint-1.md](sprint-1.md) se recuperó como reconstrucción actual, no historia inventada. Se inspeccionaron factoría/registro/tarjeta de CineBera en workspace vecino y se verifican conceptos adaptados, sin afirmar copia literal.
 
 Pregunta de defensa: ¿los tests prueban que la aplicación está completamente integrada? No: Angular 236/236, Nest 275/275 y PWA 11/11 demuestran sus alcances locales. API/pings reales amplían evidencia, pero cookies/upload/admin/PWA/móvil en navegador requieren la matriz manual. Contar pruebas no sustituye comprobar el recorrido del jugador hasta la base.
+
+## Ejemplo real: contador de comentarios junto a Me gusta
+
+La interfaz Publicacion declara cantidadComentarios?: number. La tarjeta lo recibe con su Input publicacion y su plantilla interpola el valor, usando ?? 0 para respuestas antiguas; el texto cambia entre comentario y comentarios. El CSS agrupa ambos totales con flex y flex-wrap para mantenerlos juntos y permitir saltos de línea en móvil.
+
+El panel ComentariosPublicacion usa @Output() totalActualizado = new EventEmitter<number>(). Tras leer la respuesta del servicio ejecuta totalActualizado.emit(this.total). El padre escucha (totalActualizado), llama actualizarTotalComentarios y actualiza el objeto que recibe la tarjeta. Como en CineBera, el hijo comunica un dato mediante evento y el padre coordina lo que se muestra; la tarjeta no necesita HttpClient.
+
+Pregunta de defensa: «¿Por qué no contás los elementos del array de comentarios?». Porque la página inicial solo tiene tres, pero puede haber ocho en MongoDB. El total proviene del backend; el listado de publicaciones también lo calcula por publicación sin descargar todos los textos.

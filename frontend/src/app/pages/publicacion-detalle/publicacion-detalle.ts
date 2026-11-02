@@ -103,6 +103,10 @@ export class PublicacionDetalle implements OnInit {
     this.cargando = false;
     this.cdr.markForCheck();
   }
+  actualizarTotalComentarios(total: number): void {
+    if (this.publicacion) this.publicacion = { ...this.publicacion, cantidadComentarios: total };
+    this.cdr.markForCheck();
+  }
   confirmarBaja(): void {
     this.acciones.confirmarBaja(() => {
       void this.router.navigate(['/publicaciones']);

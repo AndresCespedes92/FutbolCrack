@@ -185,6 +185,34 @@ export class PublicacionesService {
             { $limit: limit },
             // La lectura pública no expone los IDs de quienes votaron.
             { $project: { likes: 0 } },
+            // Contamos notas de cada jugada de ESTA página, sin descargar sus textos
+            // ni guardar un contador duplicado que pueda quedar desactualizado.
+            {
+              $lookup: {
+                from: 'comentarios', // Colección explícita del esquema Comentario.
+                let: { publicacionId: '$_id' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: { $eq: ['$publicacionId', '$$publicacionId'] },
+                    },
+                  },
+                  { $count: 'total' },
+                ],
+                as: 'conteoComentarios',
+              },
+            },
+            {
+              $set: {
+                cantidadComentarios: {
+                  $ifNull: [
+                    { $arrayElemAt: ['$conteoComentarios.total', 0] },
+                    0,
+                  ],
+                },
+              },
+            },
+            { $project: { conteoComentarios: 0 } },
           ],
           conteo: [{ $count: 'total' }],
         },
@@ -194,6 +222,7 @@ export class PublicacionesService {
       .aggregate<{
         publicaciones: (Partial<Publicacion> & {
           cantidadLikes: number;
+          cantidadComentarios: number;
           meGusta: boolean;
         })[];
         conteo: { total: number }[];
