@@ -62,7 +62,7 @@ describe('DashboardUsuarios: padrón/formulario/confirmación', () => {
     restaurar();
     http.verify();
   });
-  it('muestra datos reales, rol, estado y protección de la cuenta administradora', () => {
+  it('muestra datos reales, rol, estado y protección de la cuenta propia', () => {
     const filas = fixture.nativeElement.querySelectorAll('tbody tr');
     expect(filas.length).toBe(3);
     expect(filas[0].textContent).toContain('Administrador');
@@ -72,6 +72,24 @@ describe('DashboardUsuarios: padrón/formulario/confirmación', () => {
     expect(filas[1].textContent).toContain('Activo');
     expect(filas[2].textContent).toContain('Deshabilitado');
     expect(fixture.nativeElement.querySelectorAll('input[type="radio"]').length).toBe(2);
+  });
+  it('permite solicitar la baja de otro administrador y cancelarla sin HTTP', () => {
+    const otro = { ...usuarioAdministrativoPrueba(4), perfil: 'administrador' as const };
+    // La respuesta HTTP dispara markForCheck, igual que el padrón real con Angular zoneless.
+    fixture.componentInstance.cargarUsuarios();
+    listar().flush([admin, normal, inactivo, otro]);
+    fixture.detectChanges();
+    const fila = Array.from(
+      fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<HTMLElement>,
+    ).find((elemento) => elemento.textContent?.includes(otro.correo))!;
+    expect(fila.textContent).toContain('Administrador');
+    fila.querySelector<HTMLButtonElement>('.deshabilitar')!.click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('dialog').textContent).toContain(otro.nombreUsuario);
+    boton('Cancelar').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
+    http.expectNone((req) => req.method === 'DELETE');
   });
   it.each(['usuario', 'administrador'] as const)(
     'crea rol %s desde los radios, evita doble POST y limpia solo después de éxito',

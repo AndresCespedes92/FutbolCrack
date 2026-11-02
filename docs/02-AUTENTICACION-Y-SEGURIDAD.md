@@ -272,3 +272,9 @@ El DTO recorta nombre/apellido/nombreUsuario antes de IsNotEmpty: espacios oblig
 El interceptor ahora incluye /estadisticas: sus 401 invalidan estado y redirigen; 403 continúa preservando sesión. Tres regresiones fallaron antes y pasan después, junto con todas las anteriores. No se modifica el control de permisos definitivo de Nest.
 
 Pruebas reales sin escritura: API feed 200 y me/usuarios/estadística anónimos 401, CORS OPTIONS con localhost permitido/ajeno no permitido, ping Atlas y Cloudinary correctos. No hubo login/cookie/admin/upload reales ni inspección de valores secretos. Matriz completa y riesgos diferenciados en [11-AUDITORIA-FINAL.md](11-AUDITORIA-FINAL.md); no es certificado de seguridad de producción.
+
+## Verificación 5F
+
+JWT conserva 900 segundos, sin reducirlo: aviso real después del umbral de 10 minutos, Ahora no/recarga sin plazo nuevo, expiración natural y login; Edge renovó voluntariamente a los 621 segundos y siguió vigente más allá del plazo original. Tiempos y límites de observación en 14/evidencias-5f. No se modificaron cookies ni autenticación. HTTPS cross-site sigue pendiente: atributos productivos en código/suites no son evidencia de un despliegue real.
+
+Otro administrador puede suspenderse por decisión autorizada. Transacción en UsuariosService valida actor/estado y mantiene uno activo incluso en carreras; cuenta propia protegida por ObjectId normalizado. JWT previo del administrador suspendido devuelve 401 en acceso/renovación; rehabilitación permite acceso. Cinco carreras reales dieron una baja exitosa y otra rechazada. Alcance y reproducción segura en [14](14-ACEPTACION-FINAL.md).

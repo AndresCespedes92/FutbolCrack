@@ -148,11 +148,7 @@ export class DashboardUsuarios implements OnInit {
       });
   }
   puedeDeshabilitar(usuario: UsuarioAdministrativo): boolean {
-    return (
-      usuario.activo !== false &&
-      usuario.perfil !== 'administrador' &&
-      usuario._id !== this.auth.usuarioActual()?.id
-    );
+    return usuario.activo !== false && usuario._id !== this.auth.usuarioActual()?.id;
   }
   solicitarDeshabilitar(usuario: UsuarioAdministrativo): void {
     if (

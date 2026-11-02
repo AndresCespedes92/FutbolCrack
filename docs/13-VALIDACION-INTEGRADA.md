@@ -105,3 +105,11 @@ Sprint 2: código y subida real comprobados; sin pendiente funcional reproducido
 Antes de aceptar la entrega: completar M01/M03/M04/M14–M18 con la [guía de demostración](12-GUIA-DE-DEMOSTRACION.md), decidir alcance de deshabilitación de administradores y contrastar consigna oficial completa. Prioridad: instalar/actualizar PWA, revisar caché privado/logout, comprobar aviso JWT con reloj real y probar cookies en dominios HTTPS cuando exista URL QA autorizada. G-15 seguirá como limitación histórica incluso si esos ensayos pasan.
 
 **No listo para aceptación integral todavía.** Sí hay evidencia suficiente para demostrar en localhost con Atlas/Cloudinary QA los flujos funcionales probados, utilizando nuevas cuentas ficticias: las utilizadas aquí ya se limpiaron. No hacer merge/deploy sin aprobación.
+
+## Seguimiento de aceptación 5F — 2026-11-01
+
+Este documento conserva los resultados históricos de 5E y su matriz M01–M18. El seguimiento vigente está en [14-ACEPTACION-FINAL.md](14-ACEPTACION-FINAL.md): respaldo 5E 6a66fc9, rama test/aceptacion-final; Angular 237/237, Nest 278/278, PWA 11/11, ambos builds correctos y dos nuevas ejecuciones HTTP reales 14/14.
+
+Usuario autorizó baja de otro administrador (sin baja propia ni pérdida del último activo) e instalación local. S4-04 pasa a Cumple con transacción, cinco carreras reales, JWT previo revocado y modal UI; S4-08 pasa a Cumple en QA con instalación Edge, worker/update, shell offline/recuperación y 24 recursos estáticos del caché tras logout. Estado vigente: 42 Cumple, 1 Parcial (G-14), 1 No verificado (G-15). No se sobrescribe retrospectivamente el 40/3/1 de 5E.
+
+Pendientes M01 y temporización natural M04 se ensayaron; responsive tuvo tamaños efectivos 345/375/753/1265 y detalle con comentario. M03 sigue bloqueado por HTTPS. M14/M15 se comprobaron con los alcances/contextos concretos de 14; no se confunden cachés de Edge e IAB ni corte de servidores con teléfono físico offline. Revisión complementaria M17/M18 no exhaustiva sigue identificada. Propuesta de dos proyectos QA HTTPS en 14, preparada pero no desplegada ni autorizada para ejecutar. Sin merge/push/deploy.

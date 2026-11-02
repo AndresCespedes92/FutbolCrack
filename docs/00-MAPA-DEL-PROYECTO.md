@@ -353,3 +353,14 @@ Inventario completo en 10. Base main 7f327ec, rama test/auditoria-final; 5C ya r
 - `docs/evidencias-5e/http-real.json`: ejecución original saneada y limpieza; conserva un fallo del ensayo.
 - `docs/evidencias-5e/observaciones-reales.json`: repetición real corregida de M09 y observaciones del navegador; dos PNG muestran reportes y shell sin servidores.
 - No se modificaron endpoints, métodos productivos, modelos, componentes ni dependencias en 5E.
+
+## Aceptación 5F
+
+- UsuariosService.deshabilitarAdministrador en `backend/src/usuarios/usuarios.service.ts`: transacción, bloqueo de actor actual, conteo de administradores y baja lógica; `deshabilitar` compara ObjectId normalizados para proteger cuenta propia.
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.ts` / `.html`: acción para otro administrador; modal y comunicación HTTP existentes reutilizados. Regresiones en ambos archivos de pruebas de administración.
+- `backend/scripts/aceptacion-admin-qa.mjs`: cuatro escenarios reales, cinco carreras opuestas en Atlas QA; restaura únicamente dos administradores de ese namespace. No forma parte del servidor productivo.
+- `docs/14-ACEPTACION-FINAL.md` y `docs/evidencias-5f/`: resultados, tiempos reales JWT, responsive, PWA instalada/caché, limpieza y propuesta HTTPS pendiente de autorización.
+
+## Preparación QA HTTPS pendiente de aprobación
+
+Configuración concreta en docs/15-CONFIGURACION-QA-HTTPS.md; plantillas inertes frontend/backend Vercel, entrada de aislamiento QA y huellas de fuentes en docs/qa-https/. No están en rutas activas de despliegue; no cambian la aplicación.

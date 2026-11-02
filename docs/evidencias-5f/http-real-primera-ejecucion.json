@@ -1,0 +1,124 @@
+{
+  "ejecucion": "qa5e_42cc15ec",
+  "base": "futbolcrack_qa",
+  "entorno": "Nest local + Atlas QA real + Cloudinary QA real",
+  "casos": [
+    {
+      "id": "M02-registro",
+      "descripcion": "Registro real de tres cuentas ficticias por endpoint de la aplicación",
+      "resultado": "Aprobado",
+      "evidencia": {
+        "cuentas": 3,
+        "persistenciaAtlas": true,
+        "rolPublicoForzado": true
+      }
+    },
+    {
+      "id": "M02-login",
+      "descripcion": "Login real y persistencia, cookie HttpOnly y exp-iat 900",
+      "resultado": "Aprobado",
+      "evidencia": {
+        "cookieHttpOnly": true,
+        "duracionSegundos": 900,
+        "sinTokenEnJSON": true
+      }
+    },
+    {
+      "id": "M18-credenciales",
+      "descripcion": "Login incorrecto y registro duplicado",
+      "resultado": "Aprobado",
+      "evidencia": "Aserciones sobre respuesta/persistencia real correctas"
+    },
+    {
+      "id": "M04-autorizar-renovar",
+      "descripcion": "Autorización/renovación con cookie emitida por Nest QA",
+      "resultado": "Aprobado",
+      "evidencia": {
+        "renovacionVoluntaria": true,
+        "fixtureJwtFirmadoVencidoRechazado": true,
+        "relojNoSimulado": true
+      }
+    },
+    {
+      "id": "M06-perfil",
+      "descripcion": "Ficha real de jugador desde Atlas",
+      "resultado": "Aprobado",
+      "evidencia": "Aserciones sobre respuesta/persistencia real correctas"
+    },
+    {
+      "id": "M07-imagen",
+      "descripcion": "POST multipart con PNG sintético, persistencia y lectura de imagen real",
+      "resultado": "Aprobado",
+      "evidencia": {
+        "uploadCloudinaryReal": true,
+        "atlasPersistido": true,
+        "imagenHTTP": 200,
+        "detalleHTTP": 200
+      }
+    },
+    {
+      "id": "M08-likes",
+      "descripcion": "Me gusta real, duplicado 409 y retiro",
+      "resultado": "Aprobado",
+      "evidencia": "Aserciones sobre respuesta/persistencia real correctas"
+    },
+    {
+      "id": "M08-paginacion",
+      "descripcion": "23 publicaciones reales de A, páginas 10/10/3 y orden",
+      "resultado": "Aprobado",
+      "evidencia": {
+        "paginas": [
+          10,
+          10,
+          3
+        ],
+        "total": 23,
+        "ordenLikesReal": true
+      }
+    },
+    {
+      "id": "M10-comentarios",
+      "descripcion": "Alta, páginas 3/3/2 y edición de autor; ajeno 403",
+      "resultado": "Aprobado",
+      "evidencia": "Aserciones sobre respuesta/persistencia real correctas"
+    },
+    {
+      "id": "M11-administracion",
+      "descripcion": "Usuario común 403, admin lista y crea roles con API real",
+      "resultado": "Aprobado",
+      "evidencia": "Aserciones sobre respuesta/persistencia real correctas"
+    },
+    {
+      "id": "M13-estadisticas",
+      "descripcion": "Agregaciones reales Atlas, rangos propios y 403 común",
+      "resultado": "Aprobado",
+      "evidencia": "Aserciones sobre respuesta/persistencia real correctas"
+    },
+    {
+      "id": "M09-baja-permisos",
+      "descripcion": "Ajeno no elimina; admin baja y retira detalle/comentarios/reportes",
+      "resultado": "Aprobado",
+      "evidencia": "Aserciones sobre respuesta/persistencia real correctas"
+    },
+    {
+      "id": "M12-habilitacion",
+      "descripcion": "Baja jugador bloquea login/JWT previo/renovación; habilitar recupera",
+      "resultado": "Aprobado",
+      "evidencia": "Aserciones sobre respuesta/persistencia real correctas"
+    },
+    {
+      "id": "M05-logout",
+      "descripcion": "Logout real emite expiración de cookie; sin cookie la identidad es 401",
+      "resultado": "Aprobado",
+      "evidencia": "Aserciones sobre respuesta/persistencia real correctas"
+    }
+  ],
+  "limpieza": {
+    "resultado": "Aprobado",
+    "usuarios": 5,
+    "publicaciones": 23,
+    "comentarios": 9,
+    "imagenes": 1,
+    "restantesPropios": 0
+  }
+}

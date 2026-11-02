@@ -51,6 +51,9 @@ function consulta(resolver: () => any) {
     lean() {
       return this;
     },
+    session() {
+      return this;
+    },
     async exec() {
       const valor = resolver();
       return Array.isArray(valor)
@@ -62,7 +65,20 @@ function consulta(resolver: () => any) {
 const guardar = vi.fn();
 const actualizar = vi.fn();
 class ModeloUsuarioPrueba {
-  static db = { base: { isValidObjectId: Types.ObjectId.isValid } };
+  static db = {
+    base: { isValidObjectId: Types.ObjectId.isValid },
+    // Solo prueba de flujo: la contención/reintentos se verifican aparte en Atlas real.
+    transaction: async (operacion: (session: object) => Promise<unknown>) =>
+      operacion({ prueba: true }),
+  };
+  static countDocuments(filtro: any) {
+    return {
+      session() {
+        return this;
+      },
+      exec: async () => fichas.filter((doc) => coincide(doc, filtro)).length,
+    };
+  }
   static find() {
     return consulta(() => fichas);
   }
@@ -179,7 +195,7 @@ describe('Administración 5A: integración de módulos, roles, estado y sesiones
       exec: async () => {
         const usuario = fichas.find((doc) => coincide(doc, filtro));
         if (!usuario) return { matchedCount: 0 };
-        Object.assign(usuario, cambio.$set);
+        Object.assign(usuario, cambio.$set ?? {});
         return { matchedCount: 1 };
       },
     }));
@@ -415,20 +431,68 @@ describe('Administración 5A: integración de módulos, roles, estado y sesiones
       await pedir('post', ruta, token(antiguo, 'usuario')).send({}).expect(200);
     expect(fichas[3]).not.toHaveProperty('activo');
   });
-  it('bloquea autodeshabilitación y cualquier baja de administrador, incluso el último', async () => {
+  it('bloquea autodeshabilitación del último administrador y permite suspender otro', async () => {
     await pedir('delete', `/usuarios/${admin}`).expect(409);
-    fichas[2].activo = true;
-    await pedir('delete', `/usuarios/${adminInactivo}`).expect(409);
-    expect(fichas[0].activo).toBe(true);
-    expect(fichas[2].activo).toBe(true);
     expect(actualizar).not.toHaveBeenCalled();
+    fichas[2].activo = true;
+    const previo = token(adminInactivo);
+    await pedir('delete', `/usuarios/${adminInactivo}`).expect(200);
+    expect(fichas[0].activo).toBe(true);
+    expect(fichas[2].activo).toBe(false);
+    await pedir('get', '/usuarios', previo).expect(401);
+    await pedir('post', '/auth/refrescar', previo).send({}).expect(401);
+    expect(actualizar).toHaveBeenCalledWith(
+      {
+        _id: new Types.ObjectId(admin),
+        perfil: 'administrador',
+        activo: { $ne: false },
+      },
+      { $currentDate: { updatedAt: true } },
+      { session: { prueba: true }, timestamps: false },
+    );
   });
-  it('permite rehabilitar un administrador inactivo, sin habilitar bajas de administradores', async () => {
+  it('permite rehabilitar un administrador inactivo', async () => {
     await pedir('post', `/usuarios/${adminInactivo}/habilitar`)
       .send({})
       .expect(200);
     expect(fichas[2].activo).toBe(true);
     await pedir('get', '/usuarios', token(adminInactivo)).expect(200);
+  });
+  it('compara ObjectId normalizados para impedir la baja propia aunque el JWT use mayúsculas', async () => {
+    const identidad = 'abcdefabcdefabcdefabcdef';
+    fichas[0]._id = new Types.ObjectId(identidad);
+    fichas[2].activo = true;
+    await pedir(
+      'delete',
+      `/usuarios/${identidad}`,
+      token(identidad.toUpperCase()),
+    ).expect(409);
+    expect(fichas[0].activo).toBe(true);
+    expect(actualizar).not.toHaveBeenCalled();
+  });
+  it('si el actor pierde su permiso al comenzar la transacción, no suspende al destinatario', async () => {
+    fichas[2].activo = true;
+    actualizar.mockImplementationOnce(() => ({
+      exec: async () => ({ matchedCount: 0 }),
+    }));
+    await pedir('delete', `/usuarios/${adminInactivo}`).expect(403);
+    expect(fichas[2].activo).toBe(true);
+    expect(actualizar).toHaveBeenCalledTimes(1);
+  });
+  it('rechaza una baja administrativa cuando la comprobación transaccional no garantiza otro activo', async () => {
+    fichas[2].activo = true;
+    const conteo = vi
+      .spyOn(ModeloUsuarioPrueba, 'countDocuments')
+      .mockReturnValueOnce({
+        session() {
+          return this;
+        },
+        exec: async () => 1,
+      });
+    await pedir('delete', `/usuarios/${adminInactivo}`).expect(409);
+    expect(fichas[2].activo).toBe(true);
+    expect(fichas[0].activo).toBe(true);
+    conteo.mockRestore();
   });
   it('baja de usuario antiguo funciona sin completar otros campos nuevos', async () => {
     await pedir('delete', `/usuarios/${antiguo}`).expect(200);

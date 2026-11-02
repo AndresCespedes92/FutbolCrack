@@ -458,3 +458,11 @@ Ensayo externo opt-in `backend/scripts/integracion-qa.mjs`, sin mocks: primer in
 Navegador localhost: registro/login, creación multipart, like, perfil, comentarios acumulados 3/6/8 y Editado; suspensión/rehabilitación con modal, reportes/rangos, logout y worker real NORMAL. Servidores apagados: shell de reconexión sin datos privados. No confundir esto con instalación/update o caché inspeccionado: pendientes explícitos en 13. Lectura de viewport observada 375px; otros tamaños pedidos no quedaron certificados.
 
 Se retiraron solo los recursos propios autorizados: primer ensayo 4 cuentas/23 publicaciones/8 comentarios/1 imagen; segundo 6/25/24/2, 0 cuentas propias restantes. Credenciales temporales eliminadas. No producción, merge ni deploy. Advertencia real Mongoose sobre opción `new` deprecada, sin fallo funcional; no se refactorizó por ello.
+
+## Aceptación 5F — 2026-11-01
+
+Respaldo autorizado 5E 6a66fc9 tras builds correctos, Angular 236/236, Nest 275/275 y PWA 11/11; rama test/aceptacion-final. Resultado final tras política S4-04: builds correctos, **Angular 237/237 (26 archivos), Nest 278/278 (14 archivos), PWA 11/11**. Dos ejecuciones HTTP reales nuevas 14/14; ensayo administrativo real cuatro escenarios aprobados, con cinco carreras opuestas (403/200, siempre un activo). Sintaxis del nuevo ejecutor correcta.
+
+Se documentan intentos fallidos en 14: sandbox ENOENT/EACCES, fixture de Angular sin markForCheck y timeout de navegación existente. Repetición sin concurrencia pasó sin aumentar límites ni omitir tests. Mongoose `new` deprecado y LF/CRLF siguen como avisos, sin refactor. No dependencias ni modificaciones JWT/cookies/caché.
+
+JWT con reloj real, instalación/update/cache PWA y cuatro tamaños responsive comprobados con evidencias. HTTPS real bloqueado a la espera de aprobar propuesta concreta en [14](14-ACEPTACION-FINAL.md); no se crearon proyectos ni se desplegó. Scripts externos se ejecutan únicamente con autorización/namespace QA; las cuentas temporales no son datos de demo del producto.

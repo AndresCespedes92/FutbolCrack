@@ -148,3 +148,9 @@ Conceptos actuales: standalone, DI, observables, estado de componente, forms y b
 Repetidas 11/11 verificaciones PWA sobre el build actual; exactamente tres @Pipe y tres @Directive propios conservados con uso real. No se modificó el worker ni sus reglas de caché. Se intentó navegador contra localhost con servidor estático escuchando; la conexión dio timeout tanto en el entorno restringido como tras autorizar servidor/sonda. No se cambiaron firewall ni permisos para forzarla. Los servidores temporales se detuvieron.
 
 Por ello instalación, activación/cache runtime, actualización, offline real y móvil siguen **no verificados en navegador**. No se sustituyen por la suite Node. S4-08 permanece Parcial. Avatar del perfil sin foto ahora es el escudo propio; se retiró ilustración con apellido ficticio. Estado/recorrido manual en 11/12.
+
+## Aceptación PWA 5F
+
+Además de 11/11 pruebas de artefactos, se instaló FutbolCrack en Edge y abrió ventana propia; se rechazaron anclajes/inicio automático. Worker real NORMAL, manifiesto nuevo y build QA nuevo observados; se cambió solo la copia de ensayo y sus hashes oficiales, sin alterar ngsw-config ni agregar funcionalidades. Offline tras apagar ambos servidores cargó shell; al volver online, Reintentar permitió login y dashboard reales.
+
+Después del logout en PWA, DevTools mostró la tabla completa de 24 recursos del caché de interfaz: únicamente estáticos, sin API/JSON privado; control/meta del worker eran cachés separados. No se inspeccionaron otros orígenes del usuario. Captura de instalación, recursos y límites de contextos en [14](14-ACEPTACION-FINAL.md). PWA local instalada necesita servidor para datos: esto no constituye deploy. Responsive comprobado con ancho efectivo, no solo tamaño solicitado.

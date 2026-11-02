@@ -200,3 +200,7 @@ Antes de entregar: completar la matriz manual con versión de frontend/backend i
 ## Seguimiento 5E — conservar el dictamen histórico
 
 El cuerpo anterior conserva resultados y pendientes tal como estaban al cerrar 5D (39/4/0/1). La validación posterior [13-VALIDACION-INTEGRADA.md](13-VALIDACION-INTEGRADA.md) aporta integración real autorizada en localhost/Atlas QA/Cloudinary QA: S2-02 pasa a Cumple y la matriz vigente 09 queda 40 Cumple / 3 Parcial / 0 No cumple / 1 No verificado. Worker NORMAL y shell sin servidores comprobados, pero instalación/actualización/caché y cookies cross-site aún pendientes. No interpretar las filas históricas M01–M18 anteriores como resultado actual: ver su ejecución 5E en 13. No se certifica entrega integral ni se hizo merge/deploy.
+
+## Seguimiento 5F
+
+La referencia vigente posterior está en [14-ACEPTACION-FINAL.md](14-ACEPTACION-FINAL.md): 42 Cumple / 1 Parcial / 0 No cumple / 1 No verificado. Se cerraron S4-04 por política autorizada y pruebas de concurrencia, y S4-08 por evidencia PWA real local. G-14 espera HTTPS y revisión residual; G-15 mantiene límite histórico. Los dictámenes 5D y 5E anteriores permanecen como antecedentes fechados, sin reemplazar sus resultados retrospectivamente.

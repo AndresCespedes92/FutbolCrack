@@ -5,6 +5,7 @@ import {
   ConflictException,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -243,7 +244,7 @@ export class UsuariosService {
   }
   async deshabilitar(id: string, actorId: string) {
     const identidad = this.validarId(id);
-    if (identidad.toString() === actorId)
+    if (identidad.equals(this.validarId(actorId)))
       throw new ConflictException('No podés deshabilitar tu propia cuenta');
     const usuario = await this.usuarioModel
       .findById(identidad)
@@ -251,14 +252,10 @@ export class UsuariosService {
       .lean()
       .exec();
     if (!usuario) throw new NotFoundException('El usuario no existe');
-    // Política conservadora: ningún administrador se deshabilita por este endpoint.
-    // Protege al último incluso ante bajas simultáneas; no requiere conteos/transacciones frágiles.
-    if (usuario.perfil === 'administrador')
-      throw new ConflictException(
-        'Las cuentas administradoras están protegidas contra la deshabilitación',
-      );
     if (usuario.activo === false)
       throw new ConflictException('El usuario ya está deshabilitado');
+    if (usuario.perfil === 'administrador')
+      return this.deshabilitarAdministrador(identidad, actorId);
     const resultado = await this.usuarioModel
       .updateOne(
         {
@@ -274,6 +271,57 @@ export class UsuariosService {
         'El estado del usuario cambió. Actualizá el listado',
       );
     return { mensaje: 'Usuario deshabilitado correctamente' };
+  }
+  private async deshabilitarAdministrador(
+    identidad: Types.ObjectId,
+    actorId: string,
+  ) {
+    // Atlas permite transacciones: validar y escribir forman una sola operación del padrón.
+    return this.usuarioModel.db.transaction(async (session) => {
+      // Escribimos también la ficha del administrador que actúa. Si A y B intentan
+      // suspenderse entre sí, sus escrituras chocan y MongoDB reintenta una transacción.
+      // En el reintento, el actor suspendido ya no puede actuar. Un conteo solo no evita esa carrera.
+      const actor = await this.usuarioModel
+        .updateOne(
+          {
+            _id: this.validarId(actorId),
+            perfil: 'administrador',
+            activo: { $ne: false },
+          },
+          { $currentDate: { updatedAt: true } },
+          { session, timestamps: false },
+        )
+        .exec();
+      if (!actor.matchedCount)
+        throw new ForbiddenException(
+          'Tu cuenta ya no puede administrar usuarios',
+        );
+      const activos = await this.usuarioModel
+        .countDocuments({
+          perfil: 'administrador',
+          activo: { $ne: false },
+        })
+        .session(session)
+        .exec();
+      if (activos <= 1)
+        throw new ConflictException(
+          'Debe quedar al menos un administrador activo',
+        );
+      const resultado = await this.usuarioModel
+        .updateOne(
+          { _id: identidad, activo: { $ne: false } },
+          { $set: { activo: false } },
+          { session },
+        )
+        .exec();
+      if (!resultado.matchedCount)
+        throw new ConflictException(
+          'El estado del usuario cambió. Actualizá el listado',
+        );
+      // La baja propia ya se rechazó antes. El actor permanece activo al confirmar:
+      // como en el club, siempre queda una persona habilitada a cargo de la secretaría.
+      return { mensaje: 'Usuario deshabilitado correctamente' };
+    });
   }
   async habilitar(id: string) {
     const identidad = this.validarId(id);
