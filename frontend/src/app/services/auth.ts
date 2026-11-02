@@ -173,7 +173,7 @@ export class AuthService {
       this.invalidarSesion();
       return;
     }
-    if (restante <= 1 * 60000 && !this.avisoMostrado) {
+    if (restante <= 2 * 60000 && !this.avisoMostrado) {
       this.avisoMostrado = true;
       this.mostrarAviso.set(true);
     }
@@ -217,7 +217,7 @@ export class AuthService {
     this.limpiarTemporizadores();
     this.avisoTimer = setTimeout(
       () => this.comprobarTiempo(),
-      Math.max(0, vence - this.ahoraServidor() - 1 * 60000),
+      Math.max(0, vence - this.ahoraServidor() - 2 * 60000),
     );
     this.vencimientoTimer = setTimeout(
       () => this.comprobarTiempo(),
