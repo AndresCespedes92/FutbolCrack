@@ -990,3 +990,9 @@ Estado inicial: main limpia; se utilizó main sin crear ramas innecesarias. Alca
 Pruebas: builds frontend/backend exit 0, Angular 241/241, Nest 279/279, PWA 11/11; diff --check correcto. Datos de prueba aislados en suites; sin Atlas/Cloudinary real ni navegador para este cambio. Se actualizan mapa, publicaciones, comentarios, guía Angular, pruebas y matriz como seguimiento sin cambiar estados de aceptación. La preparación HTTPS anterior y sus huellas representan el estado previo: revisar/regenerar el artefacto tras aprobar este cambio antes de cualquier futuro deploy, sin actualizarlo silenciosamente.
 
 Sin dependencias, cambios de permisos/modelos/autenticación, commit, merge, push ni deploy. Pendiente ensayo manual y ejecutar/actualizar backend junto con frontend para ver totales reales; respuestas de backend anterior muestran cero por compatibilidad.
+
+## Agregar comentario desde la tarjeta — 2026-11-02
+
+Inicio main limpia; se trabajó en main sin crear ramas. PublicacionCard HTML/CSS/TS incorpora botón con apariencia de enlace, disabled como Me gusta y método emitirComentario que reutiliza emitirDetalle y abrirDetalle. Conserva validaciones y ruta existentes; sin backend, nuevos permisos ni servicios. Comentarios pedagógicos TS/CSS y documentación en mapa/publicaciones/matriz/pruebas.
+
+Pruebas de tarjeta extendidas para bloqueo/habilitación/estado; caso de navegación parametrizado para ambos accesos sin debilitar aserciones. Build frontend exit 0 y Angular 246/246 (26 archivos); diff --check correcto. Pendiente revisión visual/manual; no se afirma integración real. Sin dependencias, commit, push, merge ni deploy.

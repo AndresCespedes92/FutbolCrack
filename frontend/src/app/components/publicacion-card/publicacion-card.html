@@ -88,6 +88,14 @@
         </button>
       }
       @if (detalleDisponible) {
+        <button
+          type="button"
+          class="agregar-comentario"
+          [disabled]="!autenticado || procesando"
+          (click)="emitirComentario()"
+        >
+          Agregar comentario
+        </button>
         <button type="button" (click)="emitirDetalle()">Ver detalle</button>
       }
       @if (!autenticado) {

@@ -371,3 +371,7 @@ Configuración concreta en docs/15-CONFIGURACION-QA-HTTPS.md; plantillas inertes
 - `frontend/src/app/services/publicaciones.ts`: campo opcional cantidadComentarios en Publicacion.
 - `frontend/src/app/components/publicacion-card/publicacion-card.html` / `.css`: contadores de likes y comentarios juntos, con ajuste de línea en móvil.
 - `ComentariosPublicacion.totalActualizado`: Output con el total de la respuesta paginada; perfil/detalle lo reciben en actualizarTotalComentarios y actualizan la tarjeta sin HTTP adicional.
+
+## Acceso Agregar comentario — 2026-11-02
+
+PublicacionCard HTML/CSS presenta un botón con apariencia de enlace. emitirComentario en publicacion-card.ts aplica autenticado/!procesando y delega en emitirDetalle (detalleDisponible/activa), usando el Output abrirDetalle y los métodos verDetalle existentes de feed/perfil. No se agregan rutas ni servicios.

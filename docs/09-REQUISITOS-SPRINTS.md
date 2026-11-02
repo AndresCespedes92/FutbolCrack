@@ -199,3 +199,7 @@ Compatibilidad con sesiones: no hay cambios backend ni reglas de caché API; se 
 ## Seguimiento visual — contador de comentarios, 2026-11-02
 
 Se agrega cantidadComentarios al contrato de lectura de publicaciones y un indicador en la tarjeta reutilizada; Input desde el padre y Output totalActualizado desde los comentarios mantienen sincronizados perfil/detalle. Extiende las evidencias de componente reutilizable/comunicación y comentarios; no cambia el estado de los 44 requisitos ni certifica el QA HTTPS pendiente. Detalle y prueba manual en 03/04; resultados automatizados en 08 y bitácora.
+
+## Seguimiento visual — Agregar comentario, 2026-11-02
+
+Se reutiliza el Output abrirDetalle de PublicacionCard para navegar al detalle desde Agregar comentario, con habilitación equivalente al like. Sin cambios de estados de requisitos ni de autorización de backend. Evidencia Angular de permisos visuales y navegación compartida en 08; no certifica ensayo HTTPS o navegador real.

@@ -14,6 +14,40 @@ describe('PublicacionCard: datos y eventos sin HTTP', () => {
   });
   afterEach(() => vi.restoreAllMocks());
   it.each([
+    { autenticado: false, procesando: false, deshabilitado: true },
+    { autenticado: true, procesando: true, deshabilitado: true },
+    { autenticado: true, procesando: false, deshabilitado: false },
+  ])('Agregar comentario comparte habilitación con Me gusta: %j', (estado) => {
+    fixture.componentRef.setInput('detalleDisponible', true);
+    fixture.componentRef.setInput('autenticado', estado.autenticado);
+    fixture.componentRef.setInput('procesando', estado.procesando);
+    fixture.detectChanges();
+    const espia = vi.fn();
+    fixture.componentInstance.abrirDetalle.subscribe(espia);
+    const boton = fixture.nativeElement.querySelector('.agregar-comentario');
+    expect(boton.disabled).toBe(estado.deshabilitado);
+    expect(boton.disabled).toBe(fixture.nativeElement.querySelector('.like').disabled);
+    boton.click();
+    if (estado.deshabilitado) {
+      fixture.componentInstance.emitirComentario();
+      expect(espia).not.toHaveBeenCalled();
+    } else expect(espia).toHaveBeenCalledWith(fixture.componentInstance.publicacion);
+  });
+  it('no ofrece Agregar comentario sin navegación o con una publicación inactiva', () => {
+    fixture.componentRef.setInput('autenticado', true);
+    fixture.detectChanges();
+    const espia = vi.fn();
+    fixture.componentInstance.abrirDetalle.subscribe(espia);
+    expect(fixture.nativeElement.querySelector('.agregar-comentario')).toBeNull();
+    fixture.componentInstance.emitirComentario();
+    fixture.componentRef.setInput('detalleDisponible', true);
+    fixture.componentRef.setInput('publicacion', { ...publicacionPrueba(), activo: false });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.agregar-comentario')).toBeNull();
+    fixture.componentInstance.emitirComentario();
+    expect(espia).not.toHaveBeenCalled();
+  });
+  it.each([
     [undefined, '0 comentarios'],
     [1, '1 comentario'],
     [8, '8 comentarios'],

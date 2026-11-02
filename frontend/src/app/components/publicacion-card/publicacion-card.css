@@ -110,6 +110,13 @@ button:disabled {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* Apariencia de enlace, con botón nativo para deshabilitarlo y operarlo con teclado. */
+.agregar-comentario {
+  border-color: transparent;
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 @media (max-width: 540px) {
   .feed-post {
     padding: 18px;

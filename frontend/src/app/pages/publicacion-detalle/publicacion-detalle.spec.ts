@@ -52,27 +52,30 @@ describe('Detalle: navegación real por ID y componentes compartidos', () => {
     expect(html.querySelector('.expandir')).toBeNull();
     http.expectNone(`${API_PRUEBA}/publicaciones`);
   });
-  it('abre detalle mediante el Output de una tarjeta del feed', async () => {
-    const harness = await RouterTestingHarness.create();
-    await harness.navigateByUrl('/publicaciones');
-    sesion();
-    http
-      .expectOne((req) => req.url === `${API_PRUEBA}/publicaciones`)
-      .flush(paginaPrueba([publicacionPrueba()]));
-    harness.detectChanges();
-    Array.from(harness.routeNativeElement!.querySelectorAll('button'))
-      .find((b) => b.textContent?.includes('Ver detalle'))!
-      .click();
-    await vi.waitFor(() =>
-      expect(TestBed.inject(Router).url).toBe(`/publicaciones/${publicacionPrueba()._id}`),
-    );
-    sesion();
-    http.expectOne(url()).flush(publicacionPrueba());
-    comentarios(harness);
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain(
-      'Detalle de publicación',
-    );
-  });
+  it.each(['Ver detalle', 'Agregar comentario'])(
+    'abre detalle mediante %s y el mismo Output de la tarjeta',
+    async (accion) => {
+      const harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl('/publicaciones');
+      sesion();
+      http
+        .expectOne((req) => req.url === `${API_PRUEBA}/publicaciones`)
+        .flush(paginaPrueba([publicacionPrueba()]));
+      harness.detectChanges();
+      Array.from(harness.routeNativeElement!.querySelectorAll('button'))
+        .find((b) => b.textContent?.includes(accion))!
+        .click();
+      await vi.waitFor(() =>
+        expect(TestBed.inject(Router).url).toBe(`/publicaciones/${publicacionPrueba()._id}`),
+      );
+      sesion();
+      http.expectOne(url()).flush(publicacionPrueba());
+      comentarios(harness);
+      expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain(
+        'Detalle de publicación',
+      );
+    },
+  );
   it('sin sesión permite leer pero no comentar ni votar', async () => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl(`/publicaciones/${publicacionPrueba()._id}`);
@@ -126,14 +129,12 @@ describe('Detalle: navegación real por ID y componentes compartidos', () => {
       'No pudimos cargar',
     );
     harness.routeNativeElement!.querySelector<HTMLButtonElement>('.demo-note button')!.click();
-    http
-      .expectOne(url())
-      .flush({
-        ...publicacionPrueba(),
-        titulo: undefined,
-        descripcion: undefined,
-        contenido: 'Jugada antigua',
-      });
+    http.expectOne(url()).flush({
+      ...publicacionPrueba(),
+      titulo: undefined,
+      descripcion: undefined,
+      contenido: 'Jugada antigua',
+    });
     comentarios(harness);
     expect(harness.routeNativeElement?.textContent).toContain('Publicación anterior');
     expect(harness.routeNativeElement?.textContent).toContain('Jugada antigua');

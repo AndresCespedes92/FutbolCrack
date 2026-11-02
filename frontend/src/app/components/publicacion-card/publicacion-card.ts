@@ -43,4 +43,8 @@ export class PublicacionCard {
   emitirDetalle(): void {
     if (this.detalleDisponible && this.activa) this.abrirDetalle.emit(this.publicacion);
   }
+  emitirComentario(): void {
+    // Misma habilitación que el like y mismo Output/validaciones que Ver detalle.
+    if (this.autenticado && !this.procesando) this.emitirDetalle();
+  }
 }
