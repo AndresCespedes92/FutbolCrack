@@ -266,7 +266,7 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
       expect(cloudinary.subirImagen).not.toHaveBeenCalled();
     },
   );
-  it('conserva el límite del servicio para caracteres de dos unidades UTF-16', async () => {
+  it('conserva el límite del servicio para caracteres de dos caracteres', async () => {
     await post()
       .send(body('😀'.repeat(1001)))
       .expect(400);

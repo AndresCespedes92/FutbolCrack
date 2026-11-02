@@ -62,7 +62,7 @@ export class ComentariosPublicacion implements OnChanges {
   mensaje = '';
   editandoId: string | null = null;
   expandidos = new Set<string>();
-  // maxlength usa String.length: 501 emojis de dos unidades UTF-16 exceden 1000.
+  // maxlength usa String.length: 501 emojis de dos caracteres exceden 1000.
   readonly nuevoForm = new FormGroup({
     texto: new FormControl('', {
       nonNullable: true,
@@ -228,7 +228,7 @@ export class ComentariosPublicacion implements OnChanges {
     if (error.status === 403) return 'Solo el autor puede editar este comentario.';
     if (error.status === 404) return 'El comentario o la publicación ya no está disponible.';
     if (error.status === 400)
-      return 'Revisá el texto: es obligatorio y admite hasta 1000 unidades UTF-16.';
+      return 'Revisá el texto: es obligatorio y admite hasta 1000 caracteres.';
     return error.status === 0
       ? 'No se pudo conectar con el servidor. Intentá nuevamente.'
       : 'No pudimos completar la operación. Intentá nuevamente.';

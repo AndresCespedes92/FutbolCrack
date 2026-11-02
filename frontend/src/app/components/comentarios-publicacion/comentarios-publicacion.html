@@ -23,11 +23,11 @@
           [attr.aria-describedby]="'ayuda-' + publicacionId"
         ></textarea>
         <small [id]="'ayuda-' + publicacionId"
-          >{{ nuevoForm.controls.texto.value.length }} / 1000 unidades UTF-16</small
+          >{{ nuevoForm.controls.texto.value.length }} / 1000 caracteres</small
         >
         @if (nuevoForm.controls.texto.touched && nuevoForm.controls.texto.invalid) {
           <p class="error" role="alert">
-            Escribí un comentario de 1 a 1000 unidades UTF-16, no solo espacios.
+            Escribí un comentario de 1 a 1000 caracteres, no solo espacios.
           </p>
         }
         @if (errorNuevo) {
@@ -98,10 +98,10 @@
                 edicionForm.controls.texto.touched && edicionForm.controls.texto.invalid
               "
             ></textarea>
-            <small>{{ edicionForm.controls.texto.value.length }} / 1000 unidades UTF-16</small>
+            <small>{{ edicionForm.controls.texto.value.length }} / 1000 caracteres</small>
             @if (edicionForm.controls.texto.touched && edicionForm.controls.texto.invalid) {
               <p class="error" role="alert">
-                Escribí un texto válido de hasta 1000 unidades UTF-16.
+                Escribí un texto válido de hasta 1000 caracteres.
               </p>
             }
             @if (errorEdicion) {
