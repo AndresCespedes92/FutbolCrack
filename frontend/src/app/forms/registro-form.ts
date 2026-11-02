@@ -1,6 +1,7 @@
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import {
   confirmarClaveValidator,
+  maximoBytesClaveValidator,
   fechaNacimientoValidator,
   imagenPerfilValidator,
 } from '../validators/registro.validators';
@@ -34,19 +35,20 @@ export function crearFormularioRegistro() {
         ],
       }),
       clave: new FormControl('', {
-  nonNullable: true,
-  validators: [
-    Validators.required,
-    Validators.minLength(8),
-    Validators.maxLength(64),
+        nonNullable: true,
+        validators: [
+          Validators.required,
+          Validators.minLength(8),
+          Validators.maxLength(64),
+          maximoBytesClaveValidator,
 
-    // Debe contener al menos una letra mayúscula y un número.
-    // (?=.*[A-Z]) busca una mayúscula.
-    // (?=.*\d) busca un dígito.
-    // .+ permite el resto de los caracteres.
-    Validators.pattern(/^(?=.*[A-Z])(?=.*\d).+$/),
-  ],
-}),
+          // Debe contener al menos una letra mayúscula y un número.
+          // (?=.*[A-Z]) busca una mayúscula.
+          // (?=.*\d) busca un dígito.
+          // .+ permite el resto de los caracteres.
+          Validators.pattern(/^(?=.*[A-Z])(?=.*\d).+$/),
+        ],
+      }),
       repetirClave: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       fechaNacimiento: new FormControl('', {
         nonNullable: true,

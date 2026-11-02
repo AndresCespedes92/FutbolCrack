@@ -13,6 +13,8 @@ export const sesionInterceptor: HttpInterceptorFn = (request, next) => {
     url.pathname === '/auth/me' ||
     url.pathname === '/auth/refrescar' ||
     url.pathname.startsWith('/usuarios') ||
+    // Los tres reportes también son privados: un 401 debe invalidar, un 403 conserva sesión.
+    url.pathname.startsWith('/estadisticas') ||
     (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method) &&
       (url.pathname.startsWith('/publicaciones') || url.pathname.startsWith('/comentarios')));
   // Login y autorizar tienen 401 esperables y manejadores propios; no generan redirecciones aquí.

@@ -428,3 +428,41 @@ Incidencias resueltas: primera suite Angular tuvo 180/181 por la expectativa de 
 Las once pruebas de PWA verifican configuración/artefactos, **no ejecutan ni instalan el worker en un navegador**. Las suites de auth son regresión con HTTP simulado y worker desactivado, no prueba integral de cookies con worker activo. Pendientes: instalación HTTPS/localhost, activación/actualización y Cache Storage real, offline tras primera carga, login/logout/autorizar/refrescar con worker activo, móvil/responsive y condiciones externas previas de Atlas/Cloudinary/CORS/HTTPS. Recorrido en 07.
 
 No se hizo merge/deploy ni se tocaron backend/secretos. Avisos Git LF/CRLF son de configuración existente. La dependencia exacta del worker debe mantenerse alineada con core en futuras actualizaciones; npm ci reproduce el lock. No se afirma completo el cierre de los cuatro sprints en producción solo por pasar suites locales.
+
+## Auditoría final 5D — 2026-11-01
+
+Base main 7f327ec limpia, con 5C ya confirmada 1ca14cb. Preparación repitió ambos builds correctos, Angular 230/230, Nest 265/265 y PWA 11/11. Se creó test/auditoria-final sin un commit vacío/duplicado de respaldo.
+
+| Comando | Resultado final |
+| --- | --- |
+| `npm run build`, frontend | exit 0, sin advertencias de presupuesto |
+| `node node_modules/@angular/cli/bin/ng.js test --watch=false`, frontend | **236/236**, 26 archivos, exit 0 |
+| `npm run test:pwa`, frontend tras último build | **11/11**, exit 0; artefactos/configuración |
+| `npm run build`, backend | exit 0 |
+| `node node_modules/vitest/vitest.mjs run --no-file-parallelism --pool=threads`, backend | **275/275**, 14 archivos, exit 0 |
+
+Nuevos casos: 6 Angular (formulario UTF-8, feedback de registro y cuatro de interceptor); 10 Nest (cuatro helper clave y seis HTTP de altas/DTO). Caso existente de perfil vacío reforzado con avatar neutro y usuario sin foto. Sin dependencias nuevas ni pruebas eliminadas/omitidas, sin cambio de timeouts/configuraciones.
+
+Antes de arreglar: dos casos rechazando clave truncable fallaron, tres 401 estadísticas fallaron y tres registros con espacios devolvieron 500 en vez de 400. Se corrigieron las causas productivas y se mantuvieron los casos. Una ejecución completa concurrente Angular tuvo 218/236 por timeout inicial de navegación y errores derivados de limpieza; aislada 6/6 y repetición completa 236/236. Se documenta el intento fallido, sin suavizar aserciones ni aumentar límites. Node v24.15.0.
+
+Integración real de solo lectura: API raíz/feed 200, me/usuarios/reportes 401 anónimos; preflight localhost con origen exacto y credenciales, ajeno sin allow-origin; Atlas ping y Cloudinary ping ok. Sin subir/borrar imágenes, crear cuentas, comentar, votar ni modificar datos/índices. No se imprimieron valores de configuración secretos ni respuestas con datos reales.
+
+El navegador no accedió al servidor local (timeout aun con puerto escuchando); no se verificaron móvil/PWA runtime ni las operaciones autenticadas externas. Un ping no verifica upload y los pipelines simulados no certifican agregaciones reales. Matriz de aceptación manual M01–M18 y dictamen por sprint en 11. Guía docente en 12. No merge/deploy.
+
+## Validación integrada 5E — 2026-11-01
+
+Preparación repitió frontend build exit 0, Angular 236/236 (26 archivos), PWA 11/11, backend build exit 0 y Nest 275/275 (14 archivos). Se respaldó 5D en 725c03e y se creó test/integracion-final. No cambió código productivo ni suites/dependencias.
+
+Ensayo externo opt-in `backend/scripts/integracion-qa.mjs`, sin mocks: primer intento 12/14; segundo 13/14 por consulta de ensayo string/ObjectId; repetición suplementaria real de M09 aprobada con filtro ObjectId. No se declara una tercera suite completa 14/14. La cuenta QA demasiado larga también se corrigió en el ensayo, sin relajar DTO. Explicación, comandos, matriz y evidencias en [13](13-VALIDACION-INTEGRADA.md). `node --check` del script corregido exit 0.
+
+Navegador localhost: registro/login, creación multipart, like, perfil, comentarios acumulados 3/6/8 y Editado; suspensión/rehabilitación con modal, reportes/rangos, logout y worker real NORMAL. Servidores apagados: shell de reconexión sin datos privados. No confundir esto con instalación/update o caché inspeccionado: pendientes explícitos en 13. Lectura de viewport observada 375px; otros tamaños pedidos no quedaron certificados.
+
+Se retiraron solo los recursos propios autorizados: primer ensayo 4 cuentas/23 publicaciones/8 comentarios/1 imagen; segundo 6/25/24/2, 0 cuentas propias restantes. Credenciales temporales eliminadas. No producción, merge ni deploy. Advertencia real Mongoose sobre opción `new` deprecada, sin fallo funcional; no se refactorizó por ello.
+
+## Aceptación 5F — 2026-11-01
+
+Respaldo autorizado 5E 6a66fc9 tras builds correctos, Angular 236/236, Nest 275/275 y PWA 11/11; rama test/aceptacion-final. Resultado final tras política S4-04: builds correctos, **Angular 237/237 (26 archivos), Nest 278/278 (14 archivos), PWA 11/11**. Dos ejecuciones HTTP reales nuevas 14/14; ensayo administrativo real cuatro escenarios aprobados, con cinco carreras opuestas (403/200, siempre un activo). Sintaxis del nuevo ejecutor correcta.
+
+Se documentan intentos fallidos en 14: sandbox ENOENT/EACCES, fixture de Angular sin markForCheck y timeout de navegación existente. Repetición sin concurrencia pasó sin aumentar límites ni omitir tests. Mongoose `new` deprecado y LF/CRLF siguen como avisos, sin refactor. No dependencias ni modificaciones JWT/cookies/caché.
+
+JWT con reloj real, instalación/update/cache PWA y cuatro tamaños responsive comprobados con evidencias. HTTPS real bloqueado a la espera de aprobar propuesta concreta en [14](14-ACEPTACION-FINAL.md); no se crearon proyectos ni se desplegó. Scripts externos se ejecutan únicamente con autorización/namespace QA; las cuentas temporales no son datos de demo del producto.

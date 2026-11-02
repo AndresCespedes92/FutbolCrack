@@ -317,3 +317,17 @@ Instalación: servir build de producción por HTTPS o localhost y usar la opció
 - **¿Cómo se prueban?** Pipes con entradas/límites; directivas con host/DOM y cambios de estado; uso real en componentes; PWA con generador/artefactos y después prueba manual de navegador.
 - **¿230 + 11 prueban instalación?** No. 230 son Angular/DOM con HTTP simulado y 11 configuración/build PWA. Instalar/usar worker activo en navegador todavía debe comprobarse.
 - **¿Qué reutilizamos de CineBera?** Separación TS/HTML/CSS, bindings y estado visual. Adaptamos comportamiento a autores, rol administrativo y jugadas; el servidor mantiene la autoridad.
+
+## Auditoría 5D — Qué explicar de los arreglos y la entrega
+
+`common/password.ts` de Nest comparte la comparación/hash entre registro y admin. bcrypt considera bytes UTF-8, no letras: muchas letras acentuadas pueden ocupar más espacio. Se rechaza exceso, no se recorta la clave. Angular usa TextEncoder en maximoBytesClaveValidator de registro.validators.ts y la factoría compartida; Nest vuelve a controlar y fija máximo 64 caracteres en el DTO público. La clave no viaja como hash calculado por el navegador y nunca se muestra en la respuesta.
+
+En el DTO, Transform trim se ejecuta antes de IsNotEmpty para nombre/apellido/nombreUsuario. El caso de espacios ahora es 400 de entrada, no 500 de guardado. Como en el club, la recepción debe indicar qué ficha corregir antes de enviarla al archivo.
+
+sesionInterceptor incluía usuarios pero omitía estadísticas: se agregaron esos GET privados. Un 401 invalida identidad; un 403 informa falta de permiso conservando la sesión. Las nuevas pruebas reproducían el problema antes de corregirlo. No se cambió el guard del servidor.
+
+Se retiraron datos/tipo de demo sin uso y una camiseta con apellido ficticio usada como avatar. MiPerfil muestra la ficha real y escudo FC si falta foto. Fixtures de tests siguen existiendo, pero ninguna pantalla productiva los importa. Footer ya no dice Vista de desarrollo.
+
+Para estudiar la evidencia, leer [11-AUDITORIA-FINAL.md](11-AUDITORIA-FINAL.md): 44 filas, fuente/test y diferencia entre inspección, HTTP simulado, artefactos y red real. Para exponer, seguir [12-GUIA-DE-DEMOSTRACION.md](12-GUIA-DE-DEMOSTRACION.md). [sprint-1.md](sprint-1.md) se recuperó como reconstrucción actual, no historia inventada. Se inspeccionaron factoría/registro/tarjeta de CineBera en workspace vecino y se verifican conceptos adaptados, sin afirmar copia literal.
+
+Pregunta de defensa: ¿los tests prueban que la aplicación está completamente integrada? No: Angular 236/236, Nest 275/275 y PWA 11/11 demuestran sus alcances locales. API/pings reales amplían evidencia, pero cookies/upload/admin/PWA/móvil en navegador requieren la matriz manual. Contar pruebas no sustituye comprobar el recorrido del jugador hasta la base.

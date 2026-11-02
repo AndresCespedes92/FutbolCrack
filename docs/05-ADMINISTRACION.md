@@ -113,3 +113,15 @@ La revisión confirma que **DELETE /publicaciones/:id ya cumple**: autor o admin
 Ejemplo: el secretario retira una jugada ajena desde el feed. ConfirmacionBaja identifica título; Cancelar no manda DELETE. Confirmar llama al endpoint existente, bloquea envíos repetidos y muestra éxito tras completar; ante error mantiene modal/mensaje. Jugada y notas siguen archivadas, pero detalle/comentarios públicos responden 404 y reportes dejan de contarlos. La prueba HTTP integrada y la nueva prueba Angular del admin verifican ese recorrido; los casos anteriores de 403/error siguen vigentes.
 
 No fueron necesarios cambios productivos al servicio de bajas, permisos o modal; solo enlace estadístico y aviso de acceso denegado, además de la pantalla nueva. Las métricas reflejan contenido visible actualmente, no cifras históricas inmutables. Fechas/política en 06 y evidencia en 08.
+
+## Dictamen 5D
+
+S4-04 se evalúa **Parcial** respecto de habilitar/deshabilitar usuarios en general: la implementación funciona para jugadores y rehabilitación, pero la política 5A prohíbe deshabilitar a cualquier administrador, aunque existan varios. Se conserva esa decisión, sin ampliarla improvisadamente durante una auditoría. La protección real de Nest y las pruebas siguen vigentes; no se cambió ningún rol o cuenta real.
+
+Dashboard/altas/reportes cumplen criterios locales comprobados. Acceso positivo con admin real, cookies entre dominios y datos persistidos siguen pendientes M11–M13. Anónimos reciben 401 real en /usuarios y reportes. Nuevas altas comparten límite de clave seguro de 5D. Ver [11](11-AUDITORIA-FINAL.md) y [12](12-GUIA-DE-DEMOSTRACION.md).
+
+## Política vigente 5F — reemplaza la restricción conservadora anterior
+
+El usuario autorizó permitir la suspensión de otro administrador. La cuenta propia sigue protegida; al menos uno debe permanecer activo. UI deja disponible la acción para otra cuenta activa y exige el modal existente; Nest vuelve a comprobar permisos. UsuariosService.deshabilitarAdministrador usa transacción Atlas, escribe la ficha del actor antes de contar/suspender y evita la carrera de dos secretarios que intentan bloquearse mutuamente. No cambia registro público ni borra fichas. La rehabilitación sigue disponible.
+
+Ejemplo: A suspende a B, B pierde acceso incluso con carnet JWT previo; A puede rehabilitarlo. Ni A ni B pueden suspenderse a sí mismos; si intentan suspenderse mutuamente a la vez, una operación se rechaza y queda un administrador. Pruebas HTTP locales, frontend y cinco carreras reales documentadas en [14](14-ACEPTACION-FINAL.md), con archivos, códigos y evidencia. Requiere transacciones MongoDB; no hay fallback que arriesgue dejar el club sin administración.

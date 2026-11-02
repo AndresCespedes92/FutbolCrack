@@ -82,4 +82,13 @@ describe('Reglas del registro', () => {
     imagen.setValue(null);
     expect(imagen.valid).toBe(true);
   });
+  it('rechaza claves Unicode que bcrypt truncaría aunque tengan menos de 64 caracteres', () => {
+    const clave = crearFormularioRegistro().controls.clave;
+    clave.setValue('A1' + 'é'.repeat(36));
+    expect(clave.hasError('claveDemasiadoLarga')).toBe(true);
+    clave.setValue('A1' + 'é'.repeat(35));
+    expect(clave.valid).toBe(true);
+    clave.setValue('A1' + 'a'.repeat(62));
+    expect(clave.valid).toBe(true);
+  });
 });

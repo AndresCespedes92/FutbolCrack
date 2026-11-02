@@ -1,4 +1,3 @@
-
 import { NgClass } from '@angular/common';
 import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { AbstractControl, ReactiveFormsModule } from '@angular/forms';
@@ -32,23 +31,17 @@ export class Registro {
   esInvalido(control: AbstractControl): boolean {
     const interactuo = control.touched || control.dirty;
     const clavesDistintas =
-      control === this.campos.repetirClave &&
-      this.registroForm.hasError('clavesNoCoinciden');
+      control === this.campos.repetirClave && this.registroForm.hasError('clavesNoCoinciden');
 
     return interactuo && (control.invalid || clavesDistintas);
   }
 
   esValido(control: AbstractControl): boolean {
     const tieneDato =
-      typeof control.value === 'string'
-        ? control.value.trim() !== ''
-        : control.value !== null;
+      typeof control.value === 'string' ? control.value.trim() !== '' : control.value !== null;
 
     return (
-      tieneDato &&
-      (control.touched || control.dirty) &&
-      control.valid &&
-      !this.esInvalido(control)
+      tieneDato && (control.touched || control.dirty) && control.valid && !this.esInvalido(control)
     );
   }
 
@@ -64,14 +57,16 @@ export class Registro {
       return this.esValido(control) ? 'Dato válido.' : '';
     }
 
-    if (control.hasError('required'))
-      return 'Este campo es obligatorio.';
+    if (control.hasError('required')) return 'Este campo es obligatorio.';
 
     if (control.hasError('minlength'))
       return `Ingresá al menos ${control.getError('minlength').requiredLength} caracteres.`;
 
     if (control.hasError('maxlength'))
       return `Usá como máximo ${control.getError('maxlength').requiredLength} caracteres.`;
+
+    if (control.hasError('claveDemasiadoLarga'))
+      return 'Reducí la longitud de la contraseña o la cantidad de caracteres especiales.';
 
     if (control.hasError('email'))
       return 'Ingresá un correo válido, por ejemplo nombre@ejemplo.com.';
@@ -86,17 +81,13 @@ export class Registro {
       return 'Usá letras; separá las palabras con un espacio, guion o apóstrofe.';
     }
 
-    if (control.hasError('fechaInvalida'))
-      return 'Ingresá una fecha de nacimiento real.';
+    if (control.hasError('fechaInvalida')) return 'Ingresá una fecha de nacimiento real.';
 
-    if (control.hasError('fechaFutura'))
-      return 'La fecha de nacimiento no puede ser futura.';
+    if (control.hasError('fechaFutura')) return 'La fecha de nacimiento no puede ser futura.';
 
-    if (control.hasError('tipoImagen'))
-      return 'Elegí una imagen JPG, PNG o WebP.';
+    if (control.hasError('tipoImagen')) return 'Elegí una imagen JPG, PNG o WebP.';
 
-    if (control.hasError('imagenGrande'))
-      return 'La imagen debe pesar como máximo 5 MB.';
+    if (control.hasError('imagenGrande')) return 'La imagen debe pesar como máximo 5 MB.';
 
     return 'Las contraseñas deben coincidir.';
   }
@@ -104,9 +95,7 @@ export class Registro {
   seleccionarImagen(evento: Event): void {
     const entrada = evento.target as HTMLInputElement;
 
-    this.campos.imagenPerfil.setValue(
-      entrada.files?.item(0) ?? null,
-    );
+    this.campos.imagenPerfil.setValue(entrada.files?.item(0) ?? null);
 
     this.campos.imagenPerfil.markAsDirty();
     this.campos.imagenPerfil.markAsTouched();
@@ -162,17 +151,13 @@ export class Registro {
         this.enviando = false;
 
         if (error.status === 409) {
-          this.mensajeError =
-            'El correo o nombre de usuario ya está registrado.';
+          this.mensajeError = 'El correo o nombre de usuario ya está registrado.';
         } else if (error.status === 400) {
-          this.mensajeError =
-            'Revisá los datos ingresados y volvé a intentarlo.';
+          this.mensajeError = 'Revisá los datos ingresados y volvé a intentarlo.';
         } else if (error.status === 0) {
-          this.mensajeError =
-            'No se pudo conectar con el servidor.';
+          this.mensajeError = 'No se pudo conectar con el servidor.';
         } else {
-          this.mensajeError =
-            'Ocurrió un error al crear la cuenta.';
+          this.mensajeError = 'Ocurrió un error al crear la cuenta.';
         }
         this.cdr.markForCheck();
       },

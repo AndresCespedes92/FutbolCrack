@@ -63,7 +63,8 @@ export class DashboardUsuarios implements OnInit {
       nombre: 'clave' as const,
       etiqueta: 'Contraseña',
       tipo: 'password',
-      ayuda: 'De 8 a 64 caracteres, una mayúscula y un número.',
+      ayuda:
+        'De 8 a 64 caracteres, una mayúscula y un número; reducí longitud si usás muchos caracteres especiales.',
     },
     {
       nombre: 'repetirClave' as const,
@@ -147,11 +148,7 @@ export class DashboardUsuarios implements OnInit {
       });
   }
   puedeDeshabilitar(usuario: UsuarioAdministrativo): boolean {
-    return (
-      usuario.activo !== false &&
-      usuario.perfil !== 'administrador' &&
-      usuario._id !== this.auth.usuarioActual()?.id
-    );
+    return usuario.activo !== false && usuario._id !== this.auth.usuarioActual()?.id;
   }
   solicitarDeshabilitar(usuario: UsuarioAdministrativo): void {
     if (

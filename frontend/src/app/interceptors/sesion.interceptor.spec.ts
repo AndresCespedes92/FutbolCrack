@@ -30,6 +30,9 @@ describe('Interceptor: 401 protegido frente a 403/error transitorio', () => {
     ['GET', '/auth/me'],
     ['POST', '/auth/refrescar'],
     ['GET', '/usuarios'],
+    ['GET', '/estadisticas/publicaciones-por-usuario'],
+    ['GET', '/estadisticas/comentarios-totales'],
+    ['GET', '/estadisticas/comentarios-por-publicacion'],
     ['POST', '/publicaciones'],
     ['PUT', '/comentarios/1'],
   ])('%s %s con 401 limpia sesión y redirige', (metodo, ruta) => {
@@ -64,5 +67,13 @@ describe('Interceptor: 401 protegido frente a 403/error transitorio', () => {
     http.expectOne(url).flush({}, { status: 401, statusText: 'Unauthorized' });
     expect(router.navigate).not.toHaveBeenCalled();
     expect(auth.usuarioActual()).not.toBeNull();
+  });
+  it('estadísticas con 403 conserva sesión y permite mostrar el error de permisos', () => {
+    client.get(`${API_URL}/estadisticas/comentarios-totales`).subscribe({ error: () => {} });
+    http
+      .expectOne(`${API_URL}/estadisticas/comentarios-totales`)
+      .flush({}, { status: 403, statusText: 'Forbidden' });
+    expect(auth.usuarioActual()).not.toBeNull();
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 });

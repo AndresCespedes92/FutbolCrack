@@ -329,3 +329,38 @@ No se agregan esquemas/modelos/módulos funcionales. DELETE /publicaciones/:id, 
 | `frontend/src/app/app.html`, `app.sesion.spec.ts` | Shell de reconexión sin datos/cola offline; autorización real preservada |
 
 Hay exactamente tres @Pipe y tres @Directive propios; NgClass/RouterLink/guards no suman al conteo. No se modifica backend. Inventario íntegro en 10; detalles de caché, limitaciones y estudio en [07](07-ANGULAR-PWA-PIPES-DIRECTIVAS.md).
+
+## Auditoría final 5D — Evidencia y preparación
+
+- `docs/11-AUDITORIA-FINAL.md`: matriz de 44 requisitos, niveles de evidencia I/L/A/R, seguridad, integración real y matriz manual M01–M18.
+- `docs/12-GUIA-DE-DEMOSTRACION.md`: pantallas/acciones/conceptos y límites para la defensa.
+- `docs/sprint-1.md`: reconstrucción de documentación faltante de Sprint 1, con comparación de patrones CineBera inspeccionada en 5D; no inventa copia histórica.
+- `backend/src/common/password.ts` y nuevo `password.spec.ts`: generarHashPassword rechaza más de 72 bytes UTF-8 sin cambiar bcrypt/costo ni hashes previos.
+- `backend/src/usuarios/dto/create-usuario.dto.ts`: trim antes de IsNotEmpty en nombre/apellido/nombreUsuario y máximo 64 caracteres de password.
+- `backend/src/usuarios/usuarios.administracion.http.spec.ts`: ambas altas rechazan clave Unicode truncable, DTO de longitud y obligatorios con espacios antes de guardar.
+- `frontend/src/app/validators/registro.validators.ts`: maximoBytesClaveValidator, utilizado por la factoría compartida en forms/registro-form.ts; feedback de registro/admin actualizado.
+- `frontend/src/app/interceptors/sesion.interceptor.ts` y spec: estadísticas incluidas entre rutas privadas con 401 invalidante, 403 preserva sesión.
+- `frontend/src/app/pages/mi-perfil/mi-perfil.html` y spec: avatar sin foto usa icons/futbolcrack.svg, sin apellido/dorsal de un jugador ficticio.
+- Retirados, por no tener uso funcional: `frontend/src/app/data/publicaciones-demo.ts`, su tipo heredado `models/publicacion.ts` y el avatar `frontend/public/images/jugador-demo.svg`. El contrato HTTP vigente sigue en services/publicaciones.ts; fixtures de tests permanecen aislados.
+- `frontend/src/app/app.html`: footer de entrega Red de futbolistas, sin etiqueta Sprint 1/Vista de desarrollo.
+
+Inventario completo en 10. Base main 7f327ec, rama test/auditoria-final; 5C ya respaldada en 1ca14cb por el usuario. No se duplicó commit, ni se hizo merge/deploy.
+
+## Validación integrada 5E
+
+- `backend/scripts/integracion-qa.mjs`: ensayo opt-in HTTP real contra AppModule compilado, Atlas `futbolcrack_qa` y Cloudinary con namespace exclusivo; reserva nombres, registra cuentas ficticias, verifica permisos/paginación/reportes y limpia solo datos propios. No se ejecuta con el arranque normal.
+- `docs/13-VALIDACION-INTEGRADA.md`: matriz M01–M18, cinco requisitos pendientes, evidencia y limitaciones.
+- `docs/evidencias-5e/http-real.json`: ejecución original saneada y limpieza; conserva un fallo del ensayo.
+- `docs/evidencias-5e/observaciones-reales.json`: repetición real corregida de M09 y observaciones del navegador; dos PNG muestran reportes y shell sin servidores.
+- No se modificaron endpoints, métodos productivos, modelos, componentes ni dependencias en 5E.
+
+## Aceptación 5F
+
+- UsuariosService.deshabilitarAdministrador en `backend/src/usuarios/usuarios.service.ts`: transacción, bloqueo de actor actual, conteo de administradores y baja lógica; `deshabilitar` compara ObjectId normalizados para proteger cuenta propia.
+- `frontend/src/app/pages/dashboard-usuarios/dashboard-usuarios.ts` / `.html`: acción para otro administrador; modal y comunicación HTTP existentes reutilizados. Regresiones en ambos archivos de pruebas de administración.
+- `backend/scripts/aceptacion-admin-qa.mjs`: cuatro escenarios reales, cinco carreras opuestas en Atlas QA; restaura únicamente dos administradores de ese namespace. No forma parte del servidor productivo.
+- `docs/14-ACEPTACION-FINAL.md` y `docs/evidencias-5f/`: resultados, tiempos reales JWT, responsive, PWA instalada/caché, limpieza y propuesta HTTPS pendiente de autorización.
+
+## Preparación QA HTTPS pendiente de aprobación
+
+Configuración concreta en docs/15-CONFIGURACION-QA-HTTPS.md; plantillas inertes frontend/backend Vercel, entrada de aislamiento QA y huellas de fuentes en docs/qa-https/. No están en rutas activas de despliegue; no cambian la aplicación.
