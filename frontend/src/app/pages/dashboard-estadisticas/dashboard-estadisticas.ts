@@ -68,6 +68,12 @@ export class DashboardEstadisticas implements OnInit {
   readonly total = crearReporte<ComentariosTotales>('Comentarios totales');
   readonly comentarios = crearReporte<ComentariosPorPublicacion>('Comentarios por publicación');
   readonly reportes = [this.publicaciones, this.total, this.comentarios];
+  // Ranking de la tabla: copia y ordena las cantidades del rango sin modificar los datos del gráfico.
+  get usuariosConMasPublicaciones(): PublicacionesPorUsuario['datos'] {
+    return [...(this.publicaciones.resultado?.datos ?? [])]
+      .sort((primero, segundo) => segundo.cantidad - primero.cantidad)
+      .slice(0, 10);
+  }
   ngOnInit(): void {
     this.actualizar(0);
     this.actualizar(1);

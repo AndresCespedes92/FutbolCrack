@@ -44,8 +44,7 @@
       <p class="error" role="alert">{{ reporte.error }}</p>
     }
     @if (reporte.resultado; as resultado) {
-      <p class="rango-aplicado">
-        Rango aplicado: {{ resultado.desde }} al {{ resultado.hasta }} </p>
+      <p class="rango-aplicado">Rango aplicado: {{ resultado.desde }} al {{ resultado.hasta }}</p>
       @if (indice === 0) {
         @if (publicaciones.resultado!.datos.length) {
           <div
@@ -66,7 +65,7 @@
           <div class="tabla-scroll">
             <table>
               <caption>
-                Publicaciones por usuario
+                Publicaciones por usuario: los 10 que más publicaron en el rango
               </caption>
               <thead>
                 <tr>
@@ -75,7 +74,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (dato of publicaciones.resultado!.datos; track $index) {
+                @for (dato of usuariosConMasPublicaciones; track $index) {
                   <tr>
                     <td>
                       {{ dato.nombre }} {{ dato.nombreUsuario ? '@' + dato.nombreUsuario : '' }}

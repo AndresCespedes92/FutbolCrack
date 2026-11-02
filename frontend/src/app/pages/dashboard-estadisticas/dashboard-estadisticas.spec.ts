@@ -68,6 +68,43 @@ describe('Dashboard estadísticas: filtros independientes y gráficos con datos 
     fixture.detectChanges();
   });
   afterEach(() => http.verify());
+  it('la tabla muestra los diez que más publicaron y se actualiza con el rango sin alterar el gráfico', () => {
+    responder(1);
+    responder(2);
+    const req = solicitud(0);
+    const datos = Array.from({ length: 12 }, (_, i) => ({
+      usuarioId: String(i + 1),
+      nombre: `Jugador ${i + 1}`,
+      nombreUsuario: `jugador${i + 1}`,
+      cantidad: i + 1,
+    }));
+    req.flush({
+      ...fixture.componentInstance.publicaciones.formulario.getRawValue(),
+      zonaHoraria: 'UTC-03:00',
+      datos,
+    });
+    fixture.detectChanges();
+    const cantidades = () =>
+      Array.from(
+        fixture.nativeElement.querySelectorAll(
+          'table:first-of-type tbody tr',
+        ) as NodeListOf<HTMLTableRowElement>,
+      )
+        .slice(0, 10)
+        .map((fila) => Number(fila.cells[1].textContent));
+    const tabla = fixture.nativeElement.querySelector('table');
+    expect(tabla.querySelectorAll('tbody tr').length).toBe(10);
+    expect(cantidades()).toEqual([12, 11, 10, 9, 8, 7, 6, 5, 4, 3]);
+    expect(fixture.nativeElement.querySelectorAll('.barra').length).toBe(12);
+    expect(
+      fixture.componentInstance.publicaciones.resultado!.datos.map((dato) => dato.cantidad),
+    ).toEqual(Array.from({ length: 12 }, (_, i) => i + 1));
+    enviar(0);
+    responder(0);
+    expect(fixture.nativeElement.querySelector('table').querySelectorAll('tbody tr').length).toBe(
+      2,
+    );
+  });
   it('muestra seis campos de fecha, tres cargas independientes y solicitudes con rango/zona coherente', () => {
     expect(fixture.nativeElement.querySelectorAll('input[type=date]').length).toBe(6);
     expect(fixture.nativeElement.textContent).toContain('Cargando reporte');
