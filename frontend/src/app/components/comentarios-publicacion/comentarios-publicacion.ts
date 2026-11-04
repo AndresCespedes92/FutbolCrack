@@ -81,6 +81,12 @@ export class ComentariosPublicacion implements OnChanges {
     return this.cargando || this.enviando || this.guardando;
   }
 
+  /**
+   * Cada instancia pertenece a publicacionId recibido por Input. Si la URL/jugada cambia,
+   * cancela lecturas/escrituras y borra estado anterior antes de pedir tres notas nuevas.
+   * Esto evita mostrar comentarios de otra jugada mientras llega una respuesta vieja.
+   * Cambiar el usuario también puede retirar el permiso visual de un editor abierto.
+   */
   ngOnChanges(cambios: SimpleChanges): void {
     if (cambios['publicacionId']) {
       this.lectura?.unsubscribe();
@@ -98,6 +104,13 @@ export class ComentariosPublicacion implements OnChanges {
       if (!comentario || !this.puedeEditar(comentario)) this.cancelarEdicion();
     }
   }
+  /**
+   * Pide la siguiente página de tres y la anexa por ID con Map: una inserción concurrente puede
+   * repetir una nota entre páginas, pero no debe duplicarse en pantalla. El offset avanza por
+   * registros recibidos, no por tamaño del Map, conservando el contrato del backend.
+   * Emite totalActualizado al padre para la tarjeta; markForCheck comunica el cambio al render.
+   * Un 404 retira la jugada mediante otro Output; un error no se presenta como lista vacía exitosa.
+   */
   cargarComentarios(): void {
     if (this.ocupado || this.noDisponible) return;
     this.cargando = true;
@@ -128,6 +141,12 @@ export class ComentariosPublicacion implements OnChanges {
         },
       });
   }
+  /**
+   * Valida FormGroup y sesión visible antes del POST, bloquea doble envío y conserva texto
+   * si falla. Tras éxito reinicia las páginas porque la nueva nota desplaza los offsets antiguos;
+   * así el usuario ve los tres recientes y el nuevo total confirmado por el servidor.
+   * La identidad local habilita el formulario, pero la autoría definitiva viene del JWT en Nest.
+   */
   publicar(): void {
     if (!this.usuario || this.ocupado || this.noDisponible || this.editandoId) return;
     this.errorNuevo = '';
@@ -161,6 +180,11 @@ export class ComentariosPublicacion implements OnChanges {
     // Solo visibilidad; Nest compara el autor almacenado con el sub del JWT, incluso para admin.
     return !!this.usuario && comentario.autorId?._id === this.usuario.id && !this.noDisponible;
   }
+  /**
+   * Carga en el formulario el texto de una nota propia. editandoId hace que @if cree el textarea;
+   * appAutoFocus lo enfoca después del render. Todavía no hay PUT: Cancelar conserva el documento.
+   * puedeEditar es una ayuda visual; el servicio Nest repite la comprobación de propietario.
+   */
   iniciarEdicion(comentario: Comentario): void {
     if (!this.puedeEditar(comentario) || this.ocupado) return;
     this.editandoId = comentario._id;
@@ -174,6 +198,12 @@ export class ComentariosPublicacion implements OnChanges {
     this.errorEdicion = '';
     this.edicionForm.reset();
   }
+  /**
+   * Valida el formulario y envía PUT con el ID de la nota, no con un autor elegido por el cliente.
+   * Al recibir éxito reemplaza solo esa fila: conserva las otras páginas anexadas y su orden.
+   * El booleano modificado de la respuesta activa Editado en HTML. Un 403 muestra falta de permiso;
+   * un error de red conserva el borrador para reintentar en vez de simular que se guardó.
+   */
   guardarEdicion(): void {
     const comentario = this.comentarios.find((item) => item._id === this.editandoId);
     if (!comentario || !this.puedeEditar(comentario) || this.ocupado) return;
@@ -226,6 +256,11 @@ export class ComentariosPublicacion implements OnChanges {
     this.hayMas = false;
     this.publicacionNoDisponible.emit();
   }
+  /**
+   * Traduce fallos técnicos a mensajes de la operación. No todos los errores cierran sesión:
+   * 401 implica volver a autenticarse, 403 una acción no permitida y 404 un recurso no disponible.
+   * La invalidación global por 401 de API protegida pertenece al interceptor, no a esta traducción.
+   */
   private explicarError(error: HttpErrorResponse): string {
     if (error.status === 401) return 'Tu sesión venció. Iniciá sesión nuevamente para continuar.';
     if (error.status === 403) return 'Solo el autor puede editar este comentario.';

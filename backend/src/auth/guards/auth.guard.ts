@@ -34,10 +34,14 @@ export class AuthGuard implements CanActivate {
     @InjectModel(Usuario.name) private readonly usuarioModel: Model<Usuario>,
   ) {}
 
-  /**
-   * Se ejecuta antes del método del Controller.
-   *
-   * Permite acceder solamente si recibe un JWT válido.
+    /**
+   * Frontera de autenticación para peticiones protegidas. ExecutionContext da el Request HTTP;
+   * Reflector lee si la ruta exige cookie. En las otras rutas se prioriza Bearer sobre cookie.
+   * verifyAsync valida criptográficamente la firma y el vencimiento; después exigimos sub/iat/exp
+   * con tipos/formato esperados y consultamos el usuario actual en MongoDB.
+   * Usuario ausente, deshabilitado o token inválido produce UnauthorizedException (401).
+   * El perfil que se asigna a request.user proviene de la ficha, no del body ni de un rol viejo
+   * del JWT. Un fallo de base fuera del catch no se disfraza como un problema de credenciales.
    */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestAutenticada>();

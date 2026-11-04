@@ -119,6 +119,13 @@ export class ComentariosService {
     return { ...metadatos, datos: grupos };
   }
 
+  /**
+   * Recibe ID de publicación, usuario autenticado y DTO de texto. Antes de guardar valida ambos
+   * identificadores, existencia del usuario y que la jugada siga visible; evita notas huérfanas.
+   * MongoDB almacena referencias ObjectId, texto, modificado=false y timestamps de Mongoose.
+   * presentar prepara autor público y respuesta; el controller POST devuelve 201 si todo sale bien.
+   * Un dato inválido da 400, falta de identidad 401 y una publicación ausente/inactiva 404.
+   */
   async crear(
     publicacionId: string,
     usuarioId: string,
@@ -139,6 +146,13 @@ export class ComentariosService {
     return { mensaje: 'Comentario creado correctamente', comentario };
   }
 
+  /**
+   * Paginación real de notas de una jugada: match por referencia, orden reciente primero y
+   * desempate _id, luego facet separa página skip/limit y total con el mismo filtro.
+   * Por defecto son tres; el cliente manda offset 0/3/6 y anexa lo recibido. El total puede ser
+   * ocho aunque una página tenga tres. populate resuelve solo autores de esa página.
+   * La lectura no exige sesión pero sí publicación activa; no se ofrecen notas de una jugada retirada.
+   */
   async listar(
     publicacionId: string,
     consulta: ListarComentariosDto = new ListarComentariosDto(),
@@ -188,6 +202,15 @@ export class ComentariosService {
     };
   }
 
+  /**
+   * PUT llega desde guardarEdicion de Angular con solo texto. AuthGuard aporta usuarioId;
+   * el servicio lee el comentario real y compara su autor con esa identidad antes de modificar.
+   * Otro usuario, incluso administrador, recibe 403: administrar no permite reescribir notas ajenas.
+   * El filtro repite _id/autorId/publicacionId y $set modifica texto/modificado; new:true devuelve
+   * el resultado y runValidators ejecuta reglas del esquema. updatedAt cambia, createdAt no.
+   * La interfaz reemplaza esa fila y muestra Editado por el booleano, sin reordenar la colección.
+   * 404 cubre comentario/publicación ausentes; errores de formato/texto son 400.
+   */
   async editar(id: string, usuarioId: string, datos: EditarComentarioDto) {
     const comentarioId = this.validarId(id, 'comentario');
     await this.validarUsuario(usuarioId);
@@ -257,6 +280,12 @@ export class ComentariosService {
       );
     return limpio;
   }
+  /**
+   * Convierte documentos internos a una proyección pública y resuelve autorId con populate.
+   * No se copia el nombre dentro del comentario almacenado: sigue relacionado por ObjectId.
+   * Si falta el usuario, el frontend acepta autor null y muestra usuario no disponible;
+   * seleccionar nombre/apellido/imagen evita exponer correo, rol o contraseña del autor.
+   */
   private presentar(comentarios: ComentarioConId[]) {
     // Lista positiva también para altas/ediciones: ni campos internos futuros ni datos sensibles.
     const publicos = comentarios.map((comentario) => ({

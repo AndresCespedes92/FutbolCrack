@@ -6,6 +6,12 @@ import {
 } from '../publicaciones.constants.js';
 
 // Las publicaciones nuevas requieren ambos textos; contenido se conserva solo como alias de lectura.
+/**
+ * Contrato de alta con título y descripción obligatorios: trim de strings, tipo correcto,
+ * texto no vacío y límites 120/2000. El archivo se valida por otro pipe del controller.
+ * No admite autor/likes/activo desde el body: ValidationPipe rechaza propiedades no previstas.
+ * Un DTO valida forma y contenido; identidad, existencia y permisos requieren guard/servicio.
+ */
 export class CreatePublicacionDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString({ message: 'El título debe ser un texto' })

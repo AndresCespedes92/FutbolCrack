@@ -37,7 +37,10 @@
       (cambiarLike)="acciones.alternarLike($event, usuario, cargarTrasAccion)"
       (solicitarBaja)="acciones.solicitarBaja($event, usuario)"
     />
-    <app-comentarios-publicacion
+<!--
+El panel recibe el ID de esta URL y usuario; totalActualizado sincroniza la tarjeta sin otra petición.
+publicacionNoDisponible permite retirar el detalle si el servidor confirma 404.
+-->    <app-comentarios-publicacion
       [publicacionId]="jugada._id"
       (totalActualizado)="actualizarTotalComentarios($event)"
       [usuario]="usuario"

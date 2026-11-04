@@ -131,7 +131,10 @@
         </div>
       }
       @for (publicacion of publicaciones; track publicacion._id) {
-        <app-publicacion-card
+<!--
+Input entrega jugada/sesión/estado al hijo y Output devuelve la intención de votar, dar de baja o navegar.
+AccionesPublicaciones centraliza HTTP y recarga para que la tarjeta no duplique reglas del servidor.
+-->        <app-publicacion-card
           [publicacion]="publicacion"
           [detalleDisponible]="true"
           (abrirDetalle)="verDetalle($event)"

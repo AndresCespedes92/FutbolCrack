@@ -1,7 +1,7 @@
 import { isDevMode } from '@angular/core';
 import { provideServiceWorker } from '@angular/service-worker';
 //Angular es la recepción del club y NestJS es la oficina administrativa
-// Hasta ahora, la recepción muestra formularios, pero no puede enviar las solicitudes a la oficina.
+// HttpClient ya conecta los formularios con Nest; el interceptor distingue errores de sesión de otros fallos.
 // HttpClient es el mensajero que permite enviar esos datos y recibir una respuesta.
 
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';

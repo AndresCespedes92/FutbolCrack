@@ -22,6 +22,12 @@ interface RequestAutenticada extends Request {
 
 // Rutas absolutas en un único controller: comentarios están relacionados con una publicación,
 // pero se editan por su id propio. La lectura pública sigue la política del feed existente.
+/**
+ * Puente HTTP para comentarios: POST anidado en la publicación, GET público y PUT por ID propio.
+ * Las escrituras toman autor desde request.user.sub, cargado por AuthGuard; no aceptan autorId
+ * del formulario. DTO controla texto/query y el servicio comprueba recurso/autoría.
+ * No hay @Delete en este controller: la eliminación de comentarios no está implementada.
+ */
 @Controller()
 export class ComentariosController {
   constructor(private readonly comentariosService: ComentariosService) {}

@@ -4,11 +4,10 @@ import { AppModule } from './app.module.js';
 import { origenesPermitidos } from './common/origenes-permitidos.js';
 
 /**
- * Configuración CORS de FutbolCrack.
- *
- * En desarrollo permitimos Angular en localhost:4200.
- * En producción utilizaremos FRONTEND_URL, configurada
- * como variable de entorno en Vercel.
+ * CORS permite el origen frontend configurado y credenciales en el navegador; no autentica.
+ * La app añade además middleware de origen, guards y ValidationPipe para responsabilidades distintas.
+ * whitelist/forbidNonWhitelisted rechazan campos ajenos al DTO. Hay dos arranques (Vercel/local)
+ * y ambos aplican el pipe; no se debe asumir que compilar TypeScript valida JSON recibido.
  */
 const corsOptions = {
   origin: origenesPermitidos(),

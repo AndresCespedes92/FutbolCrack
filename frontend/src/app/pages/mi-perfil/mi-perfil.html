@@ -155,7 +155,9 @@
           (solicitarBaja)="acciones.solicitarBaja($event, usuario)"
         />
         <!-- Cada una de las tres jugadas pide solo sus tres comentarios iniciales. -->
-        <app-comentarios-publicacion
+<!--
+Cada jugada tiene panel y offset independientes. El Output actualiza solo el contador del ID correspondiente.
+-->        <app-comentarios-publicacion
           [publicacionId]="publicacion._id"
           (totalActualizado)="actualizarTotalComentarios(publicacion._id, $event)"
           [usuario]="usuario"

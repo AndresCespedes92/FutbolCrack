@@ -27,7 +27,10 @@
     <span>FUTBOLCRACK / TALENTO EN JUEGO</span><span>Red de futbolistas</span>
   </footer>
 }
-@if (auth.mostrarAviso()) {
+<!--
+Mostrar el modal no renueva: únicamente el Output extender llama al POST refrescar.
+Ahora no solo lo cierra; el exp original sigue controlando la sesión.
+-->@if (auth.mostrarAviso()) {
   <app-extender-sesion
     [renovando]="auth.renovando()"
     [minutosRestantes]="auth.minutosRestantes()"

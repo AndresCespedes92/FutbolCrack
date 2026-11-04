@@ -71,6 +71,13 @@ export interface RespuestaMeGusta {
 @Injectable({
   providedIn: 'root',
 })
+/**
+ * Transporte HTTP, separado de presentación y reglas del servidor. Los métodos retornan
+ * Observables; al suscribirse, los contenedores manejan carga/error y recargan datos confirmados.
+ * listar/detalle leen sobre/objeto; crear usa FormData con imagen opcional; likes y baja usan
+ * la cookie con withCredentials. No envía autorId ni rol para elegir quién realiza la acción.
+ * No hay editar publicación porque la API no define esa operación.
+ */
 export class PublicacionesService {
   private readonly http = inject(HttpClient);
 

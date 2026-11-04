@@ -77,6 +77,14 @@ export class PublicacionesService {
     };
   }
 
+  /**
+   * Normaliza título/descripción y repite límites como defensa de llamadas internas al servicio.
+   * Si hay imagen, Cloudinary guarda el binario y MongoDB conserva su URL/tipo junto al autor JWT.
+   * contenido se mantiene como alias compatible, no como un segundo texto editable independiente.
+   * save crea el documento; no hay edición posterior de publicaciones en esta API.
+   * Cloudinary y MongoDB son sistemas distintos: aquí no hay transacción distribuida ni compensación
+   * automática de una imagen si un guardado posterior falla. No se debe afirmar atomicidad entre ambos.
+   */
   async crear(
     autorId: string,
     datos: CreatePublicacionDto,
@@ -121,6 +129,11 @@ export class PublicacionesService {
     return this.consultarListado(consulta, usuarioAutenticadoId);
   }
 
+  /**
+   * Valida un ObjectId (400 si es inválido) y reutiliza la consulta filtrando por _id.
+   * No descarga el feed para buscar una jugada en memoria. La publicación ausente/inactiva da 404;
+   * la respuesta conserva normalización antigua, autor público y contadores del listado.
+   */
   async obtenerPorId(id: string, usuarioAutenticadoId?: string) {
     if (!Types.ObjectId.isValid(id))
       throw new BadRequestException(
@@ -142,6 +155,14 @@ export class PublicacionesService {
     return resultado.publicaciones[0];
   }
 
+  /**
+   * Única lectura para feed, perfil y detalle: filtra visibles/autor/ID antes de paginar.
+   * set calcula cantidadLikes y meGusta a partir del array real, sin confiar en valores del cliente.
+   * facet obtiene total y página; sort usa fecha o likes con desempates estables y skip/limit recorta
+   * en MongoDB. El lookup de comentarios cuenta solo las jugadas de la página, sin descargar textos.
+   * Se ocultan IDs de votantes y se pueblan campos públicos del autor. El sobre devuelve total,
+   * offset, limit y hayMas para la navegación; usuarioId filtra AUTOR, no la identidad del lector.
+   */
   private async consultarListado(
     consulta: ListarPublicacionesDto,
     usuarioAutenticadoId?: string,
@@ -257,6 +278,15 @@ export class PublicacionesService {
     return this.cambiarMeGusta(id, usuarioId, false);
   }
 
+  /**
+   * La relación usuario-publicación se guarda como ObjectId dentro de likes.
+   * Filtro y modificación viajan en una única escritura de documento: $addToSet agrega sin
+   * duplicar; $pull retira ese usuario. El filtro evita aplicar una transición ya realizada.
+   * Dos pedidos de alta simultáneos no suman dos votos. Si no se actualizó, se distingue 404
+   * (jugada no visible) de 409 (voto ya dado o ausente), y se devuelve el conteo real del array.
+   * Es una operación atómica de un documento, no una transacción distribuida ni un CRUD con
+   * colección/ID propio para likes; por eso el mismo método implementa las dos transiciones.
+   */
   private async cambiarMeGusta(
     id: string,
     usuarioId: string,
@@ -306,6 +336,13 @@ export class PublicacionesService {
     };
   }
 
+  /**
+   * Solo autor o administrador actual puede retirar una jugada; otro autenticado recibe 403.
+   * El rol se consulta en la ficha y no se acepta libremente en el body. updateOne condicionada
+   * marca activo=false; si otra solicitud ya la retiró no devuelve un éxito falso.
+   * No se borra imagen/documento ni comentarios: posteriores lecturas exigen publicación activa.
+   * La confirmación modal existe en Angular, pero los permisos deben funcionar también por Postman.
+   */
   async darDeBaja(id: string, usuarioId: string) {
     if (!Types.ObjectId.isValid(id))
       throw new BadRequestException(

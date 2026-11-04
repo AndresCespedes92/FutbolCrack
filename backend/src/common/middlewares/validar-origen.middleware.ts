@@ -4,6 +4,15 @@ import { origenesPermitidos } from '../origenes-permitidos.js';
 
 @Injectable()
 export class ValidarOrigenMiddleware implements NestMiddleware {
+  /**
+   * Control de origen antes del controller para reducir CSRF en escrituras con cookies.
+   * CORS controla qué respuestas puede leer un navegador; este middleware decide si continúa
+   * la operación. Comprueba Origin y, si falta, origen de Referer contra una lista explícita.
+   * GET/HEAD/OPTIONS siguen por esta capa; guards posteriores pueden exigir identidad.
+   * Una escritura con cookie o una operación de sesión sin origen permitido devuelve 403,
+   * incluso si el JWT era válido. Un cliente Bearer sin cookie conserva el comportamiento previsto.
+   * En Postman hay que separar este 403 de un 401: enviar Origin permitido para probar autenticación.
+   */
   use(req: Request, _res: Response, next: NextFunction): void {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       next();

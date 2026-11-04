@@ -17,6 +17,12 @@ import { Publicacion } from '../../services/publicaciones';
   templateUrl: './confirmacion-baja.html',
   styleUrl: './confirmacion-baja.css',
 })
+/**
+ * Modal propio de confirmación: recibe jugada/estado y emite confirmar o cancelar al padre.
+ * No conoce el endpoint ni envía DELETE. Sirve para evitar una baja por clic accidental,
+ * no para asegurar permisos: eso corresponde a Nest. Escape usa las reglas de Cancelar
+ * y el foco vuelve al elemento anterior al destruirse el dialog, mejorando uso con teclado.
+ */
 export class ConfirmacionBaja implements AfterViewInit, OnDestroy {
   @Input({ required: true }) publicacion!: Publicacion;
   @Input() procesando = false;

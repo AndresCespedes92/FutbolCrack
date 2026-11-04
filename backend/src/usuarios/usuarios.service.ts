@@ -77,12 +77,11 @@ export class UsuariosService {
       .exec();
   }
 
-  /**
-   * Busca un usuario por correo o nombre de usuario.
-   *
-   * Se utiliza exclusivamente para la autenticación.
-   * Incluimos passwordHash porque necesitamos verificar
-   * la contraseña ingresada mediante bcrypt.
+    /**
+   * Única lectura de credenciales para login: busca correo normalizado o nombre de usuario
+   * y pide explícitamente +passwordHash porque el esquema lo oculta por defecto.
+   * El hash se entrega a AuthService para bcrypt.compare, no al JSON ni al JWT.
+   * El filtro lo construye el servidor a partir de un string validado, no de un objeto MongoDB libre.
    */
   async findByIdentificadorConPassword(
     identificador: string,
@@ -104,14 +103,10 @@ export class UsuariosService {
     return this.usuarioModel.findOne({ nombreUsuario }).exec();
   }
 
-  /**
-   * Crea un usuario con datos ya preparados. - Recibe datos preparados por AuthService
-   *
-   * El hash de la contraseña debe generarse
-   * previamente en AuthService.
-   *
-   * El registro público no recibe un perfil configurable:
-   * este método fuerza "usuario" y activo true en guardarUsuario.
+    /**
+   * El registro público fuerza perfil usuario en el guardado aunque una llamada interna
+   * traiga un rol distinto. Poder registrarse no permite autoasignarse permisos administrativos.
+   * El alta con selección de rol pertenece al controller de usuarios protegido, no a /auth/registro.
    */
   async create(datos: CrearUsuarioData): Promise<UsuarioDocument> {
     // El registro público SIEMPRE fuerza este rol, aunque una llamada interna traiga otro campo.
@@ -203,14 +198,10 @@ export class UsuariosService {
     }
   }
 
-  /**
-   * Busca un usuario mediante su ID de MongoDB.
-   *
-   * Se utilizará para obtener los datos del usuario
-   * autenticado a partir del campo "sub" del JWT.
-   *
-   * No devuelve passwordHash porque ese campo
-   * está excluido por defecto en el esquema.
+    /**
+   * Consulta la ficha por el sub del token, con validación de formato y exclusión del hash.
+   * AuthGuard/AdministradorGuard la usan para comprobar que el permiso almacenado siga vigente.
+   * Un JWT no es prueba de que la cuenta continúe activa: esa información puede cambiar en MongoDB.
    */
   async findById(id: string): Promise<UsuarioDocument | null> {
     // Verificamos que el ID tenga el formato correcto

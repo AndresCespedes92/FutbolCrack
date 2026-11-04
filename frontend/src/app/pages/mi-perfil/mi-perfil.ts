@@ -42,6 +42,11 @@ export class MiPerfil implements OnInit {
   errorPublicaciones = '';
   // Arrow function conserva el this del padre al entregarse como callback de una acción.
   readonly cargarTrasAccion = () => this.cargarPublicaciones();
+  /**
+   * Filtra por el usuario de la sesión y pide tres recientes desde el servidor.
+   * No descarga el feed para esconder jugadas ajenas. Reutiliza PublicacionCard y una instancia
+   * del panel de comentarios por jugada; cada panel conserva su propio offset y borrador.
+   */
   cargarPublicaciones(): void {
     if (!this.usuario) return;
     this.cargandoPublicaciones = true;
@@ -123,8 +128,10 @@ export class MiPerfil implements OnInit {
       });
   }
 
-  /**
-   * Solicita al backend eliminar la cookie de sesión.
+    /**
+   * El botón de perfil llama al mismo AuthService compartido. Solo al confirmar Nest el logout
+   * se limpia la ficha local y se navega al login; si falla, se avisa y no se simula cierre exitoso.
+   * La signal de AuthService también retira Mi perfil y los enlaces administrativos del navbar.
    */
   cerrarSesion(): void {
     if (this.cerrandoSesion) return;

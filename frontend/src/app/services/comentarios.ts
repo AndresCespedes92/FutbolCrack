@@ -32,6 +32,12 @@ export interface RespuestaComentario {
 }
 
 // Centraliza HTTP para detalle y perfil. El servidor obtiene el autor del JWT, nunca del body.
+/**
+ * Servicio HTTP reutilizado por detalle/perfil. listar pide tres y recibe página más total;
+ * crear/editar envían únicamente texto: autor y publicación se fijan/verifican en Nest.
+ * withCredentials transporta cookie sin leerla; Observable permite al componente manejar
+ * carga, éxito y error al suscribirse. No hay método eliminar porque no existe endpoint DELETE.
+ */
 @Injectable({ providedIn: 'root' })
 export class ComentariosService {
   private readonly http = inject(HttpClient);

@@ -49,13 +49,12 @@ export class Login {
   mensajeError = '';
   mensajeExito = '';
 
-  /**
-   * INICIAR SESIÓN
-   *
-   * 1. Valida el formulario.
-   * 2. Envía las credenciales a NestJS.
-   * 3. NestJS devuelve la cookie HttpOnly.
-   * 4. Angular navega a Publicaciones.
+    /**
+   * El formulario reactivo verifica presencia antes del POST, pero la contraseña la valida Nest.
+   * enviando evita doble envío; un 401 deja un mensaje comprensible en el formulario.
+   * Después del éxito solo se acepta returnUrl interna que no vuelva a login/registro;
+   * así no usamos un destino arbitrario externo para redirigir al jugador.
+   * La interfaz no lee la cookie ni almacena JWT: AuthService ya recuperó los datos públicos.
    */
   iniciarSesion(): void {
     this.mensajeError = '';

@@ -14,12 +14,8 @@ import {
 } from './entities/publicacion.entity.js';
 
 /**
- * MÓDULO DE PUBLICACIONES
- *
- * Registra el esquema de Publicacion en Mongoose.
- *
- * De esta manera, NestJS podrá inyectar
- * el modelo de MongoDB en PublicacionesService.
+ * Registra el modelo de publicaciones y exporta MongooseModule para que ComentariosModule
+ * consulte la misma colección sin duplicar esquema. AuthGuard y Cloudinary se reutilizan por imports.
  */
 @Module({
   imports: [

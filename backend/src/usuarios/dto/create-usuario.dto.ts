@@ -32,6 +32,11 @@ import {
 } from 'class-validator';
 
 // Define y valida los datos recibidos al registrar un usuario.
+/**
+ * DTO de registro: valida textos/correo/fecha y fortaleza de clave antes del servicio.
+ * La confirmación y límite UTF-8 de bcrypt se comprueban en generarHashPassword.
+ * No admite perfil: el registro público no puede convertir al jugador en administrador.
+ */
 export class CreateUsuarioDto {
   //Comprueba que el dato sea texto - Impide valores vacíos
   @IsString()

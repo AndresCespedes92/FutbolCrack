@@ -44,6 +44,15 @@ export interface CredencialesLogin {
 }
 
 // Estado único de sesión en memoria: guarda usuario/fechas, nunca el JWT de la cookie HttpOnly.
+/**
+ * Estado compartido de autenticación y transporte HTTP del cliente, no un verificador de JWT.
+ * El navegador administra la cookie HttpOnly; aquí se conservan en memoria usuario y fechas,
+ * nunca la contraseña ni el token como almacenamiento de sesión.
+ * Las signals alimentan navbar/modal. Los Observables se suscriben desde componentes o guards;
+ * takeUntilDestroyed limpia suscripciones y versionSesion descarta respuestas de una sesión vieja.
+ * Nest decide la identidad y los permisos: los timers de Angular mejoran la experiencia,
+ * pero no reemplazan la verificación criptográfica ni la consulta del usuario en el servidor.
+ */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -82,11 +91,25 @@ export class AuthService {
   registrar(datos: FormData): Observable<RespuestaRegistro> {
     return this.http.post<RespuestaRegistro>(`${this.apiUrl}/registro`, datos);
   }
+  /**
+   * Envía identificador y contraseña a POST /auth/login con withCredentials.
+   * Si Nest acepta, el navegador procesa Set-Cookie y el JSON aporta usuario y vencimiento;
+   * tap recupera ese estado antes de que Login navegue. Un 401 se muestra en el formulario.
+   * withCredentials permite el intercambio de cookies entre orígenes, pero no permite leer
+   * HttpOnly ni saltea CORS, Secure, SameSite o las políticas del navegador.
+   */
   login(credenciales: CredencialesLogin): Observable<RespuestaLogin> {
     return this.http
       .post<RespuestaLogin>(`${this.apiUrl}/login`, credenciales, { withCredentials: true })
       .pipe(tap((datos) => this.recuperarSesion(datos)));
   }
+  /**
+   * Reconstruye la sesión al arrancar o recargar usando POST /auth/autorizar.
+   * Comparte una solicitud en curso con shareReplay para que raíz y guard no dupliquen llamadas.
+   * El backend comprueba la cookie vigente SIN emitir un JWT nuevo: recargar no extiende el plazo.
+   * Un 401 se transforma en null para continuar como invitado; red/500 se propagan para mostrar
+   * reconexión, sin afirmar que una caída de servidor significa credenciales incorrectas.
+   */
   autorizar(): Observable<DatosSesion | null> {
     if (this.autorizacionEnCurso) return this.autorizacionEnCurso;
     const version = this.versionSesion;
@@ -112,12 +135,22 @@ export class AuthService {
       );
     return this.autorizacionEnCurso;
   }
+  /**
+   * El guard del router pide un booleano, no el token. Primero compara la hora de vencimiento;
+   * si hay estado válido evita otra llamada, y si todavía no se comprobó la sesión usa autorizar.
+   * Esta optimización de navegación no asegura permisos remotos: cada escritura se valida en Nest.
+   */
   comprobarAcceso(): Observable<boolean> {
     this.comprobarTiempo();
     if (this.usuarioActual()) return of(true);
     if (this.comprobada) return of(false);
     return this.autorizar().pipe(map((sesion) => !!sesion));
   }
+  /**
+   * Reutiliza el usuario obtenido al autorizar para evitar un GET me repetido por cada pantalla.
+   * En consumidores aislados puede consultar /auth/me. Una sesión ya comprobada como ausente
+   * produce HttpErrorResponse 401 local: no todo 401 observado por un componente viajó por la red.
+   */
   obtenerMiPerfil(): Observable<Usuario> {
     this.comprobarTiempo();
     const usuario = this.usuarioActual();
@@ -126,6 +159,12 @@ export class AuthService {
     // Compatibilidad del método para consumidores aislados; la app real autoriza antes del outlet.
     return this.http.get<Usuario>(`${this.apiUrl}/me`, { withCredentials: true });
   }
+  /**
+   * Renovación VOLUNTARIA: solo la acción Extender sesión del modal llama a este POST.
+   * Comparte solicitudes simultáneas y conserva el usuario si falla la red, permitiendo reintentar.
+   * Un 401 invalida la sesión; una respuesta exitosa instala las fechas del nuevo JWT.
+   * No existe aquí un refresh token de larga duración: si el JWT ya venció, hay que hacer login.
+   */
   refrescar(): Observable<DatosSesion> {
     if (this.renovacionEnCurso) return this.renovacionEnCurso;
     this.comprobarTiempo();
@@ -165,6 +204,12 @@ export class AuthService {
       Math.ceil(((this.expiraEn() ?? this.ahoraServidor()) - this.ahoraServidor()) / 60000),
     );
   }
+  /**
+   * Compara expiraEn con la hora corregida por el servidor. Al llegar al vencimiento elimina
+   * el estado local y redirige al login; cuando quedan cinco minutos abre el aviso una sola vez.
+   * El umbral NO significa siempre diez minutos desde login: depende de la duración del backend.
+   * En la configuración actual de sesion.constants.ts son diez minutos de sesión y aviso a los cinco.
+   */
   comprobarTiempo(): void {
     const vencimiento = this.expiraEn();
     if (!vencimiento) return;
@@ -185,11 +230,23 @@ export class AuthService {
       true,
     );
   }
+  /**
+   * Solicita a Nest expirar la cookie y recién en éxito limpia el estado local.
+   * Si falla la red, el llamador puede avisar/reintentar sin fingir que la cookie ya desapareció.
+   * El logout no implementa una lista de JWT revocados: una copia previa válida puede conservar
+   * vigencia hasta exp, salvo que el usuario deje de estar habilitado en MongoDB.
+   */
   cerrarSesion(): Observable<{ mensaje: string }> {
     return this.http
       .post<{ mensaje: string }>(`${this.apiUrl}/logout`, {}, { withCredentials: true })
       .pipe(tap(() => this.finalizarSesion('', false)));
   }
+  /**
+   * Recibe metadatos, no un JWT legible por Angular. Valida fechas/usuario antes de usarlos,
+   * calcula desfaseServidor y programa aviso/vencimiento respecto de exp real.
+   * Reemplaza temporizadores anteriores; no agrega un plazo fijo al momento de recargar.
+   * El número versionSesion impide que una respuesta vieja reactive una sesión que ya cerramos.
+   */
   private recuperarSesion(datos: DatosSesion): void {
     if (datos.usuario?.activo === false)
       throw new HttpErrorResponse({
@@ -225,6 +282,11 @@ export class AuthService {
     );
     this.comprobarTiempo();
   }
+  /**
+   * Limpieza única para logout, falta de sesión o vencimiento: borra usuario/fechas y timers,
+   * restablece modal/errores y, si corresponde, devuelve al login con returnUrl interno.
+   * La signal al pasar a null actualiza los enlaces del navbar sin recargar toda la aplicación.
+   */
   private finalizarSesion(mensaje: string, redirigir: boolean): void {
     this.versionSesion++;
     this.comprobada = true;

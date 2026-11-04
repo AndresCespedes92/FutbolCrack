@@ -26,6 +26,12 @@ interface RequestAutenticada extends Request {
   user?: { sub: string; perfil: string };
 }
 
+/**
+ * API de jugadas: GET de listado/detalle admite identidad opcional para calcular meGusta;
+ * POST/DELETE requieren AuthGuard. El autor sale del JWT y las reglas de baja/likes del servicio.
+ * No hay PUT/PATCH para editar publicaciones. DELETE de publicación es baja lógica, mientras
+ * DELETE de /likes retira solamente el voto del usuario autenticado.
+ */
 @Controller('publicaciones')
 export class PublicacionesController {
   constructor(private readonly publicacionesService: PublicacionesService) {}
@@ -46,6 +52,13 @@ export class PublicacionesController {
     return this.publicacionesService.obtenerPorId(id, request.user?.sub);
   }
 
+  /**
+   * Crear jugada combina DTO de texto y archivo opcional multipart en memoria.
+   * Multer limita a 5 MiB y ParseFilePipe verifica tipo/tamaño antes del servicio; la validación
+   * de archivo real es más fuerte que confiar en extensión o MIME informado por Angular.
+   * AuthGuard identifica al autor. No se fija Content-Type manualmente desde el navegador:
+   * FormData debe generar el boundary. Un POST exitoso usa el 201 predeterminado de Nest.
+   */
   @Post()
   @UseGuards(AuthGuard)
   @UseInterceptors(

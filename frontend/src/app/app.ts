@@ -21,6 +21,13 @@ export class App implements OnInit {
   ngOnInit(): void {
     this.comprobarSesion();
   }
+  /**
+   * Punto de entrada del recorrido de sesión: espera POST autorizar antes de montar las pantallas.
+   * Si no hay sesión, permite login/registro y encamina las demás URLs al login según esta lógica
+   * de arranque, aunque el endpoint GET de publicaciones sea público en Nest.
+   * Una falla de red muestra reconexión: no se confunde con un 401 ni se cargan datos privados
+   * guardados. Esta diferencia entre router, arranque y API pública es importante en la defensa.
+   */
   comprobarSesion(): void {
     this.cargandoSesion.set(true);
     this.errorInicial.set('');

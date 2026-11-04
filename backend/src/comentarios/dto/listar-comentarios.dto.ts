@@ -6,6 +6,11 @@ import {
   MAXIMO_LIMITE_COMENTARIOS,
 } from '../comentarios.constants.js';
 
+/**
+ * Query string llega como texto: enteroDeQuery admite enteros decimales y las validaciones
+ * ponen límites a offset/limit antes de consultar MongoDB. El default es tres, máximo técnico 100.
+ * Angular siempre pide tres; el total no se calcula con la longitud de la página.
+ */
 export class ListarComentariosDto {
   @Transform(({ value }) => enteroDeQuery(value))
   @IsInt({ message: 'offset debe ser un entero decimal' })

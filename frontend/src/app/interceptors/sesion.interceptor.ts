@@ -5,6 +5,14 @@ import { AuthService } from '../services/auth';
 import { API_URL } from '../services/api.config';
 
 // 401 = identidad no válida; 403 = identidad válida sin permiso. No se destruyen borradores por 403/red.
+/**
+ * Interceptor funcional registrado por provideHttpClient: observa errores de NUESTRA API
+ * y solo invalida por 401 en operaciones protegidas reconocidas por ruta/método.
+ * Un login incorrecto y autorizar tienen manejo propio, por eso no fuerzan aquí otra navegación.
+ * 403 conserva la sesión (puede ser falta de rol/autoría o rechazo de origen); status 0 indica
+ * problema de red/CORS, no una identidad inválida. throwError deja el error al componente para
+ * que muestre el mensaje adecuado: el interceptor no convierte un fallo en éxito.
+ */
 export const sesionInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   const url = new URL(request.url, document.baseURI);

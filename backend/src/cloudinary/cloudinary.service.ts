@@ -29,9 +29,12 @@ export class CloudinaryService {
     });
   }
 
-  /**
-   * Recibe una imagen almacenada temporalmente en memoria.
-   * La sube a Cloudinary y devuelve su URL HTTPS.
+    /**
+   * Integra un servicio externo: recibe buffer validado y carpeta permitida por el llamador,
+   * envía un stream y resuelve la promesa con secure_url. MongoDB guarda esa URL, no el binario.
+   * La clave/secret salen del entorno y nunca del bundle Angular ni del formulario.
+   * Si falla la subida, InternalServerErrorException produce 500 con mensaje del servidor;
+   * no es un 401. Esta operación no elimina imágenes al dar de baja una publicación.
    */
   async subirImagen(archivo: ArchivoImagen, carpeta: 'perfiles' | 'publicaciones' = 'perfiles'): Promise<string> {
 

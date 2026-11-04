@@ -7,6 +7,12 @@ import { Publicacion, PublicacionesService } from './publicaciones';
 // Estado local por contenedor (providers), compartiendo reglas entre feed y perfil.
 // Centraliza mutaciones/mensajes; las tarjetas solo emiten eventos, como en CineBera.
 @Injectable()
+/**
+ * Coordinador de acciones reutilizado mediante providers locales de feed/perfil/detalle.
+ * La tarjeta emite intenciones por Output y este servicio hace HTTP, mensajes y bloqueo de envío.
+ * El Set de IDs pendientes evita doble acción sobre una jugada sin bloquear todas las demás.
+ * Los permisos visuales ayudan al usuario; Nest consulta autor/rol antes de escribir realmente.
+ */
 export class AccionesPublicaciones {
   private readonly api = inject(PublicacionesService);
   private readonly destroyRef = inject(DestroyRef);
@@ -23,6 +29,12 @@ export class AccionesPublicaciones {
       (publicacion.autorId?._id === usuario.id || usuario.perfil === 'administrador')
     );
   }
+  /**
+   * El estado meGusta decide POST o DELETE de /likes. No incrementamos un número a ciegas:
+   * tras éxito recargamos mediante el callback del contenedor para mostrar el valor confirmado.
+   * Si otra pestaña cambió el voto, 409/404 provoca sincronización sin fingir un alta exitosa.
+   * Un 401 pasa además por el interceptor; red/403 no son motivo para borrar la sesión.
+   */
   alternarLike(publicacion: Publicacion, usuario: Usuario | null, actualizar: () => void): void {
     if (!usuario || publicacion.activo === false || this.pendientes().has(publicacion._id)) return;
     this.mensaje.set('');
@@ -57,6 +69,11 @@ export class AccionesPublicaciones {
       this.error.set('');
     }
   }
+  /**
+   * Único punto del coordinador que envía DELETE: solicitarBaja solo selecciona y muestra modal.
+   * Cancelar limpia esa selección sin petición. Confirmar mantiene el modal con error si falla;
+   * solo después del éxito lo cierra, informa al usuario y actualiza la colección/destino.
+   */
   confirmarBaja(actualizar: () => void): void {
     const publicacion = this.seleccionada();
     if (!publicacion || this.eliminando()) return;

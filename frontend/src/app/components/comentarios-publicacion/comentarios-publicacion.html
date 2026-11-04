@@ -44,7 +44,10 @@
       </p>
     }
     @for (comentario of comentarios; track comentario._id) {
-      <article
+<!--
+El componente compara autorId con usuario.id y entrega un booleano a appResaltarAutor.
+La directiva solo agrega la clase visual; el botón Editar y el backend validan responsabilidades distintas.
+-->      <article
         class="comentario"
         [appResaltarAutor]="!!usuario && comentario.autorId?._id === usuario?.id"
         [attr.aria-label]="
@@ -74,7 +77,9 @@
           <time [attr.datetime]="comentario.createdAt" [attr.title]="comentario.createdAt">{{
             comentario.createdAt | fechaRelativa
           }}</time>
-          @if (comentario.modificado) {
+<!--
+Editado proviene del booleano que el PUT confirmó en MongoDB; no se infiere de la fecha mostrada.
+-->          @if (comentario.modificado) {
             <span class="editado">Editado</span>
           }
         </div>
@@ -86,7 +91,9 @@
             novalidate
           >
             <label [for]="'editar-' + comentario._id">Editar tu comentario</label>
-            <textarea
+<!--
+appAutoFocus espera el render del textarea creado por @if. No usa búsqueda global ni cambia el texto.
+-->            <textarea
               [id]="'editar-' + comentario._id"
               appAutoFocus
               formControlName="texto"

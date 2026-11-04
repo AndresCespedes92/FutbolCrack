@@ -18,6 +18,12 @@ interface RequestAutenticada extends Request {
 export class AdministradorGuard implements CanActivate {
   constructor(private readonly usuariosService: UsuariosService) {}
 
+  /**
+   * Autorización después de autenticar: sin identidad/ficha habilitada responde 401;
+   * con identidad válida pero perfil no administrador responde 403.
+   * Consulta el rol actual por UsuariosService en lugar de aceptar un dato enviado por Angular.
+   * Esta separación permite explicar por qué ocultar el dashboard no basta para proteger la API.
+   */
   async canActivate(contexto: ExecutionContext): Promise<boolean> {
     const request = contexto.switchToHttp().getRequest<RequestAutenticada>();
     const usuarioId = request.user?.sub;

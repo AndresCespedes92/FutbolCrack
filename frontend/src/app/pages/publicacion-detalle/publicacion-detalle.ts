@@ -62,6 +62,12 @@ export class PublicacionDetalle implements OnInit {
       this.cargarDetalle();
     });
   }
+  /**
+   * La URL es la entrada: valida formato de ID en la interfaz antes de GET y Nest lo repite.
+   * El estado 404/inactivo retira tarjeta/comentarios; un error de red permite reintentar en vez
+   * de afirmar que la jugada no existe. Cambiar paramMap cancela la lectura anterior.
+   * Esta pantalla conecta la tarjeta por Input/Output con el panel que crea/edita comentarios.
+   */
   cargarDetalle(): void {
     this.lectura?.unsubscribe();
     this.noDisponible = false;
@@ -103,6 +109,11 @@ export class PublicacionDetalle implements OnInit {
     this.cargando = false;
     this.cdr.markForCheck();
   }
+  /**
+   * Recibe el totalActualizado del panel, no suma la cantidad de filas visibles.
+   * Reemplaza el objeto de publicación y marca la vista para que el contador de la tarjeta
+   * muestre el total del backend incluso cuando el panel solo cargó tres notas.
+   */
   actualizarTotalComentarios(total: number): void {
     if (this.publicacion) this.publicacion = { ...this.publicacion, cantidadComentarios: total };
     this.cdr.markForCheck();

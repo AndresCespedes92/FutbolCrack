@@ -38,6 +38,12 @@ import type { JwtPayload } from './guards/auth.guard.js';
 import { SOLO_COOKIE_SESION } from './sesion.constants.js';
 import { guardarCookieSesion, opcionesCookieSesion } from './sesion-cookie.js';
 
+/**
+ * Adaptador HTTP de autenticación: decoradores combinan /auth con cada ruta.
+ * ValidationPipe global comprueba DTO antes de ejecutar la lógica; el middleware valida origen
+ * y AuthGuard protege me/autorizar/refrescar. @Res({passthrough:true}) permite escribir
+ * Set-Cookie y seguir devolviendo el JSON normal de Nest, sin exponer el JWT al frontend.
+ */
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -81,11 +87,12 @@ export class AuthController {
     return this.authService.registrar(datos, imagen);
   }
 
-  /**
-   * POST /auth/login
-   *
-   * Valida las credenciales y guarda el JWT
-   * en una cookie HttpOnly.
+    /**
+   * POST /auth/login devuelve 200 al validar credenciales y envía el JWT en cookie HttpOnly.
+   * El resultado del servicio incluye access_token para uso interno; este método selecciona
+   * solo usuario/fechas/mensaje para el JSON. Nest transforma UnauthorizedException en 401.
+   * La cookie la administra el navegador; withCredentials y el origen permitido hacen posible
+   * el intercambio entre Angular y API, sin permitir que JavaScript lea el valor HttpOnly.
    */
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -132,13 +139,11 @@ export class AuthController {
     return this.authService.obtenerMiPerfil(usuarioId);
   }
 
-  /**
-   * POST /auth/logout
-   *
-   * Cierra la sesión eliminando la cookie JWT.
-   *
-   * El navegador deja de enviar el token
-   * en las próximas peticiones.
+    /**
+   * POST /auth/logout expira la cookie con el mismo nombre/ruta/opciones usados al emitirla.
+   * No cambia la contraseña, no elimina la cuenta ni revoca todas las copias posibles del JWT.
+   * Angular limpia su estado al recibir éxito. Como operación de sesión, requiere origen válido
+   * en el middleware aunque no lleve @UseGuards: sin Origin/Referer puede responder 403.
    */
   @Post('logout')
   @HttpCode(HttpStatus.OK)
@@ -151,6 +156,11 @@ export class AuthController {
     };
   }
 
+  /**
+   * SOLO_COOKIE_SESION hace que AuthGuard ignore Bearer en esta ruta: probamos la sesión del
+   * navegador, no un token alternativo. El método confirma la cookie sin sustituirla ni renovar exp.
+   * Para probar 401 en Postman, enviar Origin permitido y retirar la cookie de ese dominio.
+   */
   @Post('autorizar')
   @HttpCode(HttpStatus.OK)
   @SetMetadata(SOLO_COOKIE_SESION, true)
@@ -159,6 +169,11 @@ export class AuthController {
     return this.authService.autorizar(request.user!);
   }
 
+  /**
+   * Renovación explícita con cookie vigente: guard y servicio comprueban identidad/exp.
+   * Solo después se guarda otra cookie y se devuelven metadatos. No se devuelve access_token.
+   * Un vencimiento no se resuelve con este endpoint: se rechaza 401 y corresponde login nuevo.
+   */
   @Post('refrescar')
   @HttpCode(HttpStatus.OK)
   @SetMetadata(SOLO_COOKIE_SESION, true)

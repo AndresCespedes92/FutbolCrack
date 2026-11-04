@@ -13,6 +13,13 @@ import { TruncatePipe } from '../../pipes/truncate.pipe';
   templateUrl: './publicacion-card.html',
   styleUrl: './publicacion-card.css',
 })
+/**
+ * Tarjeta reutilizable como componente hijo de feed, perfil y detalle: recibe datos por Input
+ * y emite cambiarLike, solicitarBaja o abrirDetalle sin conocer HttpClient ni el router.
+ * Así una tarjeta no duplica lógica de mutación ni decide permisos definitivos del servidor.
+ * Los pipes cambian presentación del texto/fecha/iniciales; los contadores ya vienen calculados.
+ * Agregar comentario comparte habilitación del like y reutiliza emitirDetalle para navegar.
+ */
 export class PublicacionCard {
   @Input({ required: true }) publicacion!: Publicacion;
   @Input() autenticado = false;

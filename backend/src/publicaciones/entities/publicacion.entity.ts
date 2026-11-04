@@ -8,6 +8,14 @@ import {
 export type PublicacionDocument = HydratedDocument<Publicacion>;
 
 // Como un parte del club: conserva autor y fechas aunque después se retire de la cartelera.
+/**
+ * Modelo persistente de jugadas: referencias de autor/likes, textos, URL multimedia y estado.
+ * DTO gobierna la entrada HTTP; @Prop gobierna persistencia/defaults. Referencias no equivalen
+ * a claves foráneas SQL automáticas: los servicios deben exigir recursos existentes.
+ * activo=false retira sin borrar. Los contadores de likes/comentarios se calculan al consultar.
+ * El enum conserva video para lectura histórica, pero el formulario/controller actual sube
+ * solo imágenes JPEG/PNG/WebP; no se debe demostrar una subida de video inexistente.
+ */
 @Schema({ timestamps: true, collection: 'publicaciones' })
 export class Publicacion {
   @Prop({ type: Types.ObjectId, ref: 'Usuario', required: true })

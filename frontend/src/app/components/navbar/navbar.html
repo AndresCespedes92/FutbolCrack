@@ -23,7 +23,10 @@
       >
     }
     <!-- Directiva visual reutilizable; la API y el router mantienen sus controles de acceso. -->
-    <ng-container *appPermisoRol="'administrador'">
+<!--
+El asterisco aplica la directiva estructural: TemplateRef/ViewContainerRef insertan o retiran enlaces.
+Aunque no se vean, los endpoints administrativos siguen necesitando AuthGuard y AdministradorGuard en Nest.
+-->    <ng-container *appPermisoRol="'administrador'">
       <a routerLink="/dashboard/usuarios" routerLinkActive="active" ariaCurrentWhenActive="page"
         >Administrar usuarios</a
       >

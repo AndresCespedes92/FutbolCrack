@@ -22,6 +22,10 @@ import { SeguridadModule } from './seguridad.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 
+/**
+ * AuthModule reúne controller/servicio y sus dependencias de usuarios, imágenes y seguridad.
+ * La inyección usa instancias del contenedor; no creamos servicios con new en cada endpoint.
+ */
 @Module({
   imports: [
     // Permite consultar y crear usuarios en MongoDB.

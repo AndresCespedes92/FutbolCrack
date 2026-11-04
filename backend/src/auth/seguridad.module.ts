@@ -7,10 +7,10 @@ import { AuthGuard } from './guards/auth.guard.js';
 import { DURACION_SESION_SEGUNDOS } from './sesion.constants.js';
 
 /**
- * Módulo compartido de seguridad.
- *
- * Centraliza la configuración JWT y proporciona
- * el guard a los módulos que necesiten proteger rutas.
+ * Concentra JwtModule, el secreto de entorno y la duración, y exporta el guard compartido.
+ * Inyección de dependencias permite reutilizar el mismo verificador en publicaciones/usuarios.
+ * No existe una estrategia Passport en este proyecto: AuthGuard llama directamente a JwtService.
+ * El secreto nunca se debe mostrar en la defensa; alcanza con señalar el nombre de la variable.
  */
 @Module({
   imports: [

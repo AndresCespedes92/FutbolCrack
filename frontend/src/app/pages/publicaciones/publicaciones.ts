@@ -137,6 +137,12 @@ export class Publicaciones implements OnInit {
     this.campos.imagen.markAsTouched();
   }
 
+  /**
+   * Formulario reactivo valida título/descripción/imagen y evita doble envío; no concede autoría.
+   * El servicio arma FormData, Nest valida otra vez y toma el autor del JWT. Tras 201 se limpia
+   * formulario/selector de archivo y se vuelve a la primera página para ver la jugada nueva.
+   * En errores se conserva el borrador; 401 deriva al login, 400/413 explican texto o imagen.
+   */
   publicar(): void {
     if (this.publicando) return;
     this.mensajePublicacion = '';
@@ -186,6 +192,12 @@ export class Publicaciones implements OnInit {
       });
   }
 
+  /**
+   * Pide una página de diez con orden/offset al backend; no corta una descarga completa.
+   * Cancelar la lectura anterior evita que una respuesta lenta reemplace la página más reciente.
+   * Los metadatos total/limit/offset alimentan botones numerados; cambiar orden reinicia el offset.
+   * Si una baja vacía la última página, consulta la última aún existente para no dejar al usuario perdido.
+   */
   cargarPublicaciones(parametros: ParametrosListadoPublicaciones = {}): void {
     this.cargando = true;
     this.mensajeError = '';

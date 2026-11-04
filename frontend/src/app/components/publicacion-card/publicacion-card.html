@@ -64,7 +64,10 @@
     }
   </div>
   <footer class="post-footer">
-    <div class="contadores">
+<!--
+Los contadores muestran el total del servidor, no el número de comentarios cargados en la página.
+Los botones emiten eventos al padre; disabled ayuda a evitar clics, no reemplaza permisos de Nest.
+-->    <div class="contadores">
       <span class="cantidad-likes">{{ publicacion.cantidadLikes ?? 0 }} Me gusta</span>
       <span class="cantidad-comentarios"
         >{{ publicacion.cantidadComentarios ?? 0 }}

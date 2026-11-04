@@ -7,6 +7,12 @@ import {
 
 import { enteroDeQuery } from '../../common/validation/entero-query.js';
 
+/**
+ * Valida parámetros del listado antes del pipeline: orden fecha/likes, usuarioId MongoDB,
+ * offset entero no negativo y limit entre 1 y 100 (default diez).
+ * No obliga a cada consumidor a pedir diez: Mi perfil usa tres. Ordenar/filtrar sucede antes
+ * del límite; recortar el array descargado en Angular no sería paginación real del backend.
+ */
 export class ListarPublicacionesDto {
   @IsIn(['fecha', 'likes'], { message: 'El orden debe ser fecha o likes' })
   orden: 'fecha' | 'likes' = 'fecha';

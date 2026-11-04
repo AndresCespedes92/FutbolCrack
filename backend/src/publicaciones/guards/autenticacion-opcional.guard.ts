@@ -13,6 +13,12 @@ import { AuthGuard } from '../../auth/guards/auth.guard.js';
 export class AutenticacionOpcionalGuard implements CanActivate {
   constructor(private readonly authGuard: AuthGuard) {}
 
+  /**
+   * Reutiliza el guard fuerte en GET públicos: si la identidad es válida permite personalizar
+   * meGusta; si falta/venció se elimina request.user y la lectura sigue como invitado.
+   * Solo absorbe UnauthorizedException. Un error de base u otro fallo no se oculta como anónimo.
+   * No usar este guard en escrituras ni afirmar que todo GET sin token devuelve 401.
+   */
   async canActivate(contexto: ExecutionContext): Promise<boolean> {
     try {
       return await this.authGuard.canActivate(contexto);

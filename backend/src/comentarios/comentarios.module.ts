@@ -9,6 +9,10 @@ import { ComentariosController } from './comentarios.controller.js';
 import { ComentariosService } from './comentarios.service.js';
 
 // Único módulo funcional nuevo autorizado. Reutiliza identidad, usuarios y modelo de publicaciones.
+/**
+ * Conecta ComentariosController/Service con modelo propio, usuarios y el modelo de publicaciones
+ * exportado. Tener un ref en el esquema no registra por sí solo un proveedor de Nest.
+ */
 @Module({
   imports: [
     SeguridadModule,

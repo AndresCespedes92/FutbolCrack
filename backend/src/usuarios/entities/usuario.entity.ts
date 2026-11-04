@@ -22,6 +22,13 @@ export type UsuarioDocument = HydratedDocument<Usuario>;
 
 // Define la estructura de la colección de usuarios.
 // timestamps agrega automáticamente createdAt y updatedAt.
+/**
+ * Esquema Mongoose de persistencia, distinto de un DTO de entrada: define campos, defaults e índices.
+ * passwordHash tiene select:false para que una consulta común no exponga credenciales;
+ * login lo solicita explícitamente. Eso no borra el hash ni lo vuelve ilegible desde Atlas.
+ * activo/perfil permiten revocar acceso o cambiar permisos consultados por guards aunque el JWT
+ * anterior aún no haya vencido. unique crea índices; los conflictos se traducen en 409 en servicio.
+ */
 @Schema({ timestamps: true })
 export class Usuario {
   @Prop({ required: true, trim: true })
