@@ -6,11 +6,13 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { generarHashPassword } from '../common/password.js';
 import { CrearUsuarioAdministrativoDto } from './dto/crear-usuario-administrativo.dto.js';
+import { EditarPerfilDto } from './dto/editar-perfil.dto.js';
 import { Usuario, UsuarioDocument } from './entities/usuario.entity.js';
 
 /**
@@ -212,6 +214,51 @@ export class UsuariosService {
 
     // Buscamos únicamente al usuario identificado.
     return this.usuarioModel.findById(id).select('-passwordHash').exec();
+  }
+
+  /** Comprueba fecha y unicidad antes de consumir una subida a Cloudinary.
+   * Se excluye la ficha propia al buscar duplicados, permitiendo conservar correo/usuario.
+   * El calendario del club se interpreta en Argentina, igual que el formulario local.
+   */
+  async validarDatosPerfil(id: string, datos: EditarPerfilDto): Promise<void> {
+    const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
+    if (datos.fechaNacimiento > hoy || datos.fechaNacimiento.startsWith('0000'))
+      throw new BadRequestException('La fecha de nacimiento no puede ser futura ni tener año cero');
+    const identidad = new Types.ObjectId(id);
+    const correo = await this.usuarioModel.findOne({
+      correo: datos.correo.trim().toLowerCase(), _id: { $ne: identidad },
+    }).select('_id').lean().exec();
+    if (correo) throw new ConflictException('El correo ya está registrado');
+    const usuario = await this.usuarioModel.findOne({
+      nombreUsuario: datos.nombreUsuario.trim(), _id: { $ne: identidad },
+    }).select('_id').lean().exec();
+    if (usuario) throw new ConflictException('El nombre de usuario ya está en uso');
+  }
+
+  /** Lista positiva de campos y filtro por identidad autenticada: ni rol, ni estado,
+   * ni contraseña se copian del formulario. El índice unique protege también ante
+   * ediciones concurrentes; MongoDB 11000 se traduce en 409 comprensible.
+   */
+  async actualizarPerfil(id: string, datos: EditarPerfilDto, imagenPerfil?: string): Promise<UsuarioDocument> {
+    const cambios = {
+      nombre: datos.nombre.trim(), apellido: datos.apellido.trim(),
+      correo: datos.correo.trim().toLowerCase(), nombreUsuario: datos.nombreUsuario.trim(),
+      fechaNacimiento: new Date(datos.fechaNacimiento),
+      ...(datos.descripcion !== undefined ? { descripcion: datos.descripcion.trim() } : {}),
+      ...(imagenPerfil !== undefined ? { imagenPerfil } : {}),
+    };
+    try {
+      const usuario = await this.usuarioModel.findOneAndUpdate(
+        { _id: new Types.ObjectId(id), activo: { $ne: false } },
+        { $set: cambios }, { new: true, runValidators: true },
+      ).select('-passwordHash').exec();
+      if (!usuario) throw new UnauthorizedException('El usuario autenticado no está habilitado');
+      return usuario;
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 11000)
+        throw new ConflictException('El correo o nombre de usuario ya existe');
+      throw error;
+    }
   }
 
   /**

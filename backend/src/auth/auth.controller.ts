@@ -23,6 +23,7 @@ import {
   UseInterceptors,
   ParseFilePipeBuilder,
   Get,
+  Patch,
   Req,
   SetMetadata,
   UseGuards,
@@ -34,6 +35,7 @@ import { memoryStorage } from 'multer';
 import { AuthService } from './auth.service.js';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import { EditarPerfilDto } from '../usuarios/dto/editar-perfil.dto.js';
 import type { JwtPayload } from './guards/auth.guard.js';
 import { SOLO_COOKIE_SESION } from './sesion.constants.js';
 import { guardarCookieSesion, opcionesCookieSesion } from './sesion-cookie.js';
@@ -115,6 +117,26 @@ export class AuthController {
       expiraEn: resultado.expiraEn,
       horaServidor: resultado.horaServidor,
     };
+  }
+
+  /** Actualiza solo la ficha identificada por el guard; no acepta un ID de otro jugador.
+   * Reutiliza Cloudinary para una foto opcional y no emite JWT ni renueva la cookie.
+   */
+  @Patch('me')
+  @UseGuards(AuthGuard)
+  @UseInterceptors(FileInterceptor('imagen', {
+    storage: memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
+  actualizarMiPerfil(
+    @Req() request: Request & { user?: JwtPayload },
+    @Body() datos: EditarPerfilDto,
+    @UploadedFile(new ParseFilePipeBuilder()
+      .addFileTypeValidator({ fileType: /^(image\/jpeg|image\/png|image\/webp)$/ })
+      .addMaxSizeValidator({ maxSize: 5 * 1024 * 1024 + 1 })
+      .build({ fileIsRequired: false })) imagen?: Express.Multer.File,
+  ) {
+    return this.authService.actualizarMiPerfil(request.user!.sub, datos, imagen);
   }
 
   /**

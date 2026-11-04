@@ -159,6 +159,19 @@ export class AuthService {
     // Compatibilidad del método para consumidores aislados; la app real autoriza antes del outlet.
     return this.http.get<Usuario>(`${this.apiUrl}/me`, { withCredentials: true });
   }
+  /** Actualiza la ficha compartida sin recuperarSesion: guardar no modifica exp ni timers.
+   * Una respuesta tardía tras logout/vencimiento nunca puede reactivar una sesión vieja.
+   */
+  actualizarMiPerfil(datos: FormData): Observable<RespuestaRegistro> {
+    const version = this.versionSesion;
+    return this.http.patch<RespuestaRegistro>(`${this.apiUrl}/me`, datos, { withCredentials: true }).pipe(
+      map((respuesta) => {
+        if (version !== this.versionSesion) throw new HttpErrorResponse({ status: 401 });
+        this.usuarioActual.set(respuesta.usuario);
+        return respuesta;
+      }),
+    );
+  }
   /**
    * Renovación VOLUNTARIA: solo la acción Extender sesión del modal llama a este POST.
    * Comparte solicitudes simultáneas y conserva el usuario si falla la red, permitiendo reintentar.

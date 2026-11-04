@@ -1,0 +1,18 @@
+/* Editor independiente: dos columnas amplias que se apilan en móvil. */
+.editor { margin-top: 24px; padding: 28px; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+h2 { margin-top: 0; }
+.editor > p, small { color: var(--color-text-secondary); line-height: 1.5; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.campo { display: grid; gap: 8px; min-width: 0; margin-bottom: 16px; }
+label { font-weight: 600; }
+input, textarea { box-sizing: border-box; width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-background); color: var(--color-text); font: inherit; }
+textarea { resize: vertical; }
+/* Como ngClass en CineBera: el color acompaña errores escritos y aria-invalid. */
+.campo-error { border-color: var(--color-error); }
+.campo-valido { border-color: var(--color-success); }
+.error { color: var(--color-error); overflow-wrap: anywhere; }
+input:focus-visible, textarea:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+.acciones { display: flex; flex-wrap: wrap; gap: 12px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 700px) { .campos { grid-template-columns: 1fr; } .editor { padding: 20px; } }

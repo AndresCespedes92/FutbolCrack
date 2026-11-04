@@ -4,6 +4,8 @@
   <h1>Mi perfil</h1>
 
   @if (usuario) {
+    <button class="button button-secondary" type="button" [disabled]="editandoPerfil || cerrandoSesion"
+      (click)="editandoPerfil = true; mensajePerfil = ''">Editar perfil</button>
     <button class="button" type="button" (click)="cerrarSesion()" [disabled]="cerrandoSesion">
       {{ cerrandoSesion ? 'Cerrando sesión...' : 'Cerrar sesión' }}
     </button>
@@ -23,6 +25,10 @@
 }
 
 @if (usuario; as jugador) {
+  @if (mensajePerfil) { <p class="action-success" role="status">{{ mensajePerfil }}</p> }
+  @if (editandoPerfil) {
+    <app-editar-perfil [usuario]="jugador" (guardado)="perfilGuardado($event)" (cancelar)="editandoPerfil = false" />
+  }
   <!-- Datos reales del usuario autenticado -->
   <section class="player-card" aria-labelledby="nombre-jugador">
     <div class="player-art">

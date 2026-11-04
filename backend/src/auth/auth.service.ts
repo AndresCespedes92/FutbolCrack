@@ -16,6 +16,7 @@ import { generarHashPassword } from '../common/password.js';
 
 import { UsuariosService } from '../usuarios/usuarios.service.js';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto.js';
+import { EditarPerfilDto } from '../usuarios/dto/editar-perfil.dto.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 
 // Representa el contenido de la imagen recibida.
@@ -125,6 +126,17 @@ export class AuthService {
     }
 
     return this.datosPublicos(usuario);
+  }
+
+  /** Como actualizar la ficha de un socio: validamos los datos antes de subir una foto.
+   * Sin archivo se conserva el avatar. La respuesta pública refresca Angular, sin firmar
+   * una sesión nueva ni devolver hashes; la contraseña se mantiene intacta.
+   */
+  async actualizarMiPerfil(usuarioId: string, datos: EditarPerfilDto, imagen?: ArchivoImagen) {
+    await this.usuariosService.validarDatosPerfil(usuarioId, datos);
+    const imagenPerfil = imagen ? await this.cloudinaryService.subirImagen(imagen) : undefined;
+    const usuario = await this.usuariosService.actualizarPerfil(usuarioId, datos, imagenPerfil);
+    return { mensaje: 'Perfil actualizado correctamente', usuario: this.datosPublicos(usuario) };
   }
 
   /**

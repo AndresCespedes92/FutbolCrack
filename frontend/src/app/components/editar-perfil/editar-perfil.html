@@ -1,0 +1,46 @@
+<section class="editor" aria-labelledby="titulo-editar-perfil">
+  <h2 id="titulo-editar-perfil">Editar mi perfil</h2>
+  <p>Actualizá tu ficha de jugador. Si no elegís otra foto, conservás la actual.</p>
+  <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate [attr.aria-busy]="guardando">
+    <!-- fieldset bloquea cambios durante el envío sin alterar valores/validadores del FormGroup. -->
+    <fieldset [disabled]="guardando">
+      <legend class="sr-only">Datos del perfil</legend>
+      <div class="campos">
+        @for (campo of camposTexto; track campo.control) {
+          <div class="campo">
+            <label [for]="'perfil-' + campo.control">{{ campo.etiqueta }}</label>
+            <input [id]="'perfil-' + campo.control" [type]="campo.tipo" [formControlName]="campo.control"
+              [autocomplete]="campo.autocomplete" [maxlength]="campo.maximo" [ngClass]="clasesCampo(campo.control)"
+              [attr.aria-invalid]="!!errorCampo(campo.control)" [attr.aria-describedby]="'error-perfil-' + campo.control" />
+            <small class="error" [id]="'error-perfil-' + campo.control">{{ errorCampo(campo.control) }}</small>
+          </div>
+        }
+        <div class="campo">
+          <label for="perfil-fecha">Fecha de nacimiento</label>
+          <input id="perfil-fecha" type="date" formControlName="fechaNacimiento" [max]="hoy"
+            [ngClass]="clasesCampo('fechaNacimiento')" [attr.aria-invalid]="!!errorCampo('fechaNacimiento')" aria-describedby="error-perfil-fecha" />
+          <small class="error" id="error-perfil-fecha">{{ errorCampo('fechaNacimiento') }}</small>
+        </div>
+        <div class="campo">
+          <label for="perfil-imagen">Nueva foto de perfil</label>
+          <input id="perfil-imagen" type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarImagen($event)"
+            [ngClass]="clasesCampo('imagenPerfil')" [attr.aria-invalid]="!!errorCampo('imagenPerfil')" aria-describedby="ayuda-perfil-imagen error-perfil-imagen" />
+          <small id="ayuda-perfil-imagen">JPEG, PNG o WebP. Máximo 5 MiB.</small>
+          <small class="error" id="error-perfil-imagen">{{ errorCampo('imagenPerfil') }}</small>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="perfil-descripcion">Descripción de tu juego</label>
+        <textarea id="perfil-descripcion" formControlName="descripcion" rows="4" maxlength="300"
+          [ngClass]="clasesCampo('descripcion')" [attr.aria-invalid]="!!errorCampo('descripcion')" aria-describedby="ayuda-perfil-descripcion error-perfil-descripcion"></textarea>
+        <small id="ayuda-perfil-descripcion">{{ campos.descripcion.value.length }}/300 caracteres</small>
+        <small class="error" id="error-perfil-descripcion">{{ errorCampo('descripcion') }}</small>
+      </div>
+      @if (error) { <p class="error" role="alert">{{ error }}</p> }
+      <div class="acciones">
+        <button class="button" type="submit">{{ guardando ? 'Guardando...' : 'Guardar cambios' }}</button>
+        <button class="button button-secondary" type="button" (click)="cancelar.emit()">Cancelar</button>
+      </div>
+    </fieldset>
+  </form>
+</section>

@@ -11,12 +11,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PublicacionesService, Publicacion } from '../../services/publicaciones';
 import { AccionesPublicaciones } from '../../services/acciones-publicaciones';
 import { ConfirmacionBaja } from '../../components/confirmacion-baja/confirmacion-baja';
+import { EditarPerfil } from '../../components/editar-perfil/editar-perfil';
 
 // Contenedor del perfil: ficha real y últimas tres publicaciones del usuario, sin comentarios ficticios.
 @Component({
   selector: 'app-mi-perfil',
   standalone: true,
-  imports: [PublicacionCard, ConfirmacionBaja, ComentariosPublicacion],
+  imports: [PublicacionCard, ConfirmacionBaja, ComentariosPublicacion, EditarPerfil],
   providers: [AccionesPublicaciones],
   templateUrl: './mi-perfil.html',
   styleUrl: './mi-perfil.css',
@@ -36,6 +37,16 @@ export class MiPerfil implements OnInit {
   cargando = true;
   cerrandoSesion = false;
   mensajeError = '';
+  editandoPerfil = false;
+  mensajePerfil = '';
+
+  /** El editor emite solo la respuesta confirmada; cancelar deja intacta la ficha visible. */
+  perfilGuardado(usuario: Usuario): void {
+    this.usuario = usuario;
+    this.editandoPerfil = false;
+    this.mensajePerfil = 'Perfil actualizado correctamente';
+    this.cargarPublicaciones();
+  }
 
   publicaciones: Publicacion[] = [];
   cargandoPublicaciones = false;
