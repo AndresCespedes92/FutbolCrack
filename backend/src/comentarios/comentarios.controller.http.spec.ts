@@ -32,6 +32,7 @@ class ModeloComentarioPrueba {
 const usuarios = { findById: vi.fn() };
 const conexion = {
   models: {
+    MeGusta: {}, // Dependencia del módulo de publicaciones; estos casos no modifican votos.
     Comentario: ModeloComentarioPrueba,
     Publicacion: { findOne: buscarPublicacion },
     Usuario: modeloUsuarioSesion((id) => usuarios.findById(id)),

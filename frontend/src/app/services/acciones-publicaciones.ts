@@ -107,6 +107,8 @@ export class AccionesPublicaciones {
     if (error.status === 403) return 'No tenés permiso para dar de baja esta publicación.';
     if (error.status === 404) return 'La publicación ya no está disponible. Actualizá el listado.';
     if (error.status === 409) return 'El voto cambió en otra solicitud. Se actualizará el listado.';
+    if (error.status === 503)
+      return 'Los votos de esta publicación están en preparación. Intentá nuevamente más tarde.';
     return error.status === 0
       ? 'No se pudo conectar con el servidor. Intentá nuevamente.'
       : `No pudimos ${accion}. Intentá nuevamente.`;

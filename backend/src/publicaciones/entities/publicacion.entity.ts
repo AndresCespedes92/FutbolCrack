@@ -12,7 +12,7 @@ export type PublicacionDocument = HydratedDocument<Publicacion>;
  * Modelo persistente de jugadas: referencias de autor/likes, textos, URL multimedia y estado.
  * DTO gobierna la entrada HTTP; @Prop gobierna persistencia/defaults. Referencias no equivalen
  * a claves foráneas SQL automáticas: los servicios deben exigir recursos existentes.
- * activo=false retira sin borrar. Los contadores de likes/comentarios se calculan al consultar.
+ * activo=false retira sin borrar. cantidadLikes se mantiene junto al voto en una transacción.
  * El enum conserva video para lectura histórica, pero el formulario/controller actual sube
  * solo imágenes JPEG/PNG/WebP; no se debe demostrar una subida de video inexistente.
  */
@@ -42,10 +42,21 @@ export class Publicacion {
   })
   tipoMultimedia: string;
 
-  // Un voto por usuario y publicación. No se usa índice unique en el array:
-  // la misma persona puede votar publicaciones distintas. La escritura usa $addToSet atómico.
-  @Prop({ type: [Types.ObjectId], ref: 'Usuario', default: [] })
+  // Solo compatibilidad de lectura/migración: ningún voto nuevo se agrega a este array.
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'Usuario',
+    default: undefined,
+    select: false,
+  })
   likes: Types.ObjectId[];
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  cantidadLikes: number;
+
+  // Los documentos históricos se distinguen en la agregación (que no aplica defaults).
+  @Prop({ type: Boolean, default: true })
+  likesMigrados: boolean;
 
   @Prop({ default: true })
   activo: boolean;
