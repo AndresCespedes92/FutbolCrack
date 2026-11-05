@@ -23,12 +23,14 @@ import {
   OrdenPublicaciones,
 } from '../../services/publicaciones';
 import { imagenPerfilValidator as imagenPublicacionValidator } from '../../validators/registro.validators';
+import { NgClass } from '@angular/common';
+import { TipoContenido, urlContenidoValidator } from '../../validators/url-contenido.validator';
 
 // Padre del feed: coordina formulario, consultas paginadas y eventos de las tarjetas.
 @Component({
   selector: 'app-publicaciones',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, PublicacionCard, ConfirmacionBaja],
+  imports: [RouterLink, ReactiveFormsModule, NgClass, PublicacionCard, ConfirmacionBaja],
   providers: [AccionesPublicaciones],
   templateUrl: './publicaciones.html',
   styleUrl: './publicaciones.css',
@@ -88,6 +90,53 @@ export class Publicaciones implements OnInit {
   });
   readonly campos = this.publicacionForm.controls;
 
+  // Controles SOLO de interfaz en etapa 1: no pertenecen al DTO ni al FormData enviado.
+  // Como los selectores reactivos de registro.html en CineBera, el estado vive en FormControl.
+  readonly tipoContenido = new FormControl<TipoContenido>('propia', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.pattern(/^(propia|instagram|tiktok)$/)],
+  });
+  readonly urlExterna = new FormControl({ value: '', disabled: true }, { nonNullable: true });
+  get plataformaExterna(): string {
+    return this.tipoContenido.value === 'instagram' ? 'Instagram' : 'TikTok';
+  }
+  get mensajeIntegracion(): string {
+    return `La integración con ${this.plataformaExterna} está en preparación. Por ahora solo podés guardar publicaciones propias.`;
+  }
+  get errorUrlExterna(): string {
+    if (!this.urlExterna.invalid || !(this.urlExterna.touched || this.urlExterna.dirty)) return '';
+    if (this.urlExterna.hasError('required'))
+      return `Pegá la URL de una publicación de ${this.plataformaExterna}.`;
+    if (this.urlExterna.hasError('maxlength')) return 'La URL admite hasta 2048 caracteres.';
+    return `Ingresá una URL HTTPS de una publicación de ${this.plataformaExterna}; no un enlace a un perfil.`;
+  }
+
+  /** Cambiar de fuente conserva título/descripción y reinicia únicamente los campos variables.
+   * Deshabilitar la imagen la excluye de la validación; reset retira errores visuales anteriores.
+   * El validator de URL depende de la plataforma y no comprueba privacidad/disponibilidad remota.
+   */
+  private configurarTipoContenido(tipo: TipoContenido): void {
+    this.mensajePublicacion = '';
+    this.mensajeExito = '';
+    this.campos.imagen.reset(null, { emitEvent: false });
+    if (this.imagenInput) this.imagenInput.nativeElement.value = '';
+    this.urlExterna.reset('', { emitEvent: false });
+    this.urlExterna.clearValidators();
+    if (tipo === 'propia') {
+      this.campos.imagen.enable({ emitEvent: false });
+      this.urlExterna.disable({ emitEvent: false });
+    } else {
+      this.campos.imagen.disable({ emitEvent: false });
+      this.urlExterna.setValidators([
+        Validators.required,
+        Validators.maxLength(2048),
+        urlContenidoValidator(tipo),
+      ]);
+      this.urlExterna.enable({ emitEvent: false });
+    }
+    this.urlExterna.updateValueAndValidity({ emitEvent: false });
+  }
+
   @ViewChild('tituloPublicacion') private tituloInput?: ElementRef<HTMLInputElement>;
 
   /** El acceso compacto abre los campos y lleva el foco al título, también con teclado. */
@@ -105,6 +154,9 @@ export class Publicaciones implements OnInit {
   }
 
   ngOnInit(): void {
+    this.tipoContenido.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((tipo) => {
+      this.configurarTipoContenido(tipo);
+    });
     this.cargarPublicaciones();
     // El feed sigue público; /auth/me solo determina las acciones visibles, sin leer la cookie HttpOnly.
     this.auth
@@ -165,12 +217,25 @@ export class Publicaciones implements OnInit {
     if (this.publicando) return;
     this.mensajePublicacion = '';
     this.mensajeExito = '';
+    if (this.tipoContenido.invalid) {
+      this.tipoContenido.markAsTouched();
+      this.mensajePublicacion = 'Seleccioná un tipo de contenido válido.';
+      return;
+    }
+    // Además del botón deshabilitado, este guard evita POST si se envía con Enter o por código.
+    // La etapa 2 deberá ampliar el contrato del servidor antes de habilitar estos tipos.
+    if (this.tipoContenido.value !== 'propia') {
+      this.urlExterna.markAsTouched();
+      this.mensajePublicacion = this.mensajeIntegracion;
+      return;
+    }
     if (this.publicacionForm.invalid) {
       this.publicacionForm.markAllAsTouched();
       this.mensajePublicacion = 'Revisá el título, la descripción y la imagen antes de publicar.';
       return;
     }
     this.publicando = true;
+    this.tipoContenido.disable({ emitEvent: false });
     this.publicacionesService
       .crear({
         titulo: this.campos.titulo.value.trim(),
@@ -181,6 +246,7 @@ export class Publicaciones implements OnInit {
       .subscribe({
         next: () => {
           this.publicando = false;
+          this.tipoContenido.enable({ emitEvent: false });
           this.publicacionForm.reset();
           // File no usa formControlName: limpiamos también el selector nativo tras confirmar el guardado.
           if (this.imagenInput) this.imagenInput.nativeElement.value = '';
@@ -190,6 +256,7 @@ export class Publicaciones implements OnInit {
         },
         error: (error: HttpErrorResponse) => {
           this.publicando = false;
+          this.tipoContenido.enable({ emitEvent: false });
           if (error.status === 401) {
             this.mensajePublicacion = 'Tu sesión venció. Iniciá sesión nuevamente.';
             void this.router.navigate(['/login']);
