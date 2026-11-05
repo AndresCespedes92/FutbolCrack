@@ -127,6 +127,47 @@
   color: var(--color-text);
 }
 
+/* Barra compacta: el input ocupa el ancho disponible y el control queda a la derecha. */
+.composer-disclosure {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.composer-trigger {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.composer-toggle {
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-secondary);
+  color: var(--color-text);
+  font-size: 26px;
+  cursor: pointer;
+}
+.composer-trigger:focus-visible,
+.composer-toggle:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
+}
+/* El panel permanece montado para conservar el archivo; hidden también lo retira del teclado. */
+.composer-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.composer-fields[hidden] {
+  display: none;
+}
+.composer-toggle:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .composer-textarea {
   display: block;
   width: 100%;

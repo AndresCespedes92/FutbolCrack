@@ -69,6 +69,8 @@ export class Publicaciones implements OnInit {
   cargando = true;
   mensajeError = '';
   publicando = false;
+  // Estado visual independiente del FormGroup: plegar conserva textos y archivo seleccionados.
+  formularioExpandido = false;
   mensajePublicacion = '';
   mensajeExito = '';
 
@@ -85,6 +87,22 @@ export class Publicaciones implements OnInit {
     imagen: new FormControl<File | null>(null, { validators: [imagenPublicacionValidator] }),
   });
   readonly campos = this.publicacionForm.controls;
+
+  @ViewChild('tituloPublicacion') private tituloInput?: ElementRef<HTMLInputElement>;
+
+  /** El acceso compacto abre los campos y lleva el foco al título, también con teclado. */
+  abrirFormulario(): void {
+    if (this.publicando) return;
+    this.formularioExpandido = true;
+    this.cdr.detectChanges();
+    this.tituloInput?.nativeElement.focus();
+  }
+
+  alternarFormulario(): void {
+    if (this.publicando) return;
+    if (this.formularioExpandido) this.formularioExpandido = false;
+    else this.abrirFormulario();
+  }
 
   ngOnInit(): void {
     this.cargarPublicaciones();
