@@ -1,5 +1,16 @@
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
+import {
+  TIPOS_CONTENIDO,
+  type TipoContenido,
+  UrlSegunContenido,
+} from '../contenido-externo.js';
 import {
   MAXIMO_DESCRIPCION,
   MAXIMO_TITULO,
@@ -13,6 +24,15 @@ import {
  * Un DTO valida forma y contenido; identidad, existencia y permisos requieren guard/servicio.
  */
 export class CreatePublicacionDto {
+  // Omitir el tipo conserva el contrato de clientes anteriores; null no es omisión.
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsIn(TIPOS_CONTENIDO)
+  tipoContenido?: TipoContenido;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @UrlSegunContenido()
+  urlExterna?: string;
+
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString({ message: 'El título debe ser un texto' })
   @IsNotEmpty({ message: 'El título es obligatorio' })

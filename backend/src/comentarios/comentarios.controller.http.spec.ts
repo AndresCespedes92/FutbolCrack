@@ -244,6 +244,34 @@ describe('Comentarios HTTP 4A: módulo, validación, autoría y paginación', ()
       expect(comentario.autorId).not.toHaveProperty(campo);
   }
 
+  it.each(['instagram', 'tiktok'])(
+    'permite crear, consultar y editar comentarios FutbolCrack en contenido %s',
+    async (tipoContenido) => {
+      publicaciones[0].tipoContenido = tipoContenido;
+      publicaciones[0].urlExterna =
+        tipoContenido === 'instagram'
+          ? 'https://instagram.com/reel/Club10/'
+          : 'https://www.tiktok.com/@club/video/123';
+      const creado = await crear().send({ texto: 'Buen pase' }).expect(201);
+      expect(creado.body.comentario.publicacionId).toBe(publicacionId);
+      const listado = await request(app.getHttpServer())
+        .get(ruta())
+        .expect(200);
+      expect(listado.body.comentarios[0].texto).toBe('Buen pase');
+      const editado = await editar()
+        .send({ texto: 'Gran asistencia' })
+        .expect(200);
+      expect(editado.body.comentario).toMatchObject({
+        texto: 'Gran asistencia',
+        modificado: true,
+      });
+      await editar(comentarioId, jwt.sign({ sub: ajenoId, perfil: 'usuario' }))
+        .send({ texto: 'Ajeno' })
+        .expect(403);
+      expect(comentarios[0].texto).toBe('Gran asistencia');
+    },
+  );
+
   it('crea 201 con autor JWT, texto recortado, referencias, fechas y marca false; devuelve autor mínimo', async () => {
     const respuesta = await crear()
       .send({ texto: '  Excelente pase al espacio  ' })

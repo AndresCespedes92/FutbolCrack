@@ -20,6 +20,8 @@ import { UsuariosService } from '../usuarios/usuarios.service.js';
 import { Publicacion } from './entities/publicacion.entity.js';
 import { MeGusta } from './entities/me-gusta.entity.js';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto.js';
+import { EditarPublicacionDto } from './dto/editar-publicacion.dto.js';
+import { validarContenido } from './contenido-externo.js';
 import {
   MAXIMO_DESCRIPCION,
   MAXIMO_TITULO,
@@ -84,7 +86,7 @@ export class PublicacionesService {
    * Normaliza título/descripción y repite límites como defensa de llamadas internas al servicio.
    * Si hay imagen, Cloudinary guarda el binario y MongoDB conserva su URL/tipo junto al autor JWT.
    * contenido se mantiene como alias compatible, no como un segundo texto editable independiente.
-   * save crea el documento; no hay edición posterior de publicaciones en esta API.
+   * save crea el documento; editar valida por separado el estado final y los permisos.
    * Cloudinary y MongoDB son sistemas distintos: aquí no hay transacción distribuida ni compensación
    * automática de una imagen si un guardado posterior falla. No se debe afirmar atomicidad entre ambos.
    */
@@ -93,6 +95,9 @@ export class PublicacionesService {
     datos: CreatePublicacionDto,
     imagen?: Express.Multer.File,
   ) {
+    const tipoContenido =
+      datos.tipoContenido === undefined ? 'propia' : datos.tipoContenido;
+    validarContenido(tipoContenido, datos.urlExterna, !!imagen);
     // Defensa de negocio para llamadas internas, además del DTO HTTP. Conserva String.length.
     const titulo = typeof datos.titulo === 'string' ? datos.titulo.trim() : '';
     const descripcion =
@@ -115,6 +120,10 @@ export class PublicacionesService {
       : '';
     const nueva = new this.publicacionModel({
       autorId: new Types.ObjectId(autorId),
+      tipoContenido,
+      ...(tipoContenido !== 'propia'
+        ? { urlExterna: datos.urlExterna!.trim() }
+        : {}),
       titulo,
       descripcion,
       contenido: descripcion, // Un solo origen de texto para clientes de lectura anteriores.
@@ -125,6 +134,68 @@ export class PublicacionesService {
       likesMigrados: true,
     });
     return nueva.save();
+  }
+
+  /** Como corregir una ficha del club: autor o administrador actual, nunca un rol del body.
+   * El tipo nace con la publicación y no cambia. Los documentos antiguos se leen como propios;
+   * un PATCH no migra la colección ni modifica likes, comentarios o archivos de Cloudinary.
+   */
+  async editar(id: string, usuarioId: string, datos: EditarPublicacionDto) {
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException(
+        'El identificador de publicación no es válido',
+      );
+    const filtro = { _id: new Types.ObjectId(id), activo: { $ne: false } };
+    const actual = await this.publicacionModel.findOne(filtro).lean().exec();
+    if (!actual)
+      throw new NotFoundException(
+        'La publicación no existe o está dada de baja',
+      );
+    const usuario = await this.usuariosService.findById(usuarioId);
+    if (!usuario || usuario.activo === false)
+      throw new UnauthorizedException('El usuario autenticado no existe');
+    if (
+      String(actual.autorId) !== usuarioId &&
+      usuario.perfil !== 'administrador'
+    )
+      throw new ForbiddenException(
+        'Solo el autor o un administrador puede editar esta publicación',
+      );
+    const tipo = actual.tipoContenido ?? 'propia';
+    if (datos.tipoContenido !== undefined && datos.tipoContenido !== tipo)
+      throw new BadRequestException(
+        'No se puede cambiar el tipo de una publicación creada',
+      );
+    const url =
+      datos.urlExterna !== undefined ? datos.urlExterna : actual.urlExterna;
+    validarContenido(tipo, url, tipo !== 'propia' && !!actual.multimediaUrl);
+    const cambios: Record<string, unknown> = {};
+    for (const [campo, maximo] of [
+      ['titulo', MAXIMO_TITULO],
+      ['descripcion', MAXIMO_DESCRIPCION],
+    ] as const) {
+      const valor = datos[campo];
+      if (valor === undefined) continue;
+      if (
+        typeof valor !== 'string' ||
+        !valor.trim() ||
+        valor.trim().length > maximo
+      )
+        throw new BadRequestException(`El campo ${campo} no es válido`);
+      cambios[campo] = valor.trim();
+    }
+    if (cambios.descripcion !== undefined)
+      cambios.contenido = cambios.descripcion;
+    if (datos.urlExterna !== undefined)
+      cambios.urlExterna = datos.urlExterna.trim();
+    if (Object.keys(cambios).length) {
+      const resultado = await this.publicacionModel
+        .updateOne(filtro, { $set: cambios }, { runValidators: true })
+        .exec();
+      if (!resultado.matchedCount)
+        throw new NotFoundException('La publicación fue dada de baja');
+    }
+    return this.obtenerPorId(id, usuarioId);
   }
 
   async listar(
@@ -289,6 +360,8 @@ export class PublicacionesService {
       publicaciones: publicaciones.map(
         ({ likesMigrados: _versionInterna, ...publicacion }) => ({
           ...publicacion,
+          // aggregate no aplica defaults del schema a los documentos históricos.
+          tipoContenido: publicacion.tipoContenido ?? 'propia',
           titulo: publicacion.titulo || 'Publicación anterior',
           descripcion: publicacion.descripcion ?? publicacion.contenido ?? '',
           contenido: publicacion.descripcion ?? publicacion.contenido ?? '',

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   ParseFilePipeBuilder,
   Post,
   Query,
@@ -18,6 +19,7 @@ import type { Request } from 'express';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
 import { PublicacionesService } from './publicaciones.service.js';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto.js';
+import { EditarPublicacionDto } from './dto/editar-publicacion.dto.js';
 import { ListarPublicacionesDto } from './dto/listar-publicaciones.dto.js';
 import { AutenticacionOpcionalGuard } from './guards/autenticacion-opcional.guard.js';
 import { MAXIMO_IMAGEN_BYTES } from './publicaciones.constants.js';
@@ -29,7 +31,7 @@ interface RequestAutenticada extends Request {
 /**
  * API de jugadas: GET de listado/detalle admite identidad opcional para calcular meGusta;
  * POST/DELETE requieren AuthGuard. El autor sale del JWT y las reglas de baja/likes del servicio.
- * No hay PUT/PATCH para editar publicaciones. DELETE de publicación es baja lógica, mientras
+ * PATCH edita textos/URL sin cambiar el tipo. DELETE de publicación es baja lógica, mientras
  * DELETE de /likes retira solamente el voto del usuario autenticado.
  */
 @Controller('publicaciones')
@@ -93,6 +95,16 @@ export class PublicacionesController {
   @UseGuards(AuthGuard)
   darMeGusta(@Param('id') id: string, @Req() request: RequestAutenticada) {
     return this.publicacionesService.darMeGusta(id, request.user!.sub);
+  }
+
+  @Patch(':id')
+  @UseGuards(AuthGuard)
+  editar(
+    @Param('id') id: string,
+    @Req() request: RequestAutenticada,
+    @Body() datos: EditarPublicacionDto,
+  ) {
+    return this.publicacionesService.editar(id, request.user!.sub, datos);
   }
 
   @Delete(':id/likes')

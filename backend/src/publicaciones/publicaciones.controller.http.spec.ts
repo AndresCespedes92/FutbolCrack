@@ -287,6 +287,337 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
     documentos.push({ _id: id, autorId, contenido: 'Parte antiguo' });
   }
 
+  describe('Tipos de contenido: alta, edición y compatibilidad sin servicios externos', () => {
+    const instagram = 'https://www.instagram.com/reel/Jugada_10/';
+    const tiktok = 'https://www.tiktok.com/@jugador/video/1234567890';
+    const patch = (datos: object, identidad = token) =>
+      request(app.getHttpServer())
+        .patch(`/publicaciones/${id}`)
+        .set('Authorization', `Bearer ${identidad}`)
+        .send(datos);
+
+    it.each([
+      ['instagram', instagram],
+      ['tiktok', tiktok],
+    ])(
+      'crea %s, conserva identificador y query y no llama a Cloudinary',
+      async (tipoContenido, enlace) => {
+        const urlExterna = `${enlace}?origen=club`;
+        const respuesta = await post()
+          .send({ ...body(), tipoContenido, urlExterna: `  ${urlExterna}  ` })
+          .expect(201);
+        expect(respuesta.body).toMatchObject({
+          tipoContenido,
+          urlExterna,
+          tipoMultimedia: 'ninguno',
+          multimediaUrl: '',
+          autorId,
+        });
+        expect(cloudinary.subirImagen).not.toHaveBeenCalled();
+        const detalle = await request(app.getHttpServer())
+          .get(`/publicaciones/${id}`)
+          .expect(200);
+        expect(detalle.body).toMatchObject({ tipoContenido, urlExterna });
+      },
+    );
+    it.each([
+      { tipoContenido: 'instagram' },
+      { tipoContenido: 'tiktok' },
+      { tipoContenido: 'propia', urlExterna: instagram },
+      { tipoContenido: 'propia', urlExterna: '' },
+      { tipoContenido: 'instagram', urlExterna: tiktok },
+      { tipoContenido: 'tiktok', urlExterna: instagram },
+      {
+        tipoContenido: 'instagram',
+        urlExterna: 'https://instagram.com.ejemplo.com/p/123/',
+      },
+      {
+        tipoContenido: 'instagram',
+        urlExterna: 'https://instagram.com@ejemplo.com/p/123/',
+      },
+      {
+        tipoContenido: 'tiktok',
+        urlExterna: 'https://tiktok.com.ejemplo.com/@club/video/123',
+      },
+      { tipoContenido: 'instagram', urlExterna: 'http://instagram.com/p/123/' },
+      { tipoContenido: 'instagram', urlExterna: 'https://instagram.com/club/' },
+      { tipoContenido: 'tiktok', urlExterna: 'https://vm.tiktok.com/123/' },
+      { tipoContenido: 'tiktok', urlExterna: 'https://vt.tiktok.com/123/' },
+      { tipoContenido: 'tiktok', urlExterna: 'https://www.tiktok.com/t/123/' },
+      { tipoContenido: 'tiktok', urlExterna: 'texto inválido' },
+      { tipoContenido: 'instagram', urlExterna: 123 },
+      { tipoContenido: 'instagram', urlExterna: null },
+      {
+        tipoContenido: 'instagram',
+        urlExterna: instagram + '?q=' + 'a'.repeat(2048),
+      },
+      { tipoContenido: null },
+      { tipoContenido: 'youtube' },
+    ])(
+      'rechaza combinación inválida de alta %# antes de persistir',
+      async (datos) => {
+        await post()
+          .send({ ...body(), ...datos })
+          .expect(400);
+        expect(guardar).not.toHaveBeenCalled();
+        expect(cloudinary.subirImagen).not.toHaveBeenCalled();
+      },
+    );
+    it.each([
+      ['instagram', instagram],
+      ['tiktok', tiktok],
+    ])('rechaza imagen en %s antes de subirla', async (tipo, enlace) => {
+      await post()
+        .field('titulo', 'Club')
+        .field('descripcion', 'Entrenamiento')
+        .field('tipoContenido', tipo)
+        .field('urlExterna', enlace)
+        .attach('imagen', png, {
+          filename: 'club.png',
+          contentType: 'image/png',
+        })
+        .expect(400);
+      expect(cloudinary.subirImagen).not.toHaveBeenCalled();
+      expect(guardar).not.toHaveBeenCalled();
+    });
+    it('propia explícita sigue permitiendo imagen y usa la misma subida', async () => {
+      const respuesta = await post()
+        .field('titulo', 'Club')
+        .field('descripcion', 'Entrenamiento')
+        .field('tipoContenido', 'propia')
+        .attach('imagen', png, {
+          filename: 'club.png',
+          contentType: 'image/png',
+        })
+        .expect(201);
+      expect(respuesta.body).toMatchObject({
+        tipoContenido: 'propia',
+        tipoMultimedia: 'imagen',
+      });
+      expect(cloudinary.subirImagen).toHaveBeenCalledOnce();
+    });
+    it('expone una publicación antigua como propia en feed y detalle sin migrarla', async () => {
+      prepararPublicacion();
+      const feed = await request(app.getHttpServer())
+        .get('/publicaciones')
+        .expect(200);
+      const detalle = await request(app.getHttpServer())
+        .get(`/publicaciones/${id}`)
+        .expect(200);
+      expect(feed.body.publicaciones[0].tipoContenido).toBe('propia');
+      expect(detalle.body.tipoContenido).toBe('propia');
+      expect(documentos[0]).not.toHaveProperty('tipoContenido');
+      expect(actualizar).not.toHaveBeenCalled();
+    });
+    it('edita una antigua y sincroniza descripción/contenido sin modificar votos ni tipo histórico', async () => {
+      prepararPublicacion();
+      documentos[0].likes = [new Types.ObjectId(ajenoId)];
+      const respuesta = await patch({
+        titulo: '  Partido del club  ',
+        descripcion: ' Nueva descripción ',
+      }).expect(200);
+      expect(respuesta.body).toMatchObject({
+        titulo: 'Partido del club',
+        descripcion: 'Nueva descripción',
+        contenido: 'Nueva descripción',
+        tipoContenido: 'propia',
+        cantidadLikes: 1,
+      });
+      expect(documentos[0].likes).toEqual([new Types.ObjectId(ajenoId)]);
+      expect(documentos[0]).not.toHaveProperty('tipoContenido');
+    });
+    it.each([
+      ['instagram', instagram],
+      ['tiktok', tiktok],
+    ])(
+      'edita URL de %s y permite cambiar solo un texto',
+      async (tipoContenido, urlExterna) => {
+        await post()
+          .send({ ...body(), tipoContenido, urlExterna })
+          .expect(201);
+        const nueva = urlExterna + '?club=10';
+        expect(
+          (await patch({ urlExterna: ` ${nueva} ` }).expect(200)).body
+            .urlExterna,
+        ).toBe(nueva);
+        expect(
+          (await patch({ titulo: 'Otro entrenamiento' }).expect(200)).body,
+        ).toMatchObject({
+          titulo: 'Otro entrenamiento',
+          tipoContenido,
+          urlExterna: nueva,
+        });
+      },
+    );
+    it.each([
+      { tipoContenido: 'tiktok' },
+      { tipoContenido: null },
+      { urlExterna: tiktok },
+      { urlExterna: '' },
+      { urlExterna: null },
+      { urlExterna: 'https://instagram.com.ejemplo.com/p/123/' },
+      { titulo: '' },
+      { descripcion: null },
+      { titulo: 'x'.repeat(121) },
+      { imagen: 'archivo.png' },
+      { autorId: ajenoId },
+      { activo: false },
+    ])('rechaza edición inválida %# sin escrituras', async (datos) => {
+      documentos.push({
+        _id: id,
+        autorId,
+        ...body(),
+        tipoContenido: 'instagram',
+        urlExterna: instagram,
+      });
+      await patch(datos).expect(400);
+      expect(actualizar).not.toHaveBeenCalled();
+    });
+    it('antigua no admite convertir tipo ni agregar URL externa', async () => {
+      prepararPublicacion();
+      await patch({ tipoContenido: 'instagram', urlExterna: instagram }).expect(
+        400,
+      );
+      await patch({ urlExterna: instagram }).expect(400);
+      expect(actualizar).not.toHaveBeenCalled();
+    });
+    it('valida el estado final: rechaza una externa sin URL incluso si el PATCH solo cambia título', async () => {
+      documentos.push({
+        _id: id,
+        autorId,
+        ...body(),
+        tipoContenido: 'instagram',
+      });
+      await patch({ titulo: 'Entrenamiento' }).expect(400);
+      expect(actualizar).not.toHaveBeenCalled();
+    });
+    it('acepta repetir el mismo tipo sin convertir la publicación', async () => {
+      await post()
+        .send({ ...body(), tipoContenido: 'instagram', urlExterna: instagram })
+        .expect(201);
+      const respuesta = await patch({
+        tipoContenido: 'instagram',
+        titulo: 'Club',
+      }).expect(200);
+      expect(respuesta.body).toMatchObject({
+        tipoContenido: 'instagram',
+        titulo: 'Club',
+        urlExterna: instagram,
+      });
+    });
+    it('alta externa anónima sigue devolviendo 401 sin subir ni guardar', async () => {
+      await request(app.getHttpServer())
+        .post('/publicaciones')
+        .send({ ...body(), tipoContenido: 'instagram', urlExterna: instagram })
+        .expect(401);
+      expect(guardar).not.toHaveBeenCalled();
+      expect(cloudinary.subirImagen).not.toHaveBeenCalled();
+    });
+    it('mezcla contenido propio y externo sin cambiar filtro, orden ni páginas de diez', async () => {
+      for (let i = 0; i < 12; i++)
+        documentos.push({
+          _id: String(i + 100).padStart(24, '0'),
+          autorId: new Types.ObjectId(i === 11 ? ajenoId : autorId),
+          ...body(),
+          activo: true,
+          createdAt: new Date(Date.UTC(2026, 0, 1, 0, i)),
+          likesMigrados: true,
+          cantidadLikes: i,
+          ...(i % 2
+            ? { tipoContenido: 'instagram', urlExterna: instagram }
+            : {}),
+        });
+      const consulta = `/publicaciones?usuarioId=${autorId}&orden=likes&limit=10`;
+      const primera = await request(app.getHttpServer())
+        .get(consulta)
+        .expect(200);
+      const segunda = await request(app.getHttpServer())
+        .get(consulta + '&offset=10')
+        .expect(200);
+      expect(primera.body).toMatchObject({
+        total: 11,
+        limit: 10,
+        offset: 0,
+        hayMas: true,
+      });
+      expect(segunda.body).toMatchObject({
+        total: 11,
+        offset: 10,
+        hayMas: false,
+      });
+      expect(primera.body.publicaciones).toHaveLength(10);
+      expect(segunda.body.publicaciones).toHaveLength(1);
+      expect(
+        primera.body.publicaciones.map((p: any) => p.cantidadLikes),
+      ).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+      expect(primera.body.publicaciones[0].tipoContenido).toBe('propia');
+      expect(primera.body.publicaciones[1].tipoContenido).toBe('instagram');
+      const porFecha = await request(app.getHttpServer())
+        .get(`/publicaciones?orden=fecha&limit=10`)
+        .expect(200);
+      expect(porFecha.body.publicaciones[0]._id).toBe(
+        String(111).padStart(24, '0'),
+      );
+    });
+    it('niega edición ajena y anónima; permite administrador consultado en la ficha actual', async () => {
+      prepararPublicacion();
+      await request(app.getHttpServer())
+        .patch(`/publicaciones/${id}`)
+        .send({ titulo: 'Ajena' })
+        .expect(401);
+      await patch(
+        { titulo: 'Ajena' },
+        jwt.sign({ sub: ajenoId, perfil: 'administrador' }),
+      ).expect(403);
+      expect(actualizar).not.toHaveBeenCalled();
+      usuarios.findById.mockResolvedValue({ perfil: 'administrador' });
+      await patch(
+        { titulo: 'Corregida por el club' },
+        jwt.sign({ sub: ajenoId, perfil: 'usuario' }),
+      ).expect(200);
+    });
+    it('edición inválida o dada de baja conserva 400/404', async () => {
+      prepararPublicacion();
+      await request(app.getHttpServer())
+        .patch('/publicaciones/invalido')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ titulo: 'Club' })
+        .expect(400);
+      documentos[0].activo = false;
+      await patch({ titulo: 'Club' }).expect(404);
+    });
+    it.each([
+      ['instagram', instagram],
+      ['tiktok', tiktok],
+    ])(
+      'likes y conteo de comentarios siguen funcionando para %s',
+      async (tipoContenido, urlExterna) => {
+        await post()
+          .send({ ...body(), tipoContenido, urlExterna })
+          .expect(201);
+        notas.push({ publicacionId: new Types.ObjectId(id) });
+        await request(app.getHttpServer())
+          .post(`/publicaciones/${id}/likes`)
+          .set('Cookie', `token=${token}`)
+          .expect(201);
+        const detalle = await request(app.getHttpServer())
+          .get(`/publicaciones/${id}`)
+          .set('Cookie', `token=${token}`)
+          .expect(200);
+        expect(detalle.body).toMatchObject({
+          tipoContenido,
+          cantidadLikes: 1,
+          cantidadComentarios: 1,
+          meGusta: true,
+        });
+        await request(app.getHttpServer())
+          .delete(`/publicaciones/${id}/likes`)
+          .set('Cookie', `token=${token}`)
+          .expect(200);
+      },
+    );
+  });
+
   it('mantiene el 401 sin sesión aunque el contenido sea válido', async () => {
     await request(app.getHttpServer())
       .post('/publicaciones')

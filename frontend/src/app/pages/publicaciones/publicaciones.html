@@ -50,109 +50,132 @@
             type="button"
             aria-controls="campos-publicacion"
             [attr.aria-expanded]="formularioExpandido"
-            [attr.aria-label]="formularioExpandido ? 'Contraer formulario de publicación' : 'Desplegar formulario de publicación'"
+            [attr.aria-label]="
+              formularioExpandido
+                ? 'Contraer formulario de publicación'
+                : 'Desplegar formulario de publicación'
+            "
             [title]="formularioExpandido ? 'Contraer' : 'Desplegar'"
             [disabled]="publicando"
             (click)="alternarFormulario()"
-          ><span aria-hidden="true">{{ formularioExpandido ? '−' : '+' }}</span></button>
-        </div>
-        <div id="campos-publicacion" class="composer-fields" [hidden]="!formularioExpandido">
-        <label for="tipo-contenido" class="composer-title">Tipo de contenido</label>
-        <select id="tipo-contenido" class="composer-content-type" [formControl]="tipoContenido"
-          aria-describedby="ayuda-tipo-contenido">
-          <option value="propia">Publicación propia</option>
-          <option value="instagram">Instagram</option>
-          <option value="tiktok">TikTok</option>
-        </select>
-        <small id="ayuda-tipo-contenido">
-          @if (tipoContenido.value === 'propia') {
-            Compartí tu jugada con una imagen opcional.
-          } @else {
-            Prepará un enlace de {{ plataformaExterna }}. Todavía no se puede guardar.
-          }
-        </small>
-        <label for="titulo-publicacion" class="composer-title">Título de la publicación</label>
-        <input
-          #tituloPublicacion
-          id="titulo-publicacion"
-          class="composer-textarea composer-input"
-          formControlName="titulo"
-          maxlength="120"
-          placeholder="Por ejemplo: Entrenamiento de definición"
-          required
-          aria-describedby="error-titulo-publicacion"
-          [attr.aria-invalid]="campos.titulo.invalid && campos.titulo.touched"
-        />
-        @if (campos.titulo.invalid && campos.titulo.touched) {
-          <small id="error-titulo-publicacion" class="composer-error"
-            >Ingresá un título de 1 a 120 caracteres, no solo espacios.</small
           >
-        }
-        <label for="descripcion-publicacion" class="composer-title">Descripción</label>
-        <textarea
-          id="descripcion-publicacion"
-          class="composer-textarea"
-          formControlName="descripcion"
-          maxlength="2000"
-          rows="4"
-          placeholder="Compartí tu entrenamiento, partido o experiencia en la cancha…"
-          required
-          aria-describedby="error-descripcion-publicacion"
-          [attr.aria-invalid]="campos.descripcion.invalid && campos.descripcion.touched"
-        ></textarea>
-        @if (campos.descripcion.invalid && campos.descripcion.touched) {
-          <small id="error-descripcion-publicacion" class="composer-error"
-            >Ingresá una descripción de 1 a 2000 caracteres, no solo espacios.</small
-          >
-        }
-        @if (tipoContenido.value === 'propia') {
-        <label for="imagen-publicacion">Imagen (opcional)</label>
-        <input
-          #imagenPublicacion
-          id="imagen-publicacion"
-          class="composer-textarea composer-input"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          (change)="seleccionarImagen($event)"
-          aria-describedby="ayuda-imagen-publicacion error-imagen-publicacion"
-        />
-        <small id="ayuda-imagen-publicacion">JPEG, PNG o WebP, hasta 5 MB.</small>
-        @if (campos.imagen.invalid && campos.imagen.touched) {
-          <small id="error-imagen-publicacion" class="composer-error"
-            >Elegí una imagen JPEG, PNG o WebP de hasta 5 MB.</small
-          >
-        }
-        } @else {
-          <label for="url-publicacion" class="composer-title">URL de {{ plataformaExterna }}</label>
-          <!-- Patrón visual de registro.html de CineBera, adaptado a un control de URL local. -->
-          <input id="url-publicacion" class="composer-textarea composer-input" type="url"
-            [formControl]="urlExterna" maxlength="2048" autocomplete="off" spellcheck="false"
-            [placeholder]="tipoContenido.value === 'instagram' ? 'https://www.instagram.com/reel/...' : 'https://www.tiktok.com/@usuario/video/...'"
-            [ngClass]="{
-              'composer-invalid': !!errorUrlExterna,
-              'composer-valid': urlExterna.valid && (urlExterna.touched || urlExterna.dirty)
-            }"
-            [attr.aria-invalid]="!!errorUrlExterna"
-            aria-describedby="ayuda-url-publicacion error-url-publicacion" />
-          <small id="ayuda-url-publicacion">
-            Pegá el enlace de una publicación pública. Por ahora solo validamos el formato; no comprobamos si es pública ni cargamos contenido externo.
-          </small>
-          @if (errorUrlExterna) {
-            <small id="error-url-publicacion" class="composer-error">{{ errorUrlExterna }}</small>
-          }
-          <p class="composer-preparation" role="status">{{ mensajeIntegracion }}</p>
-        }
-        <div class="composer-footer">
-          <span class="composer-counter"
-            >{{ campos.descripcion.value.length }} / 2000 caracteres</span
-          >
-          <button class="button composer-submit" type="submit" [disabled]="publicando || tipoContenido.value !== 'propia'">
-            {{ publicando ? 'Publicando...' : tipoContenido.value === 'propia' ? 'Publicar' : 'En preparación' }}
+            <span aria-hidden="true">{{ formularioExpandido ? '−' : '+' }}</span>
           </button>
         </div>
-        @if (mensajePublicacion) {
-          <p class="composer-error" role="alert">{{ mensajePublicacion }}</p>
-        }
+        <div id="campos-publicacion" class="composer-fields" [hidden]="!formularioExpandido">
+          <label for="tipo-contenido" class="composer-title">Tipo de contenido</label>
+          <select
+            id="tipo-contenido"
+            class="composer-content-type"
+            [formControl]="tipoContenido"
+            aria-describedby="ayuda-tipo-contenido"
+          >
+            <option value="propia">Publicación propia</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+          </select>
+          <small id="ayuda-tipo-contenido">
+            @if (tipoContenido.value === 'propia') {
+              Compartí tu jugada con una imagen opcional.
+            } @else {
+              Compartí el enlace de una publicación pública de {{ plataformaExterna }}.
+            }
+          </small>
+          <label for="titulo-publicacion" class="composer-title">Título de la publicación</label>
+          <input
+            #tituloPublicacion
+            id="titulo-publicacion"
+            class="composer-textarea composer-input"
+            formControlName="titulo"
+            maxlength="120"
+            placeholder="Por ejemplo: Entrenamiento de definición"
+            required
+            aria-describedby="error-titulo-publicacion"
+            [attr.aria-invalid]="campos.titulo.invalid && campos.titulo.touched"
+          />
+          @if (campos.titulo.invalid && campos.titulo.touched) {
+            <small id="error-titulo-publicacion" class="composer-error"
+              >Ingresá un título de 1 a 120 caracteres, no solo espacios.</small
+            >
+          }
+          <label for="descripcion-publicacion" class="composer-title">Descripción</label>
+          <textarea
+            id="descripcion-publicacion"
+            class="composer-textarea"
+            formControlName="descripcion"
+            maxlength="2000"
+            rows="4"
+            placeholder="Compartí tu entrenamiento, partido o experiencia en la cancha…"
+            required
+            aria-describedby="error-descripcion-publicacion"
+            [attr.aria-invalid]="campos.descripcion.invalid && campos.descripcion.touched"
+          ></textarea>
+          @if (campos.descripcion.invalid && campos.descripcion.touched) {
+            <small id="error-descripcion-publicacion" class="composer-error"
+              >Ingresá una descripción de 1 a 2000 caracteres, no solo espacios.</small
+            >
+          }
+          @if (tipoContenido.value === 'propia') {
+            <label for="imagen-publicacion">Imagen (opcional)</label>
+            <input
+              #imagenPublicacion
+              id="imagen-publicacion"
+              class="composer-textarea composer-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="seleccionarImagen($event)"
+              aria-describedby="ayuda-imagen-publicacion error-imagen-publicacion"
+            />
+            <small id="ayuda-imagen-publicacion">JPEG, PNG o WebP, hasta 5 MB.</small>
+            @if (campos.imagen.invalid && campos.imagen.touched) {
+              <small id="error-imagen-publicacion" class="composer-error"
+                >Elegí una imagen JPEG, PNG o WebP de hasta 5 MB.</small
+              >
+            }
+          } @else {
+            <label for="url-publicacion" class="composer-title"
+              >URL de {{ plataformaExterna }}</label
+            >
+            <!-- Patrón visual de registro.html de CineBera, adaptado a un control de URL local. -->
+            <input
+              id="url-publicacion"
+              class="composer-textarea composer-input"
+              type="url"
+              [formControl]="urlExterna"
+              maxlength="2048"
+              autocomplete="off"
+              spellcheck="false"
+              [placeholder]="
+                tipoContenido.value === 'instagram'
+                  ? 'https://www.instagram.com/reel/...'
+                  : 'https://www.tiktok.com/@usuario/video/...'
+              "
+              [ngClass]="{
+                'composer-invalid': !!errorUrlExterna,
+                'composer-valid': urlExterna.valid && (urlExterna.touched || urlExterna.dirty),
+              }"
+              [attr.aria-invalid]="!!errorUrlExterna"
+              aria-describedby="ayuda-url-publicacion error-url-publicacion"
+            />
+            <small id="ayuda-url-publicacion">
+              Pegá el enlace HTTPS completo de una publicación pública, sin acortadores. Validamos
+              el formato; no comprobamos su disponibilidad ni cargamos contenido externo.
+            </small>
+            @if (errorUrlExterna) {
+              <small id="error-url-publicacion" class="composer-error">{{ errorUrlExterna }}</small>
+            }
+          }
+          <div class="composer-footer">
+            <span class="composer-counter"
+              >{{ campos.descripcion.value.length }} / 2000 caracteres</span
+            >
+            <button class="button composer-submit" type="submit" [disabled]="publicando">
+              {{ publicando ? 'Publicando...' : 'Publicar' }}
+            </button>
+          </div>
+          @if (mensajePublicacion) {
+            <p class="composer-error" role="alert">{{ mensajePublicacion }}</p>
+          }
         </div>
         @if (mensajeExito) {
           <p role="status">{{ mensajeExito }}</p>
@@ -195,10 +218,11 @@
         </div>
       }
       @for (publicacion of publicaciones; track publicacion._id) {
-<!--
+        <!--
 Input entrega jugada/sesión/estado al hijo y Output devuelve la intención de votar, dar de baja o navegar.
 AccionesPublicaciones centraliza HTTP y recarga para que la tarjeta no duplique reglas del servidor.
--->        <app-publicacion-card
+-->
+        <app-publicacion-card
           [publicacion]="publicacion"
           [detalleDisponible]="true"
           (abrirDetalle)="verDetalle($event)"
