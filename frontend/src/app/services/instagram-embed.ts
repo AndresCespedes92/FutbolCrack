@@ -6,6 +6,7 @@ interface VentanaInstagram extends Window {
 }
 
 /** Carga una sola copia del script OFICIAL, a pedido de un componente.
+ * Feed y detalle comparten esta carga: el script se solicita al pulsar «Cargar Instagram».
  * No consulta oEmbed ni interpreta HTML de usuarios. El único script permitido es constante.
  * https://developers.facebook.com/documentation/instagram-platform/oembed (Embed JS).
  */
