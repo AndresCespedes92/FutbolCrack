@@ -54,13 +54,12 @@
         {{ expandido ? 'Ver menos' : 'Ver más' }}
       </button>
     }
-    @if (enlaceExterno; as enlace) {
-      <p class="origen-externo">
-        Origen: {{ plataformaExterna }} ·
-        <a [href]="enlace" target="_blank" rel="noopener noreferrer"
-          >Abrir en {{ plataformaExterna }} ↗</a
-        >
-      </p>
+    @if (publicacion.tipoContenido === 'instagram' || publicacion.tipoContenido === 'tiktok') {
+      <app-contenido-externo-embed
+        [tipoContenido]="publicacion.tipoContenido"
+        [urlExterna]="publicacion.urlExterna"
+        [amplio]="textoCompleto"
+      />
     }
     @if (
       (!publicacion.tipoContenido || publicacion.tipoContenido === 'propia') &&

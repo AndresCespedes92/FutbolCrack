@@ -1,0 +1,77 @@
+@if (tipoContenido === 'instagram' || tipoContenido === 'tiktok') {
+  <section
+    class="contenido-externo origen-externo"
+    [class.amplio]="amplio"
+    [attr.aria-label]="'Contenido de ' + plataforma"
+  >
+    <p class="plataforma">Origen: {{ plataforma }}</p>
+    @if (!enlaceOriginal) {
+      <p role="status">La URL es inválida o incompatible. No se puede cargar este contenido.</p>
+    } @else {
+      @if (tipoContenido === 'instagram') {
+        <!-- Contenedor propio: embed.js transforma únicamente el blockquote construido por nosotros. -->
+        <div #instagramContenedor class="instagram-container"></div>
+      } @else {
+        @if (recurso; as fuente) {
+          <!-- Atributos de seguridad estáticos: Angular los exige antes de asignar src. -->
+          <iframe
+            #reproductor
+            class="reproductor"
+            [src]="fuente"
+            title="Publicación de TikTok"
+            loading="lazy"
+            allow="fullscreen"
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            referrerpolicy="strict-origin-when-cross-origin"
+            (load)="documentoCargado()"
+            (error)="marcarNoDisponible()"
+          ></iframe>
+        }
+      }
+      <div role="status" aria-live="polite">
+        @switch (estado) {
+          @case ('inicial') {
+            <p>Cargá la vista integrada de {{ plataforma }} para ver el contenido.</p>
+          }
+          @case ('cargando') {
+            <p>
+              {{
+                cargado
+                  ? 'Esperando confirmación del reproductor…'
+                  : 'Cargando contenido de ' + plataforma + '…'
+              }}
+            </p>
+          }
+          @case ('disponible') {
+            <p>Reproductor disponible. Usá sus controles para ver el contenido.</p>
+          }
+          @case ('sin-confirmar') {
+            <p>
+              No pudimos confirmar la disponibilidad. La plataforma, la privacidad o el navegador
+              pueden impedir la reproducción. Probá abrir el original.
+            </p>
+          }
+          @case ('no-disponible') {
+            <p>
+              El reproductor informó un error o no se pudo cargar. El contenido puede estar
+              restringido, eliminado o no disponible.
+            </p>
+          }
+        }
+      </div>
+      @if (estado === 'inicial') {
+        <button type="button" (click)="cargar()">Cargar {{ plataforma }}</button>
+        <small
+          >Al cargarlo te conectás con {{ plataforma }}. La disponibilidad depende de la
+          plataforma.</small
+        >
+      } @else if (estado === 'no-disponible') {
+        <button type="button" (click)="reintentar()">Reintentar</button>
+      }
+      <!-- El enlace se conserva incluso si el iframe está bloqueado o el contenido es privado. -->
+      <a [href]="enlaceOriginal" target="_blank" rel="noopener noreferrer"
+        >Abrir en {{ plataforma }} ↗</a
+      >
+    }
+  </section>
+}

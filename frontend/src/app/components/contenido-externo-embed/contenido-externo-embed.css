@@ -1,0 +1,74 @@
+/* Una sola columna y ancho acotado: evita que un video vertical desborde en móviles. */
+:host {
+  display: block;
+  min-width: 0;
+}
+.contenido-externo {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-background);
+  overflow-wrap: anywhere;
+}
+p {
+  margin: 0 0 12px;
+}
+.plataforma,
+small {
+  color: var(--color-text-secondary);
+}
+small {
+  display: block;
+  margin: 10px 0;
+}
+/* En el detalle el padre entrega amplio=true; no duplicamos el componente. */
+.reproductor {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 9 / 16;
+  margin: 0 auto 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+.amplio .reproductor {
+  max-width: 420px;
+}
+/* El script agrega nodos sin atributos de encapsulación Angular: el ancho se limita también
+   sobre el iframe generado mediante Renderer2, sin estilos globales ni ::ng-deep. */
+.instagram-container {
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
+  margin: 0 auto;
+  overflow: hidden;
+}
+.amplio .instagram-container {
+  max-width: 540px;
+}
+button {
+  padding: 10px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-control);
+  background: var(--color-secondary);
+  color: var(--color-text);
+  cursor: pointer;
+}
+a {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--color-success);
+  text-underline-offset: 3px;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 4px;
+}
+@media (max-width: 380px) {
+  .contenido-externo {
+    padding: 10px;
+  }
+}

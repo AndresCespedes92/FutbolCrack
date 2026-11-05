@@ -75,6 +75,14 @@ describe('Tarjeta compartida: enlaces externos seguros y contenido histórico', 
       (html.querySelector('.agregar-comentario') as HTMLButtonElement).click();
       expect(votada).toBe(publicacion);
       expect(detalle).toBe(publicacion);
+      if (tipo === 'tiktok') {
+        (html.querySelector('app-contenido-externo-embed button') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        expect(html.querySelector('iframe')!.getAttribute('src')).toContain(
+          '/player/v1/123?autoplay=0',
+        );
+        expect(html.querySelector('.like')).not.toBeNull();
+      }
     },
   );
   it.each(['javascript:alert(1)', 'https://instagram.com.ejemplo.com/p/Club10/'])(
@@ -135,6 +143,15 @@ describe('Detalle externo y transporte de edición', () => {
       );
       expect(fixture.nativeElement.querySelector('app-comentarios-publicacion')).not.toBeNull();
       expect(fixture.nativeElement.querySelector('iframe, video')).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('app-contenido-externo-embed .amplio'),
+      ).not.toBeNull();
+      if (tipo === 'tiktok') {
+        fixture.nativeElement.querySelector('app-contenido-externo-embed button').click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('iframe')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('app-comentarios-publicacion')).not.toBeNull();
+      }
     },
   );
   it('PATCH envía solamente cambios y cookie; conserva respuesta normalizada', () => {
