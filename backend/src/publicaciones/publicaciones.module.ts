@@ -7,6 +7,7 @@ import { SeguridadModule } from '../auth/seguridad.module.js';
 import { AutenticacionOpcionalGuard } from './guards/autenticacion-opcional.guard.js';
 import { PublicacionesService } from './publicaciones.service.js';
 import { PublicacionesController } from './publicaciones.controller.js';
+import { MeGusta, MeGustaSchema } from './entities/me-gusta.entity.js';
 
 import {
   Publicacion,
@@ -23,6 +24,7 @@ import {
     UsuariosModule,
     SeguridadModule,
     MongooseModule.forFeature([
+      { name: MeGusta.name, schema: MeGustaSchema },
       {
         name: Publicacion.name,
         schema: PublicacionSchema,

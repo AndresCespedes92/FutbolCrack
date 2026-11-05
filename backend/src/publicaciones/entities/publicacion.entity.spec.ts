@@ -10,7 +10,9 @@ describe('Schema de publicaciones', () => {
       errors: { titulo: expect.anything(), descripcion: expect.anything() },
     });
     expect(nueva.activo).toBe(true);
-    expect(nueva.likes).toEqual([]);
+    expect(nueva.likes).toBeUndefined();
+    expect(nueva.cantidadLikes).toBe(0);
+    expect(nueva.likesMigrados).toBe(true);
   });
   it('valida nuevos campos y conserva contenido como alias opcional', async () => {
     const nueva = new Modelo({
@@ -22,5 +24,6 @@ describe('Schema de publicaciones', () => {
     expect(PublicacionSchema.path('contenido')).toBeDefined();
     expect(PublicacionSchema.path('activo').options.default).toBe(true);
     expect(PublicacionSchema.path('likes').options.unique).not.toBe(true);
+    expect(PublicacionSchema.path('likes').options.select).toBe(false);
   });
 });

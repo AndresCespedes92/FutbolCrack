@@ -9,6 +9,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -17,6 +18,7 @@ import { ListarPublicacionesDto } from './dto/listar-publicaciones.dto.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 import { UsuariosService } from '../usuarios/usuarios.service.js';
 import { Publicacion } from './entities/publicacion.entity.js';
+import { MeGusta } from './entities/me-gusta.entity.js';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto.js';
 import {
   MAXIMO_DESCRIPCION,
@@ -30,6 +32,7 @@ export class PublicacionesService {
     private readonly publicacionModel: Model<Publicacion>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly usuariosService: UsuariosService,
+    @InjectModel(MeGusta.name) private readonly meGustaModel: Model<MeGusta>,
   ) {}
 
   async publicacionesPorUsuario(datos: RangoFechasDto) {
@@ -118,6 +121,8 @@ export class PublicacionesService {
       multimediaUrl,
       tipoMultimedia: imagen ? 'imagen' : 'ninguno',
       activo: true,
+      cantidadLikes: 0,
+      likesMigrados: true,
     });
     return nueva.save();
   }
@@ -157,7 +162,7 @@ export class PublicacionesService {
 
   /**
    * Única lectura para feed, perfil y detalle: filtra visibles/autor/ID antes de paginar.
-   * set calcula cantidadLikes y meGusta a partir del array real, sin confiar en valores del cliente.
+   * set usa el contador persistido para votos nuevos y conserva lectura del array histórico.
    * facet obtiene total y página; sort usa fecha o likes con desempates estables y skip/limit recorta
    * en MongoDB. El lookup de comentarios cuenta solo las jugadas de la página, sin descargar textos.
    * Se ocultan IDs de votantes y se pueblan campos públicos del autor. El sobre devuelve total,
@@ -186,13 +191,20 @@ export class PublicacionesService {
       usuarioAutenticadoId && Types.ObjectId.isValid(usuarioAutenticadoId)
         ? new Types.ObjectId(usuarioAutenticadoId)
         : null;
-    // Una sola fuente de verdad: contamos el array, sin contador persistido que pueda desincronizarse.
+    // El contador nuevo se confirma con el voto en una transacción. El fallback conserva votos
+    // históricos hasta ejecutar explícitamente la migración; no se migra al leer el feed.
     // $match precede a $facet: total y página se calculan con los mismos filtros de estado/autor.
     const pipeline: PipelineStage[] = [
       { $match: filtro },
       {
         $set: {
-          cantidadLikes: { $size: { $ifNull: ['$likes', []] } },
+          cantidadLikes: {
+            $cond: [
+              { $eq: ['$likesMigrados', true] },
+              { $ifNull: ['$cantidadLikes', 0] },
+              { $size: { $ifNull: ['$likes', []] } },
+            ],
+          },
           meGusta: identidad
             ? { $in: [identidad, { $ifNull: ['$likes', []] }] }
             : false,
@@ -242,6 +254,7 @@ export class PublicacionesService {
     const [resultado] = await this.publicacionModel
       .aggregate<{
         publicaciones: (Partial<Publicacion> & {
+          _id: Types.ObjectId;
           cantidadLikes: number;
           cantidadComentarios: number;
           meGusta: boolean;
@@ -250,6 +263,22 @@ export class PublicacionesService {
       }>(pipeline)
       .exec();
     const pagina = resultado?.publicaciones ?? [];
+    // Una consulta indexada y acotada a la página: no descargamos todos los votos de cada jugada.
+    const migradas = pagina
+      .filter((p) => p.likesMigrados === true)
+      .map((p) => p._id);
+    const propios =
+      identidad && migradas.length
+        ? await this.meGustaModel
+            .find({ publicacionId: { $in: migradas }, usuarioId: identidad })
+            .select('publicacionId')
+            .lean()
+            .exec()
+        : [];
+    const votadas = new Set(propios.map((voto) => String(voto.publicacionId)));
+    for (const publicacion of pagina)
+      if (publicacion.likesMigrados === true)
+        publicacion.meGusta = votadas.has(String(publicacion._id));
     // populate solo resuelve autores de esta página y usa la referencia del modelo, no un nombre de colección fijo.
     const publicaciones = await this.publicacionModel.populate(pagina, {
       path: 'autorId',
@@ -257,13 +286,15 @@ export class PublicacionesService {
     });
     const total = resultado?.conteo[0]?.total ?? 0;
     return {
-      publicaciones: publicaciones.map((publicacion) => ({
-        ...publicacion,
-        titulo: publicacion.titulo || 'Publicación anterior',
-        descripcion: publicacion.descripcion ?? publicacion.contenido ?? '',
-        contenido: publicacion.descripcion ?? publicacion.contenido ?? '',
-        activo: publicacion.activo ?? true,
-      })),
+      publicaciones: publicaciones.map(
+        ({ likesMigrados: _versionInterna, ...publicacion }) => ({
+          ...publicacion,
+          titulo: publicacion.titulo || 'Publicación anterior',
+          descripcion: publicacion.descripcion ?? publicacion.contenido ?? '',
+          contenido: publicacion.descripcion ?? publicacion.contenido ?? '',
+          activo: publicacion.activo ?? true,
+        }),
+      ),
       total,
       offset,
       limit,
@@ -278,14 +309,9 @@ export class PublicacionesService {
     return this.cambiarMeGusta(id, usuarioId, false);
   }
 
-  /**
-   * La relación usuario-publicación se guarda como ObjectId dentro de likes.
-   * Filtro y modificación viajan en una única escritura de documento: $addToSet agrega sin
-   * duplicar; $pull retira ese usuario. El filtro evita aplicar una transición ya realizada.
-   * Dos pedidos de alta simultáneos no suman dos votos. Si no se actualizó, se distingue 404
-   * (jugada no visible) de 409 (voto ya dado o ausente), y se devuelve el conteo real del array.
-   * Es una operación atómica de un documento, no una transacción distribuida ni un CRUD con
-   * colección/ID propio para likes; por eso el mismo método implementa las dos transiciones.
+  /** Voto y contador se confirman juntos o se revierten juntos. MongoDB requiere replica set
+   * (Atlas lo ofrece). Escribir la publicación serializa votos y bajas concurrentes.
+   * 11000 del índice compuesto se convierte en 409; nunca se incrementa un voto duplicado.
    */
   private async cambiarMeGusta(
     id: string,
@@ -296,46 +322,81 @@ export class PublicacionesService {
       throw new BadRequestException(
         'El identificador de publicación no es válido',
       );
-    if (
-      !Types.ObjectId.isValid(usuarioId) ||
-      !(await this.usuariosService.findById(usuarioId))
-    ) {
+    const usuario = Types.ObjectId.isValid(usuarioId)
+      ? await this.usuariosService.findById(usuarioId)
+      : null;
+    if (!usuario || usuario.activo === false)
       throw new UnauthorizedException('El usuario autenticado no existe');
-    }
-    const actor = new Types.ObjectId(usuarioId);
-    const base = { _id: new Types.ObjectId(id), activo: { $ne: false } };
-    // El filtro y la modificación se ejecutan en una única operación del documento:
-    // dos pedidos simultáneos del mismo socio no pueden sumar dos votos.
-    const publicacion = await this.publicacionModel
-      .findOneAndUpdate(
-        { ...base, likes: agregar ? { $ne: actor } : actor },
-        agregar ? { $addToSet: { likes: actor } } : { $pull: { likes: actor } },
-        { new: true },
+    const publicacionId = new Types.ObjectId(id),
+      actor = new Types.ObjectId(usuarioId);
+    try {
+      return await this.publicacionModel.db.transaction(async (session) => {
+        const publicacion = await this.publicacionModel
+          .findOneAndUpdate(
+            {
+              _id: publicacionId,
+              activo: { $ne: false },
+              likesMigrados: true,
+              ...(!agregar ? { cantidadLikes: { $gt: 0 } } : {}),
+            },
+            { $inc: { cantidadLikes: agregar ? 1 : -1 } },
+            { new: true, session },
+          )
+          .select('cantidadLikes')
+          .lean()
+          .exec();
+        if (!publicacion) {
+          const existente = await this.publicacionModel
+            .findOne({ _id: publicacionId, activo: { $ne: false } })
+            .session(session)
+            .select('likesMigrados')
+            .lean()
+            .exec();
+          if (!existente)
+            throw new NotFoundException(
+              'La publicación no existe o está dada de baja',
+            );
+          if (existente.likesMigrados !== true)
+            throw new ServiceUnavailableException(
+              'Los votos de esta publicación requieren migración. Intentá más tarde.',
+            );
+          throw new ConflictException(
+            'No tenés un me gusta para quitar en esta publicación',
+          );
+        }
+        if (agregar)
+          await this.meGustaModel.create(
+            [{ publicacionId, usuarioId: actor }],
+            { session },
+          );
+        else {
+          const resultado = await this.meGustaModel
+            .deleteOne({ publicacionId, usuarioId: actor }, { session })
+            .exec();
+          if (!resultado.deletedCount)
+            throw new ConflictException(
+              'No tenés un me gusta para quitar en esta publicación',
+            );
+        }
+        return {
+          mensaje: agregar
+            ? 'Me gusta registrado correctamente'
+            : 'Me gusta quitado correctamente',
+          cantidadLikes: publicacion.cantidadLikes,
+          meGusta: agregar,
+        };
+      });
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 11000
       )
-      .select('likes')
-      .lean()
-      .exec();
-    if (!publicacion) {
-      const existe = await this.publicacionModel.findOne(base).exec();
-      if (!existe)
-        throw new NotFoundException(
-          'La publicación no existe o está dada de baja',
-        );
-      throw new ConflictException(
-        agregar
-          ? 'Ya diste me gusta a esta publicación'
-          : 'No tenés un me gusta para quitar en esta publicación',
-      );
+        throw new ConflictException('Ya diste me gusta a esta publicación');
+      throw error;
     }
-    return {
-      mensaje: agregar
-        ? 'Me gusta registrado correctamente'
-        : 'Me gusta quitado correctamente',
-      cantidadLikes: publicacion.likes?.length ?? 0,
-      meGusta: agregar,
-    };
   }
-
   /**
    * Solo autor o administrador actual puede retirar una jugada; otro autenticado recibe 403.
    * El rol se consulta en la ficha y no se acepta libremente en el body. updateOne condicionada

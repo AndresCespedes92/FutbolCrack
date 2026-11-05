@@ -88,6 +88,7 @@ const modeloPublicacion = {
       provide: getConnectionToken(),
       useValue: {
         models: {
+          MeGusta: {}, // Los reportes no consultan votos individuales.
           Publicacion: modeloPublicacion,
           Comentario: { aggregate: agregarComentarios },
           Usuario: modeloUsuarioSesion((valor) => usuarios.findById(valor)),

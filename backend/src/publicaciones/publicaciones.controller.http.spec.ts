@@ -13,6 +13,7 @@ import { AuthGuard } from '../auth/guards/auth.guard.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 import { UsuariosService } from '../usuarios/usuarios.service.js';
 import { Publicacion } from './entities/publicacion.entity.js';
+import { MeGusta } from './entities/me-gusta.entity.js';
 import { PublicacionesController } from './publicaciones.controller.js';
 import { PublicacionesService } from './publicaciones.service.js';
 import { MAXIMO_IMAGEN_BYTES } from './publicaciones.constants.js';
@@ -35,12 +36,85 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
   const cambiarLike = vi.fn();
   const buscarUno = vi.fn();
   const actualizar = vi.fn();
+  let votos: { publicacionId: Types.ObjectId; usuarioId: Types.ObjectId }[] =
+    [];
+  let cola = Promise.resolve();
+  const consulta = (resolver: () => any) => ({
+    select() {
+      return this;
+    },
+    lean() {
+      return this;
+    },
+    session() {
+      return this;
+    },
+    exec: async () => resolver(),
+  });
+  const crearVoto = vi.fn(async ([voto]) => {
+    if (
+      votos.some(
+        (v) =>
+          String(v.publicacionId) === String(voto.publicacionId) &&
+          String(v.usuarioId) === String(voto.usuarioId),
+      )
+    )
+      throw Object.assign(new Error('Duplicado simulado'), { code: 11000 });
+    votos.push(voto);
+    return [voto];
+  });
+  const eliminarVoto = vi.fn((filtro) =>
+    consulta(() => {
+      const indice = votos.findIndex(
+        (v) =>
+          String(v.publicacionId) === String(filtro.publicacionId) &&
+          String(v.usuarioId) === String(filtro.usuarioId),
+      );
+      if (indice < 0) return { deletedCount: 0 };
+      votos.splice(indice, 1);
+      return { deletedCount: 1 };
+    }),
+  );
+  const modeloVotos = {
+    create: crearVoto,
+    deleteOne: eliminarVoto,
+    find: (filtro: any) =>
+      consulta(() =>
+        votos.filter(
+          (v) =>
+            String(v.usuarioId) === String(filtro.usuarioId) &&
+            filtro.publicacionId.$in.some(
+              (id: any) => String(id) === String(v.publicacionId),
+            ),
+        ),
+      ),
+  };
+  // Serialización y rollback simulados: no prueban el motor transaccional real de Atlas.
+  const transaccion = (trabajo: (session: unknown) => Promise<any>) => {
+    const tarea = cola.then(async () => {
+      const anteriores = documentos.map((d) => ({ ...d })),
+        votosAnteriores = [...votos];
+      try {
+        return await trabajo({ prueba: true });
+      } catch (error) {
+        documentos = anteriores;
+        votos = votosAnteriores;
+        throw error;
+      }
+    });
+    cola = tarea.then(
+      () => undefined,
+      () => undefined,
+    );
+    return tarea;
+  };
   const png = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5WQAAAAASUVORK5CYII=',
     'base64',
   );
 
   class ModeloDePrueba {
+    static db = { transaction: transaccion };
     static aggregate = agregar;
     static populate = poblar;
     static findOneAndUpdate = cambiarLike;
@@ -69,6 +143,7 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
         },
         AutenticacionOpcionalGuard,
         PublicacionesService,
+        { provide: getModelToken(MeGusta.name), useValue: modeloVotos },
         { provide: getModelToken(Publicacion.name), useValue: ModeloDePrueba },
         { provide: CloudinaryService, useValue: cloudinary },
         { provide: UsuariosService, useValue: usuarios },
@@ -85,6 +160,10 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
 
   beforeEach(() => {
     documentos = [];
+    votos = [];
+    cola = Promise.resolve();
+    crearVoto.mockClear();
+    eliminarVoto.mockClear();
     notas = [];
     guardar.mockReset().mockImplementation(async (datos) => {
       const documento = { _id: id, ...datos };
@@ -114,7 +193,9 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
           )
           .map((doc) => ({
             ...doc,
-            cantidadLikes: (doc.likes ?? []).length,
+            cantidadLikes: doc.likesMigrados
+              ? doc.cantidadLikes
+              : (doc.likes ?? []).length,
             meGusta: Boolean(
               lector &&
               (doc.likes ?? []).some((uid: any) => uid.toString() === lector),
@@ -153,35 +234,30 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
       },
     }));
     poblar.mockReset().mockImplementation(async (pagina) => pagina);
-    cambiarLike.mockReset().mockImplementation((filtro, cambio) => ({
-      select: vi.fn().mockReturnThis(),
-      lean: vi.fn().mockReturnThis(),
-      exec: async () => {
+    cambiarLike.mockReset().mockImplementation((filtro, cambio) =>
+      consulta(() => {
         const doc = documentos.find(
-          (doc) =>
-            doc._id.toString() === filtro._id.toString() &&
-            doc.activo !== false,
+          (d) =>
+            String(d._id) === String(filtro._id) &&
+            d.activo !== false &&
+            d.likesMigrados === true &&
+            (!filtro.cantidadLikes || d.cantidadLikes > 0),
         );
         if (!doc) return null;
-        const actor = (filtro.likes.$ne ?? filtro.likes).toString();
-        const votos = doc.likes ?? [];
-        const existe = votos.some((uid: any) => uid.toString() === actor);
-        if (filtro.likes.$ne ? existe : !existe) return null;
-        // Se modifica antes de resolver la promesa, modelando una sola actualización atómica.
-        doc.likes = cambio.$addToSet
-          ? [...votos, cambio.$addToSet.likes]
-          : votos.filter((uid: any) => uid.toString() !== actor);
-        return { likes: [...doc.likes] };
-      },
-    }));
-    buscarUno.mockReset().mockImplementation((filtro) => ({
-      exec: async () =>
-        documentos.find(
-          (doc) =>
-            doc._id.toString() === filtro._id.toString() &&
-            doc.activo !== false,
-        ) ?? null,
-    }));
+        doc.cantidadLikes += cambio.$inc.cantidadLikes;
+        return { cantidadLikes: doc.cantidadLikes };
+      }),
+    );
+    buscarUno
+      .mockReset()
+      .mockImplementation((filtro) =>
+        consulta(
+          () =>
+            documentos.find(
+              (d) => String(d._id) === String(filtro._id) && d.activo !== false,
+            ) ?? null,
+        ),
+      );
     actualizar.mockReset().mockImplementation((filtro, cambio) => ({
       exec: async () => {
         const doc = documentos.find(
@@ -512,9 +588,20 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
       .expect(404);
   });
 
-  describe('Likes 3B: identidad y atomicidad', () => {
-    it('registra un like propio, cuenta uno y no usa el usuario enviado por cliente', async () => {
-      prepararPublicacion();
+  function prepararVotacion(usuariosIniciales: string[] = []) {
+    prepararPublicacion();
+    Object.assign(documentos[0], {
+      likesMigrados: true,
+      cantidadLikes: usuariosIniciales.length,
+    });
+    votos = usuariosIniciales.map((uid) => ({
+      publicacionId: new Types.ObjectId(id),
+      usuarioId: new Types.ObjectId(uid),
+    }));
+  }
+  describe('Likes separados: identidad, contador y transacción', () => {
+    it('registra solo al actor autenticado sin confiar en usuarioId enviado; no crea arrays', async () => {
+      prepararVotacion();
       const respuesta = await postLike()
         .send({ usuarioId: ajenoId })
         .expect(201);
@@ -523,124 +610,146 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
         cantidadLikes: 1,
         meGusta: true,
       });
-      expect(documentos[0].likes.map(String)).toEqual([autorId]);
+      expect(votos.map((v) => String(v.usuarioId))).toEqual([autorId]);
+      expect(documentos[0].cantidadLikes).toBe(1);
+      expect(documentos[0]).not.toHaveProperty('likes');
       expect(cambiarLike).toHaveBeenCalledWith(
         expect.objectContaining({
           activo: { $ne: false },
-          likes: { $ne: new Types.ObjectId(autorId) },
+          likesMigrados: true,
         }),
-        { $addToSet: { likes: new Types.ObjectId(autorId) } },
-        { new: true },
+        { $inc: { cantidadLikes: 1 } },
+        expect.objectContaining({ new: true, session: expect.anything() }),
       );
+      expect(crearVoto.mock.calls[0][1]).toHaveProperty('session');
     });
-    it('rechaza un voto repetido sin duplicar ni aumentar el conteo', async () => {
-      prepararPublicacion();
+    it('un voto repetido da 409 y revierte el incremento del contador', async () => {
+      prepararVotacion();
       await postLike().expect(201);
-      const repetido = await postLike().expect(409);
-      expect(repetido.body.message).toContain('Ya diste me gusta');
-      expect(documentos[0].likes).toHaveLength(1);
+      await postLike().expect(409);
+      expect(votos).toHaveLength(1);
+      expect(documentos[0].cantidadLikes).toBe(1);
     });
-    it('ante ocho solicitudes simultáneas solo una registra el voto', async () => {
-      prepararPublicacion();
+    it('ocho solicitudes simultáneas producen un voto y un solo incremento', async () => {
+      prepararVotacion();
       const respuestas = await Promise.all(
         Array.from({ length: 8 }, () => postLike()),
       );
-      expect(respuestas.map((res) => res.status).sort()).toEqual([
+      expect(respuestas.map((r) => r.status).sort()).toEqual([
         201, 409, 409, 409, 409, 409, 409, 409,
       ]);
-      expect(documentos[0].likes.map(String)).toEqual([autorId]);
-      for (const llamada of cambiarLike.mock.calls)
-        expect(llamada[1]).toHaveProperty('$addToSet');
+      expect(votos.map((v) => String(v.usuarioId))).toEqual([autorId]);
+      expect(documentos[0].cantidadLikes).toBe(1);
     });
-    it('permite que dos usuarios distintos voten la misma publicación', async () => {
-      prepararPublicacion();
-      await postLike().expect(201);
-      const otro = jwt.sign({ sub: ajenoId, perfil: 'usuario' });
-      const respuesta = await request(app.getHttpServer())
-        .post(`/publicaciones/${id}/likes`)
-        .set('Authorization', `Bearer ${otro}`)
-        .expect(201);
-      expect(respuesta.body.cantidadLikes).toBe(2);
-      expect(documentos[0].likes.map(String).sort()).toEqual(
-        [autorId, ajenoId].sort(),
-      );
-    });
-    it('quita únicamente el voto propio y permite volver a votar', async () => {
-      prepararPublicacion();
-      documentos[0].likes = [
-        new Types.ObjectId(autorId),
-        new Types.ObjectId(ajenoId),
-      ];
+    it('usuarios distintos votan y quitar solo retira el propio; permite volver a votar', async () => {
+      prepararVotacion([autorId, ajenoId]);
       const respuesta = await request(app.getHttpServer())
         .delete(`/publicaciones/${id}/likes`)
         .set('Authorization', `Bearer ${token}`)
         .send({ usuarioId: ajenoId })
         .expect(200);
-      expect(respuesta.body.cantidadLikes).toBe(1);
-      expect(respuesta.body.meGusta).toBe(false);
-      expect(documentos[0].likes.map(String)).toEqual([ajenoId]);
-      expect(cambiarLike.mock.calls[0][1]).toEqual({
-        $pull: { likes: new Types.ObjectId(autorId) },
+      expect(respuesta.body).toMatchObject({
+        cantidadLikes: 1,
+        meGusta: false,
       });
+      expect(votos.map((v) => String(v.usuarioId))).toEqual([ajenoId]);
       await postLike().expect(201);
-      expect(documentos[0].likes).toHaveLength(2);
+      expect(votos).toHaveLength(2);
+      expect(documentos[0].cantidadLikes).toBe(2);
+      const otro = jwt.sign({
+        sub: '000000000000000000000003',
+        perfil: 'usuario',
+      });
+      await request(app.getHttpServer())
+        .post(`/publicaciones/${id}/likes`)
+        .set('Authorization', `Bearer ${otro}`)
+        .expect(201);
+      expect(documentos[0].cantidadLikes).toBe(3);
     });
-    it('rechaza quitar un voto inexistente sin tocar los de otros', async () => {
-      prepararPublicacion();
-      documentos[0].likes = [new Types.ObjectId(ajenoId)];
-      const respuesta = await request(app.getHttpServer())
+    it('quitar un voto inexistente no cambia votos ajenos ni contador ni permite negativos', async () => {
+      prepararVotacion([ajenoId]);
+      await request(app.getHttpServer())
         .delete(`/publicaciones/${id}/likes`)
         .set('Authorization', `Bearer ${token}`)
         .expect(409);
-      expect(respuesta.body.message).toContain('No tenés un me gusta');
-      expect(documentos[0].likes.map(String)).toEqual([ajenoId]);
-    });
-    it('rechaza likes y su retiro sin autenticación', async () => {
-      prepararPublicacion();
-      await request(app.getHttpServer())
-        .post(`/publicaciones/${id}/likes`)
-        .expect(401);
+      expect(documentos[0].cantidadLikes).toBe(1);
+      expect(votos.map((v) => String(v.usuarioId))).toEqual([ajenoId]);
+      votos = [];
+      documentos[0].cantidadLikes = 0;
       await request(app.getHttpServer())
         .delete(`/publicaciones/${id}/likes`)
-        .expect(401);
-      expect(cambiarLike).not.toHaveBeenCalled();
+        .set('Authorization', `Bearer ${token}`)
+        .expect(409);
+      expect(documentos[0].cantidadLikes).toBe(0);
     });
-    it('rechaza usuario inexistente aunque el JWT esté firmado', async () => {
-      prepararPublicacion();
+    it('rechaza alta y retiro sin sesión y con usuario eliminado o deshabilitado', async () => {
+      prepararVotacion();
+      for (const metodo of ['post', 'delete'] as const)
+        await request(app.getHttpServer())
+          [metodo](`/publicaciones/${id}/likes`)
+          .expect(401);
       usuarios.findById.mockResolvedValue(null);
       await postLike().expect(401);
+      usuarios.findById.mockResolvedValue({ perfil: 'usuario', activo: false });
+      await postLike().expect(401);
+      expect(votos).toHaveLength(0);
       expect(cambiarLike).not.toHaveBeenCalled();
     });
-    it('no permite likes ni retiros sobre publicaciones ausentes o dadas de baja', async () => {
-      for (const presente of [false, true]) {
-        documentos = presente
-          ? [
-              {
-                _id: id,
-                autorId,
-                activo: false,
-                likes: [new Types.ObjectId(autorId)],
-              },
-            ]
-          : [];
-        await postLike().expect(404);
+    it('rechaza publicaciones ausentes/inactivas e ID inválido sin tocar los votos', async () => {
+      prepararVotacion([autorId]);
+      documentos[0].activo = false;
+      for (const metodo of ['post', 'delete'] as const)
         await request(app.getHttpServer())
-          .delete(`/publicaciones/${id}/likes`)
+          [metodo](`/publicaciones/${id}/likes`)
           .set('Authorization', `Bearer ${token}`)
           .expect(404);
-        if (presente)
-          expect(documentos[0].likes.map(String)).toEqual([autorId]);
-      }
-    });
-    it('rechaza un id inválido sin ejecutar la actualización', async () => {
+      documentos = [];
+      await postLike().expect(404);
       await request(app.getHttpServer())
         .post('/publicaciones/id-invalido/likes')
         .set('Authorization', `Bearer ${token}`)
         .expect(400);
-      expect(cambiarLike).not.toHaveBeenCalled();
+      expect(votos).toHaveLength(1);
+    });
+    it('un fallo de persistencia revierte contador y no informa éxito', async () => {
+      prepararVotacion();
+      crearVoto.mockRejectedValueOnce(new Error('Persistencia de prueba'));
+      await postLike().expect(500);
+      expect(documentos[0].cantidadLikes).toBe(0);
+      expect(votos).toHaveLength(0);
+    });
+    it('lee votos históricos pero bloquea mutaciones hasta migrar para evitar perderlos', async () => {
+      prepararPublicacion();
+      documentos[0].likes = [new Types.ObjectId(autorId)];
+      await postLike().expect(503);
+      expect(documentos[0].likes.map(String)).toEqual([autorId]);
+      expect(votos).toHaveLength(0);
+    });
+    it('ordena contadores nuevos y responde meGusta sin exponer IDs ni versión interna', async () => {
+      prepararVotacion([autorId]);
+      documentos.push({
+        _id: '000000000000000000000022',
+        activo: true,
+        likesMigrados: true,
+        cantidadLikes: 1000000,
+      });
+      const respuesta = await request(app.getHttpServer())
+        .get('/publicaciones?orden=likes')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(
+        respuesta.body.publicaciones.map((p: any) => p.cantidadLikes),
+      ).toEqual([1000000, 1]);
+      expect(respuesta.body.publicaciones.map((p: any) => p.meGusta)).toEqual([
+        false,
+        true,
+      ]);
+      for (const p of respuesta.body.publicaciones) {
+        expect(p).not.toHaveProperty('likes');
+        expect(p).not.toHaveProperty('likesMigrados');
+      }
     });
   });
-
   function postLike() {
     return request(app.getHttpServer())
       .post(`/publicaciones/${id}/likes`)
@@ -872,7 +981,7 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
         anonima.body.publicaciones.every((pub: any) => pub.meGusta === false),
       ).toBe(true);
     });
-    it('considera un documento antiguo sin likes como cero y permite su primer voto', async () => {
+    it('considera un documento antiguo sin likes como cero y permite votar después de migrarlo', async () => {
       prepararPublicacion();
       const anterior = await request(app.getHttpServer())
         .get('/publicaciones')
@@ -883,6 +992,9 @@ describe('Publicaciones HTTP: modelo, imágenes, compatibilidad y baja lógica',
         meGusta: false,
       });
       expect(documentos[0]).not.toHaveProperty('likes');
+      await postLike().expect(503);
+      // Representa el resultado de la migración explícita, no una conversión silenciosa al votar.
+      Object.assign(documentos[0], { likesMigrados: true, cantidadLikes: 0 });
       await postLike().expect(201);
       const votada = await request(app.getHttpServer())
         .get('/publicaciones')
