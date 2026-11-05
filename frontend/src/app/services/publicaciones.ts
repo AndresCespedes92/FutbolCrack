@@ -2,6 +2,7 @@ import { API_URL } from './api.config';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { TipoContenido } from '../validators/url-contenido.validator';
 
 /**
  * Datos públicos del autor.
@@ -21,6 +22,8 @@ export interface AutorPublicacion {
  * Representa una publicación almacenada en MongoDB.
  */
 export interface Publicacion {
+  tipoContenido?: TipoContenido;
+  urlExterna?: string;
   _id: string;
   autorId: AutorPublicacion | null;
   contenido: string;
@@ -42,6 +45,8 @@ export interface Publicacion {
  * Datos necesarios para crear una publicación.
  */
 export interface CrearPublicacionDto {
+  tipoContenido?: TipoContenido;
+  urlExterna?: string;
   titulo: string;
   descripcion: string;
   imagen?: File;
@@ -76,7 +81,7 @@ export interface RespuestaMeGusta {
  * Observables; al suscribirse, los contenedores manejan carga/error y recargan datos confirmados.
  * listar/detalle leen sobre/objeto; crear usa FormData con imagen opcional; likes y baja usan
  * la cookie con withCredentials. No envía autorId ni rol para elegir quién realiza la acción.
- * No hay editar publicación porque la API no define esa operación.
+ * editar envía solo textos/URL: el backend conserva el tipo definido al crear.
  */
 export class PublicacionesService {
   private readonly http = inject(HttpClient);
@@ -137,9 +142,18 @@ export class PublicacionesService {
     const formulario = new FormData();
     formulario.append('titulo', datos.titulo);
     formulario.append('descripcion', datos.descripcion);
+    if (datos.tipoContenido) formulario.append('tipoContenido', datos.tipoContenido);
+    if (datos.urlExterna !== undefined) formulario.append('urlExterna', datos.urlExterna);
     if (datos.imagen) formulario.append('imagen', datos.imagen);
     return this.http.post<Publicacion>(this.apiUrl, formulario, {
       withCredentials: true,
     });
+  }
+
+  editar(
+    id: string,
+    datos: Partial<Pick<CrearPublicacionDto, 'titulo' | 'descripcion' | 'urlExterna'>>,
+  ): Observable<Publicacion> {
+    return this.http.patch<Publicacion>(`${this.apiUrl}/${id}`, datos, { withCredentials: true });
   }
 }

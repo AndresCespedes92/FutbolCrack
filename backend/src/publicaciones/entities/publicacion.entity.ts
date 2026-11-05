@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import { TIPOS_CONTENIDO, type TipoContenido } from '../contenido-externo.js';
 import {
   MAXIMO_DESCRIPCION,
   MAXIMO_TITULO,
@@ -18,6 +19,12 @@ export type PublicacionDocument = HydratedDocument<Publicacion>;
  */
 @Schema({ timestamps: true, collection: 'publicaciones' })
 export class Publicacion {
+  @Prop({ type: String, enum: TIPOS_CONTENIDO, default: 'propia' })
+  tipoContenido: TipoContenido;
+
+  @Prop({ type: String, trim: true, maxlength: 2048 })
+  urlExterna?: string;
+
   @Prop({ type: Types.ObjectId, ref: 'Usuario', required: true })
   autorId: Types.ObjectId;
 

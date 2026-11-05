@@ -7,7 +7,7 @@ import { Publicaciones } from './publicaciones';
 import { TipoContenido } from '../../validators/url-contenido.validator';
 
 // Formulario, plantilla y servicio HTTP reales; HttpTestingController impide escribir en la API.
-describe('Selector de contenido: etapa 1 solo Angular', () => {
+describe('Selector de contenido: integración Angular con tipos de publicación', () => {
   let fixture: ComponentFixture<Publicaciones>, http: HttpTestingController;
   const url = `${API_URL}/publicaciones`;
   const paginaVacia = { publicaciones: [], total: 0, offset: 0, limit: 10, hayMas: false };
@@ -65,7 +65,7 @@ describe('Selector de contenido: etapa 1 solo Angular', () => {
   });
 
   it.each(['instagram', 'tiktok'] as const)(
-    'muestra URL para %s y bloquea botón, submit y llamada directa aunque los datos sean válidos',
+    'muestra URL para %s y envía tipo y enlace sin archivo mediante el servicio HTTP real',
     (tipo) => {
       cambiarTipo(tipo);
       completarTextos();
@@ -78,15 +78,30 @@ describe('Selector de contenido: etapa 1 solo Angular', () => {
       expect(fixture.nativeElement.querySelector('#imagen-publicacion')).toBeNull();
       expect(fixture.nativeElement.querySelector('#titulo-publicacion')).not.toBeNull();
       expect(fixture.nativeElement.querySelector('#descripcion-publicacion')).not.toBeNull();
-      expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(true);
-      expect(fixture.nativeElement.querySelector('.composer-preparation').textContent).toContain(
-        'está en preparación',
-      );
+      expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(false);
       enviarFormulario();
+      // Una segunda llamada mientras está pendiente no duplica la publicación.
       componente().publicar();
-      http.expectNone((r) => r.method === 'POST');
+      const req = http.expectOne((r) => r.url === url && r.method === 'POST');
+      const datos = req.request.body as FormData;
+      expect([...datos.keys()].sort()).toEqual([
+        'descripcion',
+        'tipoContenido',
+        'titulo',
+        'urlExterna',
+      ]);
+      expect(datos.get('tipoContenido')).toBe(tipo);
+      expect(datos.get('urlExterna')).toBe(componente().urlExterna.value);
+      expect(datos.get('titulo')).toBe('Jugada de QA');
+      expect(datos.get('imagen')).toBeNull();
+      expect(req.request.withCredentials).toBe(true);
+      req.flush({ _id: 'externa-qa' });
+      http.expectOne((r) => r.url === url && r.method === 'GET').flush(paginaVacia);
+      fixture.detectChanges();
       expect(componente().publicando).toBe(false);
-      expect(componente().mensajePublicacion).toContain('solo podés guardar publicaciones propias');
+      expect(componente().mensajeExito).toContain('creada correctamente');
+      expect(componente().tipoContenido.value).toBe('propia');
+      expect(componente().urlExterna.disabled).toBe(true);
       expect(fixture.nativeElement.querySelector('iframe, script, video')).toBeNull();
     },
   );
@@ -151,7 +166,7 @@ describe('Selector de contenido: etapa 1 solo Angular', () => {
   });
 
   it.each([false, true])(
-    'propia conserva el contrato y las cookies, con imagen=%s y sin campos nuevos',
+    'propia conserva textos, archivo y cookies, con imagen=%s y tipo explícito',
     (conImagen) => {
       cambiarTipo('instagram');
       escribirUrl('https://instagram.com/reel/Jugada10/');
@@ -163,11 +178,13 @@ describe('Selector de contenido: etapa 1 solo Angular', () => {
       const req = http.expectOne((r) => r.url === url && r.method === 'POST');
       const datos = req.request.body as FormData;
       expect([...datos.keys()].sort()).toEqual(
-        conImagen ? ['descripcion', 'imagen', 'titulo'] : ['descripcion', 'titulo'],
+        conImagen
+          ? ['descripcion', 'imagen', 'tipoContenido', 'titulo']
+          : ['descripcion', 'tipoContenido', 'titulo'],
       );
       expect(datos.get('titulo')).toBe('Jugada de QA');
       expect(datos.get('descripcion')).toBe('Entrenamiento de pases');
-      expect(datos.get('tipoContenido')).toBeNull();
+      expect(datos.get('tipoContenido')).toBe('propia');
       expect(datos.get('urlExterna')).toBeNull();
       expect(req.request.withCredentials).toBe(true);
       expect(componente().tipoContenido.disabled).toBe(true);
@@ -197,5 +214,51 @@ describe('Selector de contenido: etapa 1 solo Angular', () => {
     expect(componente().campos.titulo.value).toBe('  Jugada de QA  ');
     cambiarTipo('tiktok');
     expect(componente().mensajePublicacion).toBe('');
+  });
+  it('error HTTP externo conserva borrador, muestra mensaje y permite reintentar', () => {
+    cambiarTipo('instagram');
+    completarTextos();
+    escribirUrl('https://instagram.com/reel/Club10/');
+    enviarFormulario();
+    http
+      .expectOne((r) => r.method === 'POST')
+      .flush({}, { status: 400, statusText: 'Bad Request' });
+    fixture.detectChanges();
+    expect(componente().publicando).toBe(false);
+    expect(componente().tipoContenido.enabled).toBe(true);
+    expect(componente().tipoContenido.value).toBe('instagram');
+    expect(componente().urlExterna.value).toBe('https://instagram.com/reel/Club10/');
+    expect(componente().campos.titulo.value).toBe('  Jugada de QA  ');
+    expect(componente().mensajePublicacion).toContain('enlace de la plataforma');
+  });
+  it('feed renderiza el enlace guardado por el backend con la tarjeta compartida', () => {
+    componente().cargarPublicaciones();
+    http
+      .expectOne((r) => r.url === url && r.method === 'GET')
+      .flush({
+        ...paginaVacia,
+        total: 1,
+        publicaciones: [
+          {
+            _id: '000000000000000000000011',
+            tipoContenido: 'instagram',
+            urlExterna: 'https://instagram.com/p/Club10/',
+            autorId: null,
+            titulo: 'Club en Instagram',
+            descripcion: 'Entrenamiento',
+            contenido: 'Entrenamiento',
+            tipoMultimedia: 'ninguno',
+            multimediaUrl: '',
+            cantidadLikes: 0,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.origen-externo a').getAttribute('href')).toBe(
+      'https://instagram.com/p/Club10/',
+    );
+    expect(fixture.nativeElement.textContent).toContain('Club en Instagram');
+    expect(fixture.nativeElement.querySelector('.like').disabled).toBe(true);
   });
 });

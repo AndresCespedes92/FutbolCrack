@@ -10,14 +10,15 @@ describe('URL de contenido externo: formato local sin solicitudes remotas', () =
     ['tiktok', 'https://www.tiktok.com/@jugador.10/video/1234567890'],
     ['tiktok', 'https://www.tiktok.com/@jugador/photo/1234567890?lang=es'],
     ['tiktok', 'https://m.tiktok.com/@jugador/video/123/'],
-    ['tiktok', 'https://vm.tiktok.com/EnlaceQA/'],
-    ['tiktok', 'https://vt.tiktok.com/EnlaceQA/'],
-    ['tiktok', 'https://www.tiktok.com/t/EnlaceQA/'],
   ] as [PlataformaExterna, string][])('acepta formato %s: %s', (tipo, valor) => {
     expect(urlContenidoValidator(tipo)(new FormControl(valor))).toBeNull();
   });
 
   it.each([
+    ['tiktok', 'https://vm.tiktok.com/EnlaceQA/'],
+    ['tiktok', 'https://vt.tiktok.com/EnlaceQA/'],
+    ['tiktok', 'https://www.tiktok.com/t/EnlaceQA/'],
+    ['instagram', 'https://insta\ngram.com/p/Jugada10/'],
     ['instagram', 'https://www.tiktok.com/@jugador/video/123'],
     ['tiktok', 'https://instagram.com/reel/Jugada10/'],
     ['instagram', 'http://instagram.com/p/Jugada10/'],

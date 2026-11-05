@@ -20,7 +20,9 @@ export function urlContenidoValidator(plataforma: PlataformaExterna): ValidatorF
         url.protocol !== 'https:' ||
         url.username ||
         url.password ||
-        url.port
+        url.port ||
+        /[\s\\]/.test(valor) ||
+        valor.length > 2048
       )
         return { urlContenido: true };
       const host = url.hostname.toLowerCase();
@@ -28,11 +30,8 @@ export function urlContenidoValidator(plataforma: PlataformaExterna): ValidatorF
         ['instagram.com', 'www.instagram.com'].includes(host) &&
         /^\/(?:p|reel|reels)\/[A-Za-z0-9_-]+\/?$/.test(url.pathname);
       const tiktok =
-        (['tiktok.com', 'www.tiktok.com', 'm.tiktok.com'].includes(host) &&
-          (/^\/@[A-Za-z0-9._]+\/(?:video|photo)\/\d+\/?$/.test(url.pathname) ||
-            /^\/t\/[A-Za-z0-9_-]+\/?$/.test(url.pathname))) ||
-        (['vm.tiktok.com', 'vt.tiktok.com'].includes(host) &&
-          /^\/[A-Za-z0-9_-]+\/?$/.test(url.pathname));
+        ['tiktok.com', 'www.tiktok.com', 'm.tiktok.com'].includes(host) &&
+        /^\/@[A-Za-z0-9._]+\/(?:video|photo)\/\d+\/?$/.test(url.pathname);
       return (plataforma === 'instagram' ? instagram : tiktok) ? null : { urlContenido: true };
     } catch {
       return { urlContenido: true };

@@ -54,7 +54,19 @@
         {{ expandido ? 'Ver menos' : 'Ver más' }}
       </button>
     }
-    @if (publicacion.tipoMultimedia === 'imagen' && publicacion.multimediaUrl) {
+    @if (enlaceExterno; as enlace) {
+      <p class="origen-externo">
+        Origen: {{ plataformaExterna }} ·
+        <a [href]="enlace" target="_blank" rel="noopener noreferrer"
+          >Abrir en {{ plataformaExterna }} ↗</a
+        >
+      </p>
+    }
+    @if (
+      (!publicacion.tipoContenido || publicacion.tipoContenido === 'propia') &&
+      publicacion.tipoMultimedia === 'imagen' &&
+      publicacion.multimediaUrl
+    ) {
       <img
         class="post-image"
         [src]="publicacion.multimediaUrl"
@@ -64,10 +76,11 @@
     }
   </div>
   <footer class="post-footer">
-<!--
+    <!--
 Los contadores muestran el total del servidor, no el número de comentarios cargados en la página.
 Los botones emiten eventos al padre; disabled ayuda a evitar clics, no reemplaza permisos de Nest.
--->    <div class="contadores">
+-->
+    <div class="contadores">
       <span class="cantidad-likes">{{ publicacion.cantidadLikes ?? 0 }} Me gusta</span>
       <span class="cantidad-comentarios"
         >{{ publicacion.cantidadComentarios ?? 0 }}

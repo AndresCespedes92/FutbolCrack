@@ -90,7 +90,7 @@ export class Publicaciones implements OnInit {
   });
   readonly campos = this.publicacionForm.controls;
 
-  // Controles SOLO de interfaz en etapa 1: no pertenecen al DTO ni al FormData enviado.
+  // Controles variables separados del grupo común; el servicio los incorpora al FormData.
   // Como los selectores reactivos de registro.html en CineBera, el estado vive en FormControl.
   readonly tipoContenido = new FormControl<TipoContenido>('propia', {
     nonNullable: true,
@@ -100,15 +100,12 @@ export class Publicaciones implements OnInit {
   get plataformaExterna(): string {
     return this.tipoContenido.value === 'instagram' ? 'Instagram' : 'TikTok';
   }
-  get mensajeIntegracion(): string {
-    return `La integración con ${this.plataformaExterna} está en preparación. Por ahora solo podés guardar publicaciones propias.`;
-  }
   get errorUrlExterna(): string {
     if (!this.urlExterna.invalid || !(this.urlExterna.touched || this.urlExterna.dirty)) return '';
     if (this.urlExterna.hasError('required'))
       return `Pegá la URL de una publicación de ${this.plataformaExterna}.`;
     if (this.urlExterna.hasError('maxlength')) return 'La URL admite hasta 2048 caracteres.';
-    return `Ingresá una URL HTTPS de una publicación de ${this.plataformaExterna}; no un enlace a un perfil.`;
+    return `Ingresá el enlace HTTPS completo de una publicación de ${this.plataformaExterna}; no un perfil ni un enlace acortado.`;
   }
 
   /** Cambiar de fuente conserva título/descripción y reinicia únicamente los campos variables.
@@ -222,11 +219,9 @@ export class Publicaciones implements OnInit {
       this.mensajePublicacion = 'Seleccioná un tipo de contenido válido.';
       return;
     }
-    // Además del botón deshabilitado, este guard evita POST si se envía con Enter o por código.
-    // La etapa 2 deberá ampliar el contrato del servidor antes de habilitar estos tipos.
-    if (this.tipoContenido.value !== 'propia') {
+    if (this.tipoContenido.value !== 'propia' && this.urlExterna.invalid) {
       this.urlExterna.markAsTouched();
-      this.mensajePublicacion = this.mensajeIntegracion;
+      this.mensajePublicacion = 'Revisá el enlace de la publicación antes de guardar.';
       return;
     }
     if (this.publicacionForm.invalid) {
@@ -240,7 +235,10 @@ export class Publicaciones implements OnInit {
       .crear({
         titulo: this.campos.titulo.value.trim(),
         descripcion: this.campos.descripcion.value.trim(),
-        imagen: this.campos.imagen.value ?? undefined,
+        tipoContenido: this.tipoContenido.value,
+        ...(this.tipoContenido.value === 'propia'
+          ? { imagen: this.campos.imagen.value ?? undefined }
+          : { urlExterna: this.urlExterna.value.trim() }),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -248,6 +246,7 @@ export class Publicaciones implements OnInit {
           this.publicando = false;
           this.tipoContenido.enable({ emitEvent: false });
           this.publicacionForm.reset();
+          this.tipoContenido.setValue('propia');
           // File no usa formControlName: limpiamos también el selector nativo tras confirmar el guardado.
           if (this.imagenInput) this.imagenInput.nativeElement.value = '';
           this.mensajeExito = 'Publicación creada correctamente.';
@@ -264,7 +263,7 @@ export class Publicaciones implements OnInit {
             this.mensajePublicacion = 'La imagen supera el máximo de 5 MB.';
           } else if (error.status === 400) {
             this.mensajePublicacion =
-              'Revisá los textos y que la imagen sea JPEG, PNG o WebP de hasta 5 MB.';
+              'Revisá los textos, el enlace de la plataforma o la imagen (JPEG, PNG o WebP de hasta 5 MB).';
           } else {
             this.mensajePublicacion =
               error.status === 0
