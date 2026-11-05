@@ -26,12 +26,40 @@
       <span>{{ totalPublicaciones }} PUBLICACIONES</span>
     </div>
 
-    <!-- El formulario se conserva; las tarjetas delegan sus acciones al contenedor. -->
+    <!-- El acceso compacto reduce la carga visual; hidden conserva el borrador y el archivo al plegar. -->
     <form class="composer-preview" [formGroup]="publicacionForm" (ngSubmit)="publicar()" novalidate>
       <div class="composer-avatar" aria-hidden="true">FC</div>
       <div class="composer-content">
+        <div class="composer-disclosure">
+          <input
+            class="composer-textarea composer-input composer-trigger"
+            type="text"
+            readonly
+            role="button"
+            placeholder="Escribe una publicación..."
+            aria-label="Escribir una publicación"
+            aria-controls="campos-publicacion"
+            [attr.aria-expanded]="formularioExpandido"
+            [disabled]="publicando"
+            (click)="abrirFormulario()"
+            (keydown.enter)="$event.preventDefault(); abrirFormulario()"
+            (keydown.space)="$event.preventDefault(); abrirFormulario()"
+          />
+          <button
+            class="composer-toggle"
+            type="button"
+            aria-controls="campos-publicacion"
+            [attr.aria-expanded]="formularioExpandido"
+            [attr.aria-label]="formularioExpandido ? 'Contraer formulario de publicación' : 'Desplegar formulario de publicación'"
+            [title]="formularioExpandido ? 'Contraer' : 'Desplegar'"
+            [disabled]="publicando"
+            (click)="alternarFormulario()"
+          ><span aria-hidden="true">{{ formularioExpandido ? '−' : '+' }}</span></button>
+        </div>
+        <div id="campos-publicacion" class="composer-fields" [hidden]="!formularioExpandido">
         <label for="titulo-publicacion" class="composer-title">Título de la publicación</label>
         <input
+          #tituloPublicacion
           id="titulo-publicacion"
           class="composer-textarea composer-input"
           formControlName="titulo"
@@ -90,6 +118,7 @@
         @if (mensajePublicacion) {
           <p class="composer-error" role="alert">{{ mensajePublicacion }}</p>
         }
+        </div>
         @if (mensajeExito) {
           <p role="status">{{ mensajeExito }}</p>
         }
