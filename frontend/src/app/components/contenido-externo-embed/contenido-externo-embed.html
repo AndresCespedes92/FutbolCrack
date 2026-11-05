@@ -45,6 +45,12 @@
           @case ('disponible') {
             <p>Reproductor disponible. Usá sus controles para ver el contenido.</p>
           }
+          @case ('insertado') {
+            <p>
+              Instagram muestra el contenido y sus avisos de disponibilidad dentro de esta vista. Si
+              no lo ves, podés abrir la publicación original.
+            </p>
+          }
           @case ('sin-confirmar') {
             <p>
               No pudimos confirmar la disponibilidad. La plataforma, la privacidad o el navegador
@@ -65,7 +71,7 @@
           >Al cargarlo te conectás con {{ plataforma }}. La disponibilidad depende de la
           plataforma.</small
         >
-      } @else if (estado === 'no-disponible') {
+      } @else if (estado === 'no-disponible' || estado === 'sin-confirmar') {
         <button type="button" (click)="reintentar()">Reintentar</button>
       }
       <!-- El enlace se conserva incluso si el iframe está bloqueado o el contenido es privado. -->

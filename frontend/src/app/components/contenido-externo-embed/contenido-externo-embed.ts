@@ -7,6 +7,7 @@ import {
   Input,
   OnChanges,
   Renderer2,
+  SimpleChanges,
   ViewChild,
   inject,
 } from '@angular/core';
@@ -22,7 +23,8 @@ const ORIGENES_PERMITIDOS = [
   'https://www.instagram.com',
   'https://instagram.com',
 ] as const;
-type EstadoEmbed = 'inicial' | 'cargando' | 'disponible' | 'sin-confirmar' | 'no-disponible';
+type EstadoEmbed =
+  'inicial' | 'cargando' | 'insertado' | 'disponible' | 'sin-confirmar' | 'no-disponible';
 
 /** Hijo de PublicacionCard: recibe datos por Input, sin HTTP ni permisos de negocio.
  * Documentación oficial: https://developers.tiktok.com/doc/embed-player/
@@ -64,7 +66,9 @@ export class ContenidoExternoEmbed implements OnChanges {
     return this.tipoContenido === 'instagram' ? 'Instagram' : 'TikTok';
   }
 
-  ngOnChanges(): void {
+  ngOnChanges(cambios: SimpleChanges): void {
+    // Ampliar la tarjeta en el detalle solo modifica CSS: no reinicia el video ya cargado.
+    if (!cambios['tipoContenido'] && !cambios['urlExterna']) return;
     this.version++;
     this.limpiarInstagram();
     this.cancelarEspera();
@@ -110,6 +114,7 @@ export class ContenidoExternoEmbed implements OnChanges {
       /^\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)\/?$/,
     )?.[1];
     if (!codigo) return;
+    this.cancelarEspera();
     // No incorporamos ruta ni query libres; reels se normaliza al formato oficial reel.
     const formato = new URL(this.enlaceOriginal).pathname.startsWith('/p/') ? 'p' : 'reel';
     const canonica = `https://www.instagram.com/${formato}/${codigo}/`;
@@ -125,7 +130,8 @@ export class ContenidoExternoEmbed implements OnChanges {
     this.renderer.appendChild(bloque, enlace);
     this.renderer.appendChild(contenedor, bloque);
     this.estado = 'cargando';
-    const version = this.version;
+    // Cada intento invalida también promesas anteriores de esta misma publicación.
+    const version = ++this.version;
     // Meta no documenta una señal equivalente a onPlayerReady: observar un iframe NO prueba
     // que la publicación esté disponible. La plataforma muestra sus propias restricciones.
     this.observador = new MutationObserver(() => {
@@ -151,7 +157,9 @@ export class ContenidoExternoEmbed implements OnChanges {
         this.renderer.setStyle(marco, 'max-width', '100%');
         this.renderer.setStyle(marco, 'width', '100%');
         this.cancelarEspera();
-        this.estado = 'sin-confirmar';
+        // La vista fue insertada, pero solo Instagram conoce si el contenido es público.
+        // No mostramos un aviso de fallo por el solo hecho de que Meta no emita onPlayerReady.
+        this.estado = 'insertado';
         this.cdr.markForCheck();
       }
     });
@@ -222,11 +230,18 @@ export class ContenidoExternoEmbed implements OnChanges {
     this.limpiarInstagram();
     this.estado = 'no-disponible';
     this.recurso = null;
+    this.cdr.markForCheck();
   }
   reintentar(): void {
+    this.cancelarEspera();
+    this.limpiarInstagram();
     this.recurso = null;
     this.cargado = false;
+    this.estado = 'inicial';
+    // Retira el iframe anterior antes de crear otro, incluso si ambos usan el mismo ID.
+    this.cdr.detectChanges();
     this.cargar();
+    this.cdr.markForCheck(); // El render intermedio ya consumió la marca del evento de clic.
   }
   private cancelarEspera(): void {
     clearTimeout(this.temporizador);
