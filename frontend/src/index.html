@@ -5,6 +5,12 @@
     <title>FutbolCrack</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- CSP acotada a marcos: solo reproductores oficiales. No cambia API ni Cloudinary.
+         Si el hosting añade otra CSP, ambas se aplican y debe permitir este frame-src también. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="frame-src https://www.tiktok.com https://www.instagram.com https://instagram.com;"
+    />
     <meta name="theme-color" content="#596b42" />
     <meta
       name="description"

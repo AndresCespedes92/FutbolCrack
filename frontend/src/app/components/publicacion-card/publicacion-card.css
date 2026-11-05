@@ -110,20 +110,6 @@ button:disabled {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-/* El origen es un enlace normal: no se incrusta ni descarga multimedia externa. */
-.origen-externo {
-  margin-top: 16px;
-  color: var(--color-text-secondary);
-}
-.origen-externo a {
-  color: var(--color-success);
-  text-underline-offset: 3px;
-}
-.origen-externo a:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 4px;
-  border-radius: var(--radius-control);
-}
 /* Apariencia de enlace, con botón nativo para deshabilitarlo y operarlo con teclado. */
 .agregar-comentario {
   border-color: transparent;

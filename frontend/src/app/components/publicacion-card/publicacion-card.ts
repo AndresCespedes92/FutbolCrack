@@ -3,15 +3,14 @@ import { InicialesPipe } from '../../pipes/iniciales.pipe';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Publicacion } from '../../services/publicaciones';
 import { TruncatePipe } from '../../pipes/truncate.pipe';
-import { urlContenidoValidator } from '../../validators/url-contenido.validator';
-import { FormControl } from '@angular/forms';
+import { ContenidoExternoEmbed } from '../contenido-externo-embed/contenido-externo-embed';
 
 // Como PeliculaCard en CineBera: el padre entrega datos por Input; el hijo comunica intenciones.
 // Esta tarjeta no conoce HttpClient ni decide permisos del servidor.
 @Component({
   selector: 'app-publicacion-card',
   standalone: true,
-  imports: [TruncatePipe, FechaRelativaPipe, InicialesPipe],
+  imports: [TruncatePipe, FechaRelativaPipe, InicialesPipe, ContenidoExternoEmbed],
   templateUrl: './publicacion-card.html',
   styleUrl: './publicacion-card.css',
 })
@@ -35,20 +34,6 @@ export class PublicacionCard {
   @Output() abrirDetalle = new EventEmitter<Publicacion>();
   expandido = false;
   readonly limiteTexto = 280;
-  get plataformaExterna(): string {
-    return this.publicacion.tipoContenido === 'instagram' ? 'Instagram' : 'TikTok';
-  }
-  // Defensa visual frente a respuestas antiguas/inconsistentes: nunca renderizar javascript:.
-  get enlaceExterno(): string | null {
-    const tipo = this.publicacion.tipoContenido;
-    const url = this.publicacion.urlExterna;
-    return (tipo === 'instagram' || tipo === 'tiktok') &&
-      typeof url === 'string' &&
-      url.trim() &&
-      !urlContenidoValidator(tipo)(new FormControl(url))
-      ? url.trim()
-      : null;
-  }
   get descripcion(): string {
     return this.publicacion.descripcion ?? this.publicacion.contenido;
   }
