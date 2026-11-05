@@ -57,6 +57,20 @@
           ><span aria-hidden="true">{{ formularioExpandido ? '−' : '+' }}</span></button>
         </div>
         <div id="campos-publicacion" class="composer-fields" [hidden]="!formularioExpandido">
+        <label for="tipo-contenido" class="composer-title">Tipo de contenido</label>
+        <select id="tipo-contenido" class="composer-content-type" [formControl]="tipoContenido"
+          aria-describedby="ayuda-tipo-contenido">
+          <option value="propia">Publicación propia</option>
+          <option value="instagram">Instagram</option>
+          <option value="tiktok">TikTok</option>
+        </select>
+        <small id="ayuda-tipo-contenido">
+          @if (tipoContenido.value === 'propia') {
+            Compartí tu jugada con una imagen opcional.
+          } @else {
+            Prepará un enlace de {{ plataformaExterna }}. Todavía no se puede guardar.
+          }
+        </small>
         <label for="titulo-publicacion" class="composer-title">Título de la publicación</label>
         <input
           #tituloPublicacion
@@ -91,6 +105,7 @@
             >Ingresá una descripción de 1 a 2000 caracteres, no solo espacios.</small
           >
         }
+        @if (tipoContenido.value === 'propia') {
         <label for="imagen-publicacion">Imagen (opcional)</label>
         <input
           #imagenPublicacion
@@ -107,12 +122,32 @@
             >Elegí una imagen JPEG, PNG o WebP de hasta 5 MB.</small
           >
         }
+        } @else {
+          <label for="url-publicacion" class="composer-title">URL de {{ plataformaExterna }}</label>
+          <!-- Patrón visual de registro.html de CineBera, adaptado a un control de URL local. -->
+          <input id="url-publicacion" class="composer-textarea composer-input" type="url"
+            [formControl]="urlExterna" maxlength="2048" autocomplete="off" spellcheck="false"
+            [placeholder]="tipoContenido.value === 'instagram' ? 'https://www.instagram.com/reel/...' : 'https://www.tiktok.com/@usuario/video/...'"
+            [ngClass]="{
+              'composer-invalid': !!errorUrlExterna,
+              'composer-valid': urlExterna.valid && (urlExterna.touched || urlExterna.dirty)
+            }"
+            [attr.aria-invalid]="!!errorUrlExterna"
+            aria-describedby="ayuda-url-publicacion error-url-publicacion" />
+          <small id="ayuda-url-publicacion">
+            Pegá el enlace de una publicación pública. Por ahora solo validamos el formato; no comprobamos si es pública ni cargamos contenido externo.
+          </small>
+          @if (errorUrlExterna) {
+            <small id="error-url-publicacion" class="composer-error">{{ errorUrlExterna }}</small>
+          }
+          <p class="composer-preparation" role="status">{{ mensajeIntegracion }}</p>
+        }
         <div class="composer-footer">
           <span class="composer-counter"
             >{{ campos.descripcion.value.length }} / 2000 caracteres</span
           >
-          <button class="button composer-submit" type="submit" [disabled]="publicando">
-            {{ publicando ? 'Publicando...' : 'Publicar' }}
+          <button class="button composer-submit" type="submit" [disabled]="publicando || tipoContenido.value !== 'propia'">
+            {{ publicando ? 'Publicando...' : tipoContenido.value === 'propia' ? 'Publicar' : 'En preparación' }}
           </button>
         </div>
         @if (mensajePublicacion) {
